@@ -40,38 +40,36 @@ in [DECISIONS.md](DECISIONS.md); this is the short form.
    without infrastructure.
 2. **Never invent a vessel length, and never gate a booking on picking a known vessel.**
    Booking registers the vessel; a gate once made vessel bookings impossible entirely.
-3. **Nothing vanishes silently, but repetition is not information.** What the importer
-   cannot place becomes a review item with its sheet/row/column. Missing lengths are
-   derived, not stored. Identical problems **fold into one row with a count**
-   (`lib/review.ts`) — one vessel too long for one berth across four bookings is one
-   decision, and listing it four times buried everything else. Conflicts never fold.
+3. **Nothing vanishes silently, but repetition is not information.** Whatever the
+   importer cannot place becomes a review item with its sheet/row/column. Missing
+   lengths are derived, not stored. Identical problems fold into one row with a count
+   (`lib/review.ts`); conflicts never fold.
 4. **`Small craft slips` is pooled** and exempt from conflict detection. Every other berth
    is exclusive.
 5. **The berths live in a migration**, not in application code. They are the facility.
-6. **Bar height is `vessel length ÷ berth length`.** The misfit is geometry, not a badge,
-   and it states its measurement at any width including a single day. Say it in words —
-   `170ft in 90ft berth`, never `170′ > 90′`. Every bar carries a plain-language
-   `data-tip` shown instantly on hover; **do not go back to the native `title`**, which
-   took a second to appear and left the board looking unexplained.
-7. **Every date bound comes from `lib/nav`, and none is hard-coded.** The floor stretches
-   to the earliest booking so imported history stays reachable; the form refuses a start
-   date before today. A fixed bound has hidden real bookings three times. A date input's
-   `min` guards only the picker, so the save path checks too.
+6. **Bar height is `vessel length ÷ berth length`**, stated at any width including a
+   single day. Say it in words — `170ft in 90ft berth`, never `170′ > 90′`. Every bar
+   carries a plain-language `data-tip` shown instantly; **never the native `title`**,
+   which took a second and left the board looking unexplained.
+7. **Every date bound comes from `lib/nav`; none is hard-coded.** The floor stretches to
+   the earliest booking so imported history stays reachable; the form refuses a start
+   before today. A fixed bound has hidden real bookings three times. A date input's `min`
+   guards only the picker, so the save path checks too.
 8. **An empty schedule is a supported state, not a degraded one.** It still renders the
    full grid. Building it is what exposed the two bugs in invariant 2.
 9. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review.
    `/search` is a destination, **not a fourth tab** — do not add it to the nav, and do not
    delete it for breaking the rule.
-10. **Light only, and one obvious action.** Do not reinstate a dark theme: the mark hues
+10. **Light only, and one obvious action.** Do not reinstate a dark theme — the mark hues
     are validated against the light surface, and the custom 404 exists because Next's
-    default carries its own dark rule. `+ New booking` is the only filled button, and
-    **no control may exist only to confirm another**.
+    default carries its own. `+ New booking` is the only filled button, and **no control
+    may exist only to confirm another**.
 
 ## Structure
 
 ```
 src/domain/   pure rules: conflicts, fit, classification. No DB, no React.
-src/lib/      pure view helpers: month nav, bar geometry, search grouping.
+src/lib/      pure view helpers: month nav, bar geometry, search and queue grouping.
 src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
 src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.

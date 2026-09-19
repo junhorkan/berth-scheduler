@@ -23,6 +23,7 @@ built is usually more informative than the thing that was.
 | 14 | [The legacy schedule is imported, and removable](#14-the-legacy-schedule-is-imported-and-removable) |
 | 15 | [Missing lengths are derived, not queued](#15-missing-lengths-are-derived-not-queued) |
 | 16 | [Light only, one obvious action, no control that only confirms another](#16-light-only-one-obvious-action-no-control-that-only-confirms-another) |
+| 17 | [Repetition is not information](#17-repetition-is-not-information) |
 
 ---
 
@@ -364,3 +365,39 @@ Center* and a label beside it said *Dock Schedule*, which is the same sentence t
 read in a daylit setting. Next's default 404 carries its own `prefers-color-scheme` rule,
 so it is replaced; that page is also deliberately database-free, because the screen shown
 when something is already wrong should not depend on the database being awake.
+
+---
+
+## 17. Repetition is not information
+
+**Decision.** Identical problems fold into one row with a count. A column that is almost
+always blank is removed rather than reserved. A statement the interface already makes is
+not made again in prose.
+
+**Why.** Three places were measured, not guessed at:
+
+- **The review queue showed one row per affected booking.** `M/V Iron Heron` appeared
+  four times consecutively, each reading *"Vessel is 100' but the berth is 55'"* — one
+  vessel, one problem, four dates. Across the queue that was **28 rows for 15 actual
+  problems**, and the repetition buried the items that differed. Folding took it to 17
+  rows and halved the buttons.
+- **The Vessels table reserved a column for Operator**, which **6 of 419 vessels** have.
+  It was blank on 413 rows, widening the table to display nothing. The six now show it
+  under the name.
+- **The board announced "Nothing booked in September 2026"** in a bordered band directly
+  above a visibly empty grid, while the toolbar already read `0 in September`. Three
+  statements of one fact. The legend went too: five colour swatches explaining bars that
+  were not there.
+
+**What does not fold.** Conflicts. Each is a distinct pair of bookings needing its own
+resolution, so collapsing them would hide real work rather than noise. The grouping key
+is deliberately narrow: a vessel too long for a berth is keyed on *that pairing*, because
+the same hull can fit one berth and not another.
+
+**A consequence worth stating.** Marking a folded group done resolves every occurrence in
+one statement. Closing them individually would leave the group half-present on the next
+render, which is the kind of bug that only appears once real data has repeats in it.
+
+**Related:** the same instinct as [16](#16-light-only-one-obvious-action-no-control-that-only-confirms-another) —
+a control that only confirms another is repetition too.
+
