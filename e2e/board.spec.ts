@@ -212,3 +212,17 @@ test.describe('the other tabs', () => {
     await expect(first.locator('.qact .btn').first()).toBeVisible();
   });
 });
+
+test.describe('a wrong turn', () => {
+  test('shows a light 404 with a way back, not the framework default', async ({ page }) => {
+    // Next's default error page carries its own prefers-color-scheme rule, so on a
+    // dark-preference machine it was the one screen that contradicted the whole app.
+    const res = await page.goto('/no-such-page');
+    expect(res?.status()).toBe(404);
+    await expect(page.getByText('That page does not exist.')).toBeVisible();
+    await expect(page.locator('.next-error-h1')).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Back to the board' }).click();
+    await expect(page.locator('.month')).toBeVisible();
+  });
+});
