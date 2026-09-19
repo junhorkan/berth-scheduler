@@ -49,48 +49,47 @@ body {
   margin: 0;
   background: var(--plane);
   color: var(--ink);
-  font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font: 15px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 a { color: var(--vessel); }
 
 /* ---------------------------------------------------------------- chrome */
-.shell { max-width: 1320px; margin: 0 auto; padding: 22px 24px 40px; }
+.shell { max-width: 1320px; margin: 0 auto; padding: 26px 24px 48px; }
 
 .masthead {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--axis);
+  padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--axis);
 }
-.masthead h1 { font-size: 19px; margin: 0; font-weight: 680; letter-spacing: -0.02em; }
-.masthead .sub {
-  color: var(--ink-muted); font-size: 10px; text-transform: uppercase;
-  letter-spacing: 0.09em; font-weight: 600; padding-left: 12px;
-  border-left: 1px solid var(--axis);
-}
+.masthead h1 { font-size: 21px; margin: 0; font-weight: 680; letter-spacing: -0.02em; }
+/* One line, under the title, saying what you can do here. Not a page about the
+   project — invariant 9 still holds — just the sentence a first-time visitor needs. */
+.masthead .brand { margin-right: 4px; }
+.masthead .tagline { margin: 3px 0 0; font-size: 13px; color: var(--ink-2); }
 
 .tabs { display: flex; gap: 2px; margin-left: auto; }
 .tabs a {
-  font-size: 13px; padding: 4px 10px; border-radius: 6px;
+  font-size: 14px; padding: 6px 12px; border-radius: 8px;
   text-decoration: none; color: var(--ink-2);
 }
 .tabs a[aria-current='page'] { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ring); font-weight: 600; }
 .tabs .count {
-  font-family: var(--mono); font-size: 11px; margin-left: 5px;
+  font-family: var(--mono); font-size: 12px; margin-left: 6px;
   color: var(--critical);
 }
 
 .toolbar {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   background: var(--surface); border: 1px solid var(--grid);
-  border-radius: 8px; padding: 8px 10px; margin-bottom: 12px;
+  border-radius: 12px; padding: 10px 12px; margin-bottom: 14px;
 }
-.toolbar .month { font-weight: 650; font-size: 14px; min-width: 132px; text-align: center; }
+.toolbar .month { font-weight: 650; font-size: 15px; min-width: 138px; text-align: center; }
 .navbtn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 6px; text-decoration: none;
+  width: 32px; height: 32px; border-radius: 8px; text-decoration: none;
   border: 1px solid var(--axis); color: var(--ink); background: var(--surface);
-  font-size: 14px; line-height: 1;
+  font-size: 15px; line-height: 1;
 }
 .navbtn:hover { border-color: var(--ink-2); }
 
@@ -98,8 +97,8 @@ a { color: var(--vessel); }
 
 .jump { display: flex; gap: 6px; align-items: center; }
 .jump select {
-  font: inherit; font-size: 12px; padding: 4px 6px;
-  border: 1px solid var(--axis); border-radius: 6px;
+  font: inherit; font-size: 13px; padding: 6px 8px;
+  border: 1px solid var(--axis); border-radius: 8px;
   background: var(--surface); color: var(--ink); cursor: pointer;
 }
 .jump select:hover { border-color: var(--ink-2); }
@@ -108,7 +107,7 @@ a { color: var(--vessel); }
 /* ----------------------------------------------------------------- board */
 .board {
   background: var(--surface); border: 1px solid var(--grid);
-  border-radius: 8px; padding: 10px 12px 14px; overflow-x: auto;
+  border-radius: 12px; padding: 14px 14px 16px; overflow-x: auto;
 }
 .gridrow { display: grid; grid-template-columns: 150px minmax(620px, 1fr); }
 
@@ -126,8 +125,8 @@ a { color: var(--vessel); }
   padding-right: 10px; border-bottom: 1px solid var(--grid);
   border-right: 1px solid var(--axis);
 }
-.rail b { font-size: 12px; font-weight: 650; line-height: 1.2; letter-spacing: -0.01em; }
-.rail i { font-style: normal; font-family: var(--mono); font-size: 10px; color: var(--ink-muted); }
+.rail b { font-size: 13px; font-weight: 650; line-height: 1.25; letter-spacing: -0.01em; }
+.rail i { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--ink-muted); }
 .rail .pooled { font-family: inherit; font-size: 9px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 
 .lane {
@@ -172,8 +171,8 @@ a { color: var(--vessel); }
 
 /* --------------------------------------------------------------- legend */
 .legend {
-  display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px;
-  font-size: 10px; color: var(--ink-muted); align-items: center;
+  display: flex; flex-wrap: wrap; gap: 14px; margin-top: 13px;
+  font-size: 11px; color: var(--ink-muted); align-items: center;
 }
 .legend div { display: flex; align-items: center; gap: 5px; }
 .sw { width: 18px; height: 10px; border-radius: 2px; flex: none; }
@@ -184,22 +183,22 @@ a { color: var(--vessel); }
 .sw.closure { background: repeating-linear-gradient(135deg, var(--unknown-fill) 0 5px, var(--unknown-hatch) 5px 6px); border: 1px solid var(--axis); }
 
 .note { font-size: 12px; color: var(--ink-muted); margin: 10px 0 0; }
-.empty { padding: 28px 0; text-align: center; color: var(--ink-muted); font-size: 13px; }
+.empty { padding: 32px 0; text-align: center; color: var(--ink-muted); font-size: 14px; }
 
 /* --------------------------------------------------------- panels/tables */
 .panel {
   background: var(--surface); border: 1px solid var(--grid);
-  border-radius: 8px; padding: 12px 14px; font-size: 13px;
+  border-radius: 12px; padding: 16px 18px; font-size: 14px;
 }
 .panel b { font-weight: 650; }
 
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tbl th {
-  text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--ink-muted); font-weight: 600; padding: 0 8px 6px 0;
+  text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--ink-muted); font-weight: 600; padding: 0 10px 8px 0;
   border-bottom: 1px solid var(--axis);
 }
-.tbl td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+.tbl td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--grid); vertical-align: middle; }
 .tbl tr.needs td:first-child { box-shadow: inset 2px 0 0 var(--event); padding-left: 8px; }
 
 .flag {
@@ -209,8 +208,8 @@ a { color: var(--vessel); }
 
 .lenwrap { display: inline-flex; align-items: center; gap: 6px; }
 .leninput {
-  width: 62px; font: inherit; font-size: 12px; font-family: var(--mono);
-  padding: 2px 6px; border: 1px solid var(--axis); border-radius: 5px;
+  width: 72px; font: inherit; font-size: 13px; font-family: var(--mono);
+  padding: 5px 8px; border: 1px solid var(--axis); border-radius: 7px;
   background: var(--surface); color: var(--ink);
 }
 .leninput:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
@@ -219,8 +218,8 @@ a { color: var(--vessel); }
 .hint.bad { color: var(--critical); }
 
 .btn {
-  font: inherit; font-size: 12px; padding: 3px 9px; cursor: pointer;
-  border: 1px solid var(--axis); border-radius: 6px;
+  font: inherit; font-size: 13px; padding: 6px 12px; cursor: pointer;
+  border: 1px solid var(--axis); border-radius: 8px;
   background: var(--surface); color: var(--ink); text-decoration: none;
   display: inline-flex; align-items: center;
 }
@@ -239,23 +238,25 @@ a { color: var(--vessel); }
 /* ----------------------------------------------------------- review queue */
 .queue { list-style: none; margin: 0; padding: 0; }
 .queue li {
-  display: flex; gap: 12px; align-items: flex-start;
-  padding: 9px 0; border-bottom: 1px solid var(--grid);
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 13px 0; border-bottom: 1px solid var(--grid);
 }
 .queue li:last-child { border-bottom: 0; }
 .qmain { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.qtitle { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-muted); }
+.qtitle { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); }
 .queue li.bad .qtitle { color: var(--critical); }
 .queue li.warn .qtitle { color: var(--event); }
-.qtext { font-size: 13px; font-weight: 600; }
-.qdetail { font-size: 12px; color: var(--ink-2); }
+.qtext { font-size: 15px; font-weight: 600; }
+.qdetail { font-size: 13px; color: var(--ink-2); }
 .qmeta { font-size: 11px; color: var(--ink-muted); font-family: var(--mono); }
 .qact { display: flex; gap: 6px; flex: none; padding-top: 2px; }
 
 /* ------------------------------------------------------- booking panel */
+/* The one thing this tool is for, sized like it. */
 .btn.primary {
   background: var(--vessel); border-color: var(--vessel);
-  color: #fff; font-weight: 650;
+  color: #fff; font-weight: 650; font-size: 14px; padding: 8px 16px;
+  border-radius: 9px;
 }
 .btn.primary:hover { filter: brightness(0.93); border-color: var(--vessel); }
 
@@ -268,13 +269,13 @@ a { color: var(--vessel); }
   padding: 18px 18px 24px; overflow-y: auto;
   box-shadow: -8px 0 28px rgba(0, 0, 0, 0.14);
 }
-.panel-sheet h2 { font-size: 15px; margin: 0 0 14px; }
+.panel-sheet h2 { font-size: 17px; margin: 0 0 16px; }
 
 .field { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 11px; }
-.field > label { width: 74px; flex: none; font-size: 12px; color: var(--ink-muted); padding-top: 5px; }
+.field > label { width: 78px; flex: none; font-size: 13px; color: var(--ink-muted); padding-top: 8px; }
 .field input, .field select {
-  font: inherit; font-size: 13px; padding: 4px 7px; flex: 1; min-width: 0;
-  border: 1px solid var(--axis); border-radius: 6px;
+  font: inherit; font-size: 14px; padding: 7px 10px; flex: 1; min-width: 0;
+  border: 1px solid var(--axis); border-radius: 8px;
   background: var(--surface); color: var(--ink);
 }
 .field input:focus, .field select:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
@@ -326,22 +327,22 @@ a { color: var(--vessel); }
 
 .find { display: flex; gap: 6px; align-items: center; }
 .find input {
-  font: inherit; font-size: 12px; padding: 4px 8px; width: 210px;
-  border: 1px solid var(--axis); border-radius: 6px;
+  font: inherit; font-size: 13px; padding: 7px 11px; width: 230px;
+  border: 1px solid var(--axis); border-radius: 8px;
   background: var(--surface); color: var(--ink);
 }
 .find input::placeholder { color: var(--ink-muted); }
 .find input:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
 .find button {
-  font: inherit; font-size: 12px; padding: 4px 10px; cursor: pointer;
-  border: 1px solid var(--axis); border-radius: 6px;
+  font: inherit; font-size: 13px; padding: 7px 13px; cursor: pointer;
+  border: 1px solid var(--axis); border-radius: 8px;
   background: var(--surface); color: var(--ink);
 }
 .find button:hover { border-color: var(--ink-2); }
 
 .sgroup {
   background: var(--surface); border: 1px solid var(--ring);
-  border-radius: 10px; padding: 10px 12px; margin-top: 10px;
+  border-radius: 12px; padding: 14px 16px; margin-top: 12px;
 }
 .shead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .shead b { font-size: 14px; font-weight: 650; }
@@ -390,7 +391,7 @@ a { color: var(--vessel); }
 
 /* ---- Counts, inline in the toolbar rather than a band of their own ---- */
 
-.facts { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+.facts { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-2); }
 .facts b { font-weight: 650; color: var(--ink); }
 .facts i { width: 1px; height: 11px; background: var(--axis); display: inline-block; }
 .facts .flagged { color: var(--critical); font-weight: 650; text-decoration: none; }
@@ -443,7 +444,7 @@ a { color: var(--vessel); }
 
 .boardnote {
   margin: 2px 0 10px; padding: 0 2px;
-  font-size: 12.5px; line-height: 1.55; color: var(--ink-2);
+  font-size: 13.5px; line-height: 1.55; color: var(--ink-2);
 }
 .boardnote b { color: var(--ink); font-weight: 650; }
 .boardnote .btn { font-size: 12px; padding: 1px 8px; vertical-align: baseline; }

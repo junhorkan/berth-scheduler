@@ -32,8 +32,8 @@ tool becomes unusable) or softening the overlap guarantee (the strongest claim h
 
 ## Invariants
 
-Breaking any of these looks like an improvement and is not. The full argument for each is
-in [DECISIONS.md](DECISIONS.md); this is the short form.
+Breaking any of these looks like an improvement and is not. Full argument for each:
+[DECISIONS.md](DECISIONS.md).
 
 1. **`src/domain` and `src/lib` import nothing from `db` or `app`.** Pure, and unit-tested
    without infrastructure.
@@ -59,13 +59,16 @@ in [DECISIONS.md](DECISIONS.md); this is the short form.
    empty month still draws the full grid, and says in one line where the bookings
    actually are: a blank grid cannot be told apart from a broken page. Building the
    empty path is what exposed the two bugs in invariant 2.
-9. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review.
-   `/search` is a destination, **not a fourth tab** — do not add it to the nav, and do not
-   delete it for breaking the rule.
+9. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review. One
+   tagline in the masthead is not a page. `/search` is a destination, **not a fourth
+   tab** — do not add it to the nav, nor delete it for breaking the rule.
 10. **Light only, and one obvious action.** Do not reinstate a dark theme — the mark hues
     are validated against the light surface, and the custom 404 exists because Next's
     default carries its own. `+ New booking` is the only filled button, and **no control
     may exist only to confirm another**.
+11. **Body text outside the grid never drops below 13px** (uppercase micro-labels may be
+    11). When something will not fit, change its shape, not its point size — shrinking
+    is how a readable page becomes an unreadable one, one commit at a time.
 
 ## Structure
 

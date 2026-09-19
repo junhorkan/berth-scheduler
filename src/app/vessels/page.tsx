@@ -40,7 +40,7 @@ export default async function VesselsPage() {
               <th>Vessel</th>
               <th style={{ width: 120 }}>Length</th>
               <th style={{ width: 110, textAlign: 'right' }}>Bookings</th>
-              <th style={{ width: 110 }}>Last seen</th>
+              <th style={{ width: 118 }}>Last booked</th>
             </tr>
           </thead>
           <tbody>

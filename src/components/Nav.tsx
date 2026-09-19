@@ -14,7 +14,10 @@ export default async function Nav({
   const summary = await getSummary();
   return (
     <header className="masthead">
-      <h1>Harborview Marine Research Center</h1>
+      <div className="brand">
+        <h1>Harborview Marine Research Center</h1>
+        <p className="tagline">Book a berth, check any date, and never double-book one.</p>
+      </div>
 
       <form className="find" method="get" action="/search" role="search">
         <input

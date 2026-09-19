@@ -25,6 +25,7 @@ built is usually more informative than the thing that was.
 | 16 | [Light only, one obvious action, no control that only confirms another](#16-light-only-one-obvious-action-no-control-that-only-confirms-another) |
 | 17 | [Repetition is not information](#17-repetition-is-not-information) |
 | 18 | [An empty month is not an empty page](#18-an-empty-month-is-not-an-empty-page) |
+| 19 | [The type scale was borrowed, not invented](#19-the-type-scale-was-borrowed-not-invented) |
 
 ---
 
@@ -437,3 +438,41 @@ an empty today is a true statement about the schedule and must be allowed to be 
 the board with a line of text made an empty month look like a failure, where seven
 labelled lanes look like a schedule waiting for a booking. The grid stays; the sentence
 sits above it.
+
+---
+
+## 19. The type scale was borrowed, not invented
+
+**Decision.** Chrome type, padding and corner radii were raised across the app — body
+14→15px, table cells 13→14, buttons 12→13 with real padding, card radii 8→12 — and the
+masthead gained a one-line tagline. The board grid was left alone.
+
+**Why.** The reference was [Swipe Market](https://swipemarketcu.com), a Columbia student
+marketplace the project owner uses and finds obvious to operate. Studying it, the thing
+that makes it easy is not styling: it is that nothing is small, the primary action is
+unmissable, and a first-time visitor is told in one line what the site is for. This app
+had the opposite settings — 10–13px throughout, the primary action last in a dense
+toolbar, and no sentence anywhere saying what it does.
+
+Three things were taken and one was left:
+
+- **Scale.** Nothing in the chrome is below 13px now, and buttons have 6–8px of padding
+  instead of 3. This is invariant 11.
+- **A sentence under the title.** *"Book a berth, check any date, and never double-book
+  one."* It is a tagline, not the explainer page that [12](#12-no-in-app-page-explaining-the-project)
+  rules out — and it happens to state the one guarantee the database actually enforces.
+- **Room in a row.** Queue rows went from 9px of vertical padding to 13, table cells from
+  5 to 9. Density was never the constraint; there was space to spare.
+- **Not taken: the centred, playful masthead.** Swipe Market is a consumer marketplace and
+  can open with a large centred title and an emoji. This is a tool someone has open all
+  day beside other work, and a full-width hero would cost a lane of the board on every
+  load.
+
+**The grid keeps its own scale.** Day numbers stay at 10px and bar labels at 10px, because
+they are data, not chrome: 31 columns and seven lanes have to fit a screen at once, and
+that is a shape constraint, not a reading one. The tooltip carries the full sentence.
+
+**The trap this closes.** Swipe Market's own mobile stylesheet reads
+`font-size: 10px; /* Reduced from 12px */` — a table that would not fit was shrunk until
+it did, twice. That is the failure invariant 11 exists to prevent here: when something
+does not fit, change its shape, not its point size.
