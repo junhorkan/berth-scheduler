@@ -484,3 +484,9 @@ a { color: var(--vessel); }
 .restorewrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 /* The refusal is the interesting outcome, so it is stated, not swallowed. */
 .restoreerr { font-size: 12px; color: var(--critical); max-width: 230px; text-align: right; }
+
+/* ---- Suggest a berth: the system proposes and explains; the person confirms ---- */
+
+.suggestrow { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.suggestrow .btn { font-size: 12px; padding: 4px 10px; flex: none; }
+.suggestrow .sub-hint { margin-top: 0; flex: 1; min-width: 0; }

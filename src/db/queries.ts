@@ -97,6 +97,43 @@ export async function getNearestBookedMonth(
   return { year: Number(iso.slice(0, 4)), month: Number(iso.slice(5, 7)) };
 }
 
+/**
+ * Which active bookings overlap a date range, per berth.
+ *
+ * Only exclusive berths can be "taken": a pooled berth holds several boats at once, so
+ * reporting a clash there would be a lie the conflict constraint does not tell either.
+ *
+ * Keyed by berth id and returned as a plain object so it crosses the server-action
+ * boundary without ceremony; `src/lib/suggest` turns it into the wording.
+ */
+export async function getBerthOccupancy(
+  start: string,
+  end: string,
+  excludeBookingId?: string,
+): Promise<Record<string, { label: string; startDate: string; endDate: string }[]>> {
+  const sql = db();
+  const rows = await sql`
+    select b.berth_id, b.label, b.start_date, b.end_date
+      from bookings b
+      join berths be on be.id = b.berth_id
+     where b.status = 'active'
+       and be.capacity_mode = 'exclusive'
+       and b.during && daterange(${start}::date, (${end}::date + 1), '[)')
+       and (${excludeBookingId ?? null}::uuid is null or b.id <> ${excludeBookingId ?? null}::uuid)
+     order by b.start_date`;
+
+  const out: Record<string, { label: string; startDate: string; endDate: string }[]> = {};
+  for (const r of rows) {
+    const key = r.berth_id as string;
+    (out[key] ??= []).push({
+      label: r.label as string,
+      startDate: (r.start_date as Date).toISOString().slice(0, 10),
+      endDate: (r.end_date as Date).toISOString().slice(0, 10),
+    });
+  }
+  return out;
+}
+
 export type CancelledRow = {
   id: string;
   label: string;

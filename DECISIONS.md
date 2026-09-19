@@ -28,6 +28,7 @@ built is usually more informative than the thing that was.
 | 19 | [The type scale was borrowed, not invented](#19-the-type-scale-was-borrowed-not-invented) |
 | 20 | [Cancelling is reversible, not restricted](#20-cancelling-is-reversible-not-restricted) |
 | 21 | [The facility is not WHOI](#21-the-facility-is-not-whoi) |
+| 22 | [The system suggests a berth; it never assigns one](#22-the-system-suggests-a-berth-it-never-assigns-one) |
 
 ---
 
@@ -586,3 +587,52 @@ own sample data. There was no ambiguity for a logo to resolve.
 resolving "today" in the server's UTC would roll the board a month early at 8pm on the
 last day of a month (`src/lib/nav.ts`). That is a statement about a timezone, not a claim
 of affiliation.
+
+---
+
+## 22. The system suggests a berth; it never assigns one
+
+**Decision.** The berth dropdown states what each berth is doing on the chosen dates —
+`North Pier East — 240ft · free, fits`, `Inner Channel — 55ft · free, 115ft too short`,
+`North Pier Face — 75ft · taken Jul 14 – 17` — and a **Find me a berth** button proposes
+one and says why. The person still picks and still saves.
+
+**Why this and not auto-assignment.** The brief's second failure is *"verifying that a
+vessel actually fits the berth it has been assigned to"* — assigned, by a person. Having
+the system choose attacks that one level up: there is less left to verify. But choosing
+outright fails on two things:
+
+- **97.5% of vessels have no recorded length**, so for almost every booking the system
+  cannot know what fits. Assigning anyway would mean guessing, and
+  [invariant 2](../CLAUDE.md) is that a length is never invented. With no length the
+  suggester ranks on availability alone and says `fit is not checked` in as many words.
+- **The coordinator knows things the database does not**: shore power, crane reach, which
+  float is nearest the lab, who is arriving at 0600. A silent assignment ignoring all of
+  that is confidently wrong, and confidently wrong twice is how a tool stops being used.
+
+So it does the work and shows its reasoning, and a person confirms. That is also the
+honest division of labour: the system owns what it can check — overlap and length —
+and nothing else.
+
+**Best-fit, because it is one sentence.** The proposal is the **smallest free berth the
+vessel fits in**, so a 40ft launch does not consume the 410ft pier. That is standard
+bin-packing, and it matters less for being optimal than for being explainable: *"smallest
+free berth that fits 120ft, so the longer ones stay open."*
+
+**When nothing fits it says so, with the number.** `No free berth is long enough for
+300ft — the longest free one is 240ft.` A refusal carrying the measurement is more useful
+than a proposal that does not fit, and it is the same instinct as
+[4](#4-the-bars-height-is-the-fit-check): state the quantity, not the verdict alone.
+
+**The pooled berth is never suggested.** Small craft slips accepts another boat
+regardless, so it would win every time and the suggestion would carry no information. It
+stays selectable and labelled `shared, no fit check`.
+
+**Where the logic lives.** `src/lib/suggest.ts`, pure and unit-tested against a fixture
+of berths — no database, no React ([invariant 1](../CLAUDE.md)). The server returns raw
+occupancy; the ranking and every word of the wording happen in that module, on the client
+that already holds the berth list and the vessel's length.
+
+**Rejected: two modes, "book a specific berth" or "book any berth".** A fork in the form
+costs a second path to build and test, and the "any" branch would hide the one thing
+worth showing — *why* that berth. One dropdown that explains itself does the same job.

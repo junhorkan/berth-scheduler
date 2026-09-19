@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import * as m from '../db/mutations';
+import * as q from '../db/queries';
 import type { BookingKind } from '../domain/types';
 
 /** Evaluate a candidate booking without writing. Drives the live verdict strip. */
@@ -36,6 +37,21 @@ export async function cancelBookingAction(id: string) {
   // Review now lists it under Recently cancelled, so that page is stale too.
   revalidatePath('/review');
   return res;
+}
+
+/**
+ * What every berth is doing on a date range.
+ *
+ * Returns raw occupancy, not a recommendation: the wording and the ranking live in
+ * `src/lib/suggest`, which is pure and unit-tested, and runs on the client that already
+ * holds the berth list and the vessel's length.
+ */
+export async function berthOccupancyAction(
+  start: string,
+  end: string,
+  excludeBookingId?: string,
+) {
+  return q.getBerthOccupancy(start, end, excludeBookingId);
 }
 
 /** Undo a cancellation. Refused by the constraint if the slot was taken meanwhile. */

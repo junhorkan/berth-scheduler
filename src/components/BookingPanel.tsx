@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { checkBookingAction, createBookingAction } from '../app/actions';
+import { checkBookingAction, createBookingAction, berthOccupancyAction } from '../app/actions';
 import type { BerthRow } from '../db/queries';
 import type { CheckResult } from '../db/mutations';
 import type { BookingKind } from '../domain/types';
+import { describeChoices, suggestBerth } from '../lib/suggest';
+import type { Occupancy } from '../lib/suggest';
 
 /**
  * New booking, opening OVER the board rather than on its own page, so the grid stays
@@ -43,6 +45,8 @@ export default function BookingPanel({
   const [start, setStart] = useState(defaultDate);
   const [end, setEnd] = useState(defaultDate);
   const [check, setCheck] = useState<CheckResult | null>(null);
+  const [occupancy, setOccupancy] = useState<Record<string, Occupancy[]> | null>(null);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -65,8 +69,13 @@ export default function BookingPanel({
     setChecking(true);
     const t = setTimeout(async () => {
       try {
-        const result = await checkBookingAction({ berthId, vesselId, kind, start, end });
-        if (mine === generation.current) setCheck(result);
+        // Both in one round trip: the verdict for the chosen berth, and what every
+        // other berth is doing, so the dropdown can say so without a second wait.
+        const [result, occ] = await Promise.all([
+          checkBookingAction({ berthId, vesselId, kind, start, end }),
+          berthOccupancyAction(start, end),
+        ]);
+        if (mine === generation.current) { setCheck(result); setOccupancy(occ); }
       } finally {
         if (mine === generation.current) setChecking(false);
       }
@@ -82,6 +91,26 @@ export default function BookingPanel({
    * that already exist. Starting from an empty schedule every vessel is new, so the
    * gate made vessel bookings unreachable. Saving registers it instead.
    */
+  /**
+   * What each berth is doing on these dates, and which one to propose.
+   *
+   * Both come from `lib/suggest`, which is pure: the server returns raw occupancy and
+   * the wording and ranking happen here, where the berth list and the vessel's length
+   * already are. Before the first check lands `choices` is empty and the dropdown falls
+   * back to plain names, so the form is never unusable while waiting.
+   */
+  const vesselLengthFt = kind === 'vessel' ? vessel?.lengthFt ?? null : null;
+  const choices = occupancy
+    ? describeChoices(berths, new Map(Object.entries(occupancy)), vesselLengthFt, kind === 'vessel')
+    : [];
+
+  function findBerth() {
+    if (!choices.length) return;
+    const s = suggestBerth(choices, vesselLengthFt);
+    if (s.berthId) setBerthId(s.berthId);
+    setSuggestion(s.reason);
+  }
+
   const isNewVessel = kind === 'vessel' && !vessel && vesselName.trim() !== '';
   const missingLabel = effectiveLabel === '';
   const blocked = check ? !check.bookable : false;
@@ -187,13 +216,30 @@ export default function BookingPanel({
 
         <div className="field">
           <label htmlFor="b">Berth</label>
-          <select id="b" value={berthId} onChange={(e) => setBerthId(e.target.value)}>
-            {berths.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}{b.lengthFt != null ? ` — ${b.lengthFt}ft` : ' — pooled'}
-              </option>
-            ))}
-          </select>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <select
+              id="b"
+              value={berthId}
+              onChange={(e) => { setBerthId(e.target.value); setSuggestion(null); }}
+            >
+              {berths.map((b) => {
+                const c = choices.find((x) => x.berthId === b.id);
+                return (
+                  <option key={b.id} value={b.id}>
+                    {c
+                      ? c.optionLabel
+                      : `${b.name}${b.lengthFt != null ? ` — ${b.lengthFt}ft` : ' — pooled'}`}
+                  </option>
+                );
+              })}
+            </select>
+            <div className="suggestrow">
+              <button type="button" className="btn" onClick={findBerth} disabled={!occupancy}>
+                Find me a berth
+              </button>
+              {suggestion && <span className="sub-hint">{suggestion}</span>}
+            </div>
+          </div>
         </div>
 
         <div className="field">

@@ -38,6 +38,8 @@ Breaking any of these looks like an improvement and is not. Full argument for ea
    without infrastructure.
 2. **Never invent a vessel length, and never gate a booking on picking a known vessel.**
    Booking registers the vessel; a gate once made vessel bookings impossible entirely.
+   The berth suggester **proposes and explains, never assigns**: with no length it ranks
+   on availability and says the fit was not checked.
 3. **Nothing vanishes silently, but repetition is not information.** Whatever the
    importer cannot place becomes a review item with its sheet/row/column. Missing
    lengths are derived, not stored. Identical problems fold into one row with a count
@@ -80,7 +82,7 @@ Breaking any of these looks like an improvement and is not. Full argument for ea
 
 ```
 src/domain/   pure rules: conflicts, fit, classification. No DB, no React.
-src/lib/      pure view helpers: month nav, bar geometry, search and queue grouping.
+src/lib/      pure view helpers: nav, bar geometry, search, grouping, berth suggestion.
 src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
 src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.
@@ -93,8 +95,8 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev       # local dev server
-npm test          # 235 unit tests, no database needed
-npm run e2e       # 42 specs. HITS THE LIVE DB: swaps in a fixture, restores after
+npm test          # 246 unit tests, no database needed
+npm run e2e       # 44 specs. HITS THE LIVE DB: swaps in a fixture, restores after
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build

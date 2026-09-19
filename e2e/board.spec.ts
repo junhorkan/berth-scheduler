@@ -206,6 +206,47 @@ test.describe('creating a booking', () => {
     await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
   });
 
+  test('says what every berth is doing on the chosen dates', async ({ page }) => {
+    // The dropdown used to list seven names and nothing else, so picking a berth meant
+    // choosing one, reading the verdict, and going back — once per berth.
+    await page.goto('/');
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByLabel('Vessel', { exact: true }).fill('S/Y Test Beacon');   // 170ft
+
+    const dates = page.locator('input[type="date"]');
+    await dates.first().fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-25`);
+    await dates.nth(1).fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-26`);
+
+    const berth = page.getByLabel('Berth', { exact: true });
+    // How far short, not merely that it is short.
+    await expect(berth.locator('option', { hasText: 'Inner Channel' }))
+      .toHaveText(/115ft too short/);
+    await expect(berth.locator('option', { hasText: 'North Pier East' }))
+      .toHaveText(/free, fits/);
+  });
+
+  test('suggests the smallest berth that fits, and says why', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByLabel('Vessel', { exact: true }).fill('R/V Test Harbor');   // 40ft
+
+    const dates = page.locator('input[type="date"]');
+    await dates.first().fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-25`);
+    await dates.nth(1).fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-26`);
+
+    await page.getByRole('button', { name: 'Find me a berth' }).click();
+
+    // 40ft fits 55, 75, 90, 240 and 410. Best-fit takes the 55 and leaves the rest,
+    // which is the whole point of ranking by size rather than by row order.
+    await expect(page.getByLabel('Berth', { exact: true }))
+      .toHaveValue(await page.getByLabel('Berth', { exact: true })
+        .locator('option', { hasText: 'Inner Channel' }).getAttribute('value') ?? '');
+    await expect(page.getByText(/Smallest free berth that fits 40ft/)).toBeVisible();
+
+    // It proposes; it does not commit. Save is still the person's click.
+    await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
+  });
+
   test('refuses a booking that starts in the past', async ({ page }) => {
     // A berth cannot be reserved for a day that has gone. The date input's `min`
     // only constrains the picker, so the save path has to check it too.
