@@ -100,44 +100,41 @@ export default async function BoardPage({
         month={month}
         selectedId={sp.sel}
         emptyNote={
-          // The only screen that explains nothing, so this is where the board says
-          // what it is. No title line: the masthead two inches above carries it.
+          // The only screen that renders no explanation of its own, so this is where the
+          // board says how to read itself. The two facts stay visible; the three rules
+          // sit behind a label that says what they are, because "Info" is not a reason
+          // to click and whoever needs them would never press it.
           <div className="boardnote">
             <p>
               <b>
-                Nothing booked
-                {scheduleIsEmpty ? ' yet' : ` in ${MONTH_NAMES[month - 1]} ${year}`}.
+                {scheduleIsEmpty
+                  ? 'The schedule is empty.'
+                  : `${MONTH_NAMES[month - 1]} ${year} is empty.`}
               </b>{' '}
-              All {berths.length} berths are free
-              {scheduleIsEmpty ? '' : ' for the whole month'}.
-            </p>
-
-            <p className="bn-how">
-              Berths run down the left, days across the top, one bar per booking.
-            </p>
-            <ul className="bn-list">
-              <li>A bar taller than its lane is a vessel too long for that berth.</li>
-              <li>Overlapping bookings cannot be saved at all.</li>
-              <li>Click any bar to move or cancel it.</li>
-            </ul>
-
-            <p className="bn-more">
               {scheduleIsEmpty ? (
                 <>
                   Start with <b>+ New booking</b>, or{' '}
                   <LoadSampleButton label="load the sample schedule" /> &mdash; 23 years
-                  of legacy bookings to try the conflict and size checks against,
-                  removable at any time from Review.
+                  of legacy bookings to try the checks against.
                 </>
               ) : elsewhere ? (
                 <>
-                  The nearest month with bookings is{' '}
+                  Nearest bookings:{' '}
                   <a href={monthHref(elsewhere.year, elsewhere.month)}>
                     {MONTH_NAMES[elsewhere.month - 1]} {elsewhere.year}
                   </a>.
                 </>
               ) : null}
             </p>
+
+            <details>
+              <summary>How to read this board</summary>
+              <ul className="bn-list">
+                <li>A bar taller than its lane is a vessel too long for that berth.</li>
+                <li>Overlapping bookings cannot be saved at all.</li>
+                <li>Click any bar to move or cancel it.</li>
+              </ul>
+            </details>
           </div>
         }
       />

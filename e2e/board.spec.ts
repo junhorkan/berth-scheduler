@@ -38,8 +38,8 @@ test.describe('the board', () => {
     // held nothing and every booking sat in the imported years.
     await page.goto(EMPTY_MONTH_HREF);
     const note = page.locator('.boardnote');
-    await expect(note).toContainText('Nothing booked in');
-    await expect(note).toContainText('free for the whole month');
+    await expect(note).toContainText('is empty');
+    await expect(note).toContainText('Nearest bookings');
 
     // The pointer has to lead somewhere that is actually occupied, or it is worse
     // than no pointer at all.
@@ -54,9 +54,17 @@ test.describe('the board', () => {
     // them render, so this is the one screen that has to speak for itself.
     await page.goto(EMPTY_MONTH_HREF);
     const note = page.locator('.boardnote');
-    await expect(note).toContainText('Berths run down the left');
-    await expect(note).toContainText('too long for that berth');
-    await expect(note).toContainText('cannot be saved');
+
+    // Collapsed by default, but the label has to say what is inside: "Info" gives
+    // nobody a reason to press it, so the people who need the rules never would.
+    const rules = note.locator('.bn-list');
+    await expect(rules).toBeHidden();
+    await expect(note.getByText('How to read this board')).toBeVisible();
+
+    await note.getByText('How to read this board').click();
+    await expect(rules).toBeVisible();
+    await expect(rules).toContainText('too long for that berth');
+    await expect(rules).toContainText('cannot be saved');
 
     // And it is orientation, not decoration: the moment the month has work in it, the
     // board speaks for itself and this must be gone.

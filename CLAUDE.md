@@ -59,10 +59,11 @@ Breaking any of these looks like an improvement and is not. Full argument for ea
    actually are: a blank grid cannot be told apart from a broken page. Building the
    empty path is what exposed the two bugs in invariant 2.
 9. **Explain the tool, never the project.** Three tabs: Board, Vessels, Review — no
-   About page, no architecture in the product. Orientation is allowed in exactly one
-   place, the empty board, because every other explanation hangs off something on
-   screen and none of them render there; it must vanish once a bar exists. `/search`
-   is a destination, **not a fourth tab**.
+   About page, no architecture in the product. Orientation is allowed in one place, the
+   empty board, because every other explanation hangs off something on screen and none
+   render there; it must vanish once a bar exists. Facts stay visible, rules collapse
+   behind a summary that **names them** — never `Info`, which gives nobody a reason to
+   open it. `/search` is a destination, **not a fourth tab**.
 10. **Light only, and one obvious action.** Do not reinstate a dark theme — the mark hues
     are validated against the light surface, and the custom 404 exists because Next's
     default carries its own. `+ New booking` is the only filled button, and **no control

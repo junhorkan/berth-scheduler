@@ -457,8 +457,19 @@ a { color: var(--vessel); }
 }
 .boardnote p { margin: 0; }
 .boardnote b { color: var(--ink); font-weight: 650; }
-.boardnote .bn-how { margin-top: 9px; }
-.boardnote .bn-list { margin: 4px 0 0; padding-left: 17px; }
+.boardnote .bn-list { margin: 6px 0 0; padding-left: 17px; }
 .boardnote .bn-list li { margin-bottom: 1px; }
-.boardnote .bn-more { margin-top: 10px; }
 .boardnote .btn { font-size: 12.5px; padding: 3px 10px; vertical-align: baseline; }
+
+/* The rules sit one click away. The summary is labelled with what is inside, not
+   "Info": whoever needs it has to be given a reason to open it, and the two facts
+   above stay visible whether it is opened or not. */
+.boardnote details { margin-top: 7px; }
+.boardnote summary {
+  display: inline-block; cursor: pointer; list-style: none;
+  font-size: 12.5px; color: var(--vessel);
+}
+.boardnote summary::-webkit-details-marker { display: none; }
+.boardnote summary::before { content: '\25b8\00a0'; }
+.boardnote details[open] summary::before { content: '\25be\00a0'; }
+.boardnote summary:hover { text-decoration: underline; }

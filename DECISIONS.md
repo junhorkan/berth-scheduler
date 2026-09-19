@@ -453,12 +453,21 @@ save, the queue off a problem. On an empty month none of them render, including
 orientation most had the least, and the best idea in the project — that a bar's height
 *is* the fit check — was invisible until you navigated away.
 
-Three lines now sit under the empty-month fact: how the grid is laid out, that a bar
-taller than its lane does not fit, that overlaps cannot be saved, and that a bar is
-clickable. They are **operating instructions, not a description of the build**, and they
-are drawn only while the month holds nothing, so somebody using the tool for real sees
-them once and never again. A spec asserts both halves: the lines appear on an empty
-month, and are gone the moment the board has a bar.
+Two facts stay visible — the month is empty, and where the nearest bookings are — and
+three rules sit one click behind a `<details>` labelled **How to read this board**. They
+are **operating instructions, not a description of the build**, and the whole block is
+drawn only while the month holds nothing, so somebody using the tool for real sees it
+once and never again. Specs assert all of it: the rules are hidden until the summary is
+clicked, and the block is gone the moment the board has a bar.
+
+**Why the label, and not "Info".** The first version put all of it on screen: 59 words,
+which made the landing page 82 words before the grid started, 43% of the first screen.
+A plain `Info` button would have fixed the count and broken the purpose — the person who
+needs these rules is the one who does not know there is anything to learn, and would
+never press it. A summary that says what is inside is a reason to click; `Info` is not.
+Visible text went 59 words → 13, and the grid moved up to 32% of the screen, without
+hiding either fact. No JavaScript: `<details>` is native, so the page stays a server
+component.
 
 Rejected alongside it: a `/how-it-works` page in the manner of a consumer marketplace.
 That shape earns its place where the process happens off the website — you find a
