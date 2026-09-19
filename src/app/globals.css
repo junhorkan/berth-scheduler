@@ -440,11 +440,25 @@ a { color: var(--vessel); }
 
 .sub-note { margin-left: 8px; font-size: 11px; color: var(--ink-muted); }
 
-/* ---- An empty month says so, inside the card, above the grid it explains ---- */
+/* ---- The cold open ----------------------------------------------------------
+ *
+ * An empty board is the only screen in the app that explains nothing: the legend is
+ * attached to bars, the verdict strip to a save, the queue to a problem. With no
+ * bookings in the month, none of them render, and the best idea in the project — a
+ * bar's height IS the fit check — is invisible until you navigate somewhere else.
+ *
+ * So this is where the board says what it is. It is drawn only while the month holds
+ * nothing, which means someone using the tool for real never sees it twice.
+ */
 
 .boardnote {
-  margin: 2px 0 10px; padding: 0 2px;
+  margin: 2px 0 14px; padding: 0 2px; max-width: 78ch;
   font-size: 13.5px; line-height: 1.55; color: var(--ink-2);
 }
+.boardnote p { margin: 0; }
 .boardnote b { color: var(--ink); font-weight: 650; }
-.boardnote .btn { font-size: 12px; padding: 1px 8px; vertical-align: baseline; }
+.boardnote .bn-how { margin-top: 9px; }
+.boardnote .bn-list { margin: 4px 0 0; padding-left: 17px; }
+.boardnote .bn-list li { margin-bottom: 1px; }
+.boardnote .bn-more { margin-top: 10px; }
+.boardnote .btn { font-size: 12.5px; padding: 3px 10px; vertical-align: baseline; }

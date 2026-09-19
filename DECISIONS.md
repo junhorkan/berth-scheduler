@@ -268,6 +268,13 @@ a destination reached from the masthead box, not a fourth tab.
 itself. A coordinator does not want a migration report; they want a to-do list, which is
 what Review is. All rationale lives in these repo files.
 
+**Amended.** The rule was too broad. It forbade explaining the *project*, which is right,
+but it also forbade explaining the *tool*, which left the one screen that renders no
+explanation at all with none — see [18](#18-an-empty-month-is-not-an-empty-page). An empty
+board now carries three lines of orientation. The line that matters is which of the two it
+describes: how to read a bar, never how the bar is implemented. There is still no About
+page, no architecture in the product, and no fourth tab.
+
 ---
 
 ## 13. Search groups by identity, and is a page rather than a dropdown
@@ -438,6 +445,26 @@ an empty today is a true statement about the schedule and must be allowed to be 
 the board with a line of text made an empty month look like a failure, where seven
 labelled lanes look like a schedule waiting for a booking. The grid stays; the sentence
 sits above it.
+
+**Extended: the empty board is where the tool introduces itself.** Every explanation in
+this app hangs off something on screen — the legend off a bar, the verdict strip off a
+save, the queue off a problem. On an empty month none of them render, including
+`<Legend />`, which is gated on `bookings.length > 0`. So the screen that needs
+orientation most had the least, and the best idea in the project — that a bar's height
+*is* the fit check — was invisible until you navigated away.
+
+Three lines now sit under the empty-month fact: how the grid is laid out, that a bar
+taller than its lane does not fit, that overlaps cannot be saved, and that a bar is
+clickable. They are **operating instructions, not a description of the build**, and they
+are drawn only while the month holds nothing, so somebody using the tool for real sees
+them once and never again. A spec asserts both halves: the lines appear on an empty
+month, and are gone the moment the board has a bar.
+
+Rejected alongside it: a `/how-it-works` page in the manner of a consumer marketplace.
+That shape earns its place where the process happens off the website — you find a
+listing, then meet a stranger and pay them — which no page in the product could show.
+This process happens entirely on screen, so a permanent page would be a second copy of
+the UI's own labels, drifting out of date.
 
 ---
 

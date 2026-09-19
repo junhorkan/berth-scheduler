@@ -18,17 +18,16 @@ Live at https://berth-scheduler.vercel.app
 
 ## The one idea to not break
 
-The brief names two failures. **They are different shapes, and the whole design rests on
+The brief names two failures. **They are different shapes and the design rests on
 keeping them apart.**
 
-- **Double-booking** is decidable — the dates are always known.
-  → A Postgres `EXCLUDE` constraint makes it **unstorable**. Red in the UI. Blocks saving.
-- **Vessel too long for its berth** is *not* decidable — a vessel's length is only known
-  once somebody records it, and most never will.
-  → An advisory warning. Amber in the UI. **Never blocks.**
+- **Double-booking** is decidable — the dates are always known. A Postgres `EXCLUDE`
+  constraint makes it **unstorable**. Red in the UI. Blocks saving.
+- **Vessel too long for its berth** is *not* — a length is known only once somebody
+  records it, and most never will. Advisory. Amber in the UI. **Never blocks.**
 
-Unifying these into one "validation" concept forces either blocking on unknowns (the
-tool becomes unusable) or softening the overlap guarantee (the strongest claim here).
+Unifying them into one "validation" forces either blocking on unknowns (the tool becomes
+unusable) or softening the overlap guarantee (the strongest claim here).
 
 ## Invariants
 
@@ -59,9 +58,11 @@ Breaking any of these looks like an improvement and is not. Full argument for ea
    empty month still draws the full grid, and says in one line where the bookings
    actually are: a blank grid cannot be told apart from a broken page. Building the
    empty path is what exposed the two bugs in invariant 2.
-9. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review. One
-   tagline in the masthead is not a page. `/search` is a destination, **not a fourth
-   tab** — do not add it to the nav, nor delete it for breaking the rule.
+9. **Explain the tool, never the project.** Three tabs: Board, Vessels, Review — no
+   About page, no architecture in the product. Orientation is allowed in exactly one
+   place, the empty board, because every other explanation hangs off something on
+   screen and none of them render there; it must vanish once a bar exists. `/search`
+   is a destination, **not a fourth tab**.
 10. **Light only, and one obvious action.** Do not reinstate a dark theme — the mark hues
     are validated against the light surface, and the custom 404 exists because Next's
     default carries its own. `+ New booking` is the only filled button, and **no control
@@ -88,7 +89,7 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 ```bash
 npm run dev       # local dev server
 npm test          # 228 unit tests, no database needed
-npm run e2e       # 39 Playwright specs; builds a fixture, then restores the sample
+npm run e2e       # 40 Playwright specs; builds a fixture, then restores the sample
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build

@@ -87,7 +87,7 @@ npm run dev
 
 ```bash
 npm test          # 228 unit tests, no database required
-npm run e2e       # 39 Playwright specs against a real server
+npm run e2e       # 40 Playwright specs against a real server
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify connection and that the constraint exists
 ```

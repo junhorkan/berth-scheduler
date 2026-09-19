@@ -125,7 +125,7 @@ board renders one; watching the system refuse a booking proves the rule is real.
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
 > `src/domain` and `src/lib`, which import nothing from the database or the UI — 228 unit
-> tests run in under a second with no infrastructure. 39 Playwright specs build their own
+> tests run in under a second with no infrastructure. 40 Playwright specs build their own
 > fixture against a real server and restore the sample afterwards, so the app is left in
 > the state it ships in.
 >

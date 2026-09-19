@@ -48,6 +48,23 @@ test.describe('the board', () => {
     await expect(page.locator('.boardnote')).toHaveCount(0);
   });
 
+  test('an empty board explains the bars, and stops once there are bars', async ({ page }) => {
+    // Every other explanation in the app hangs off something on screen — the legend off
+    // a bar, the verdict off a save, the queue off a problem. On an empty month none of
+    // them render, so this is the one screen that has to speak for itself.
+    await page.goto(EMPTY_MONTH_HREF);
+    const note = page.locator('.boardnote');
+    await expect(note).toContainText('Berths run down the left');
+    await expect(note).toContainText('too long for that berth');
+    await expect(note).toContainText('cannot be saved');
+
+    // And it is orientation, not decoration: the moment the month has work in it, the
+    // board speaks for itself and this must be gone.
+    await page.goto(FIXTURE_HREF);
+    await expect(page.locator('.bar').first()).toBeVisible();
+    await expect(page.locator('.boardnote')).toHaveCount(0);
+  });
+
   test('navigates across the whole bookable window', async ({ page }) => {
     await page.goto(`/?y=${FIXTURE_YEAR + 2}&m=6`);
     await expect(page.locator('.month')).toHaveText(`June ${FIXTURE_YEAR + 2}`);
