@@ -148,6 +148,26 @@ export async function getVessels(): Promise<VesselRow[]> {
   }));
 }
 
+export type VesselOption = { id: string; name: string; lengthFt: number | null };
+
+/**
+ * Just enough to populate the new-booking typeahead.
+ *
+ * getVessels() joins 418 vessels against every booking and aggregates, which is the
+ * right query for the Vessels tab and pure waste on the board — the board discards the
+ * counts it pays for. The board renders on every month navigation, so it gets this.
+ */
+export async function getVesselOptions(): Promise<VesselOption[]> {
+  const sql = db();
+  const rows = await sql`
+    select id, canonical_name, length_ft from vessels order by canonical_name`;
+  return rows.map((r) => ({
+    id: r.id as string,
+    name: r.canonical_name as string,
+    lengthFt: r.length_ft as number | null,
+  }));
+}
+
 export type ReviewRow = {
   id: string;
   type: 'conflict' | 'too_long' | 'missing_length' | 'unclassified';

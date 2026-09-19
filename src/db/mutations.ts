@@ -21,6 +21,18 @@ export type CheckResult = {
   blockedBecause: string | null;
 };
 
+/** Only vessels have a length to look up; events and closures resolve to nothing. */
+function vesselLengthQuery(
+  sql: ReturnType<typeof db>,
+  kind: BookingKind,
+  vesselId: string | null,
+): Promise<{ length_ft: number | null }[]> {
+  if (kind !== 'vessel' || !vesselId) return Promise.resolve([]);
+  return sql`select length_ft from vessels where id = ${vesselId}` as unknown as Promise<
+    { length_ft: number | null }[]
+  >;
+}
+
 /**
  * Evaluate a candidate booking without writing anything.
  * Uses exactly the same domain functions the importer and the tests use.
@@ -44,19 +56,24 @@ export async function checkBooking(input: {
     };
   }
 
-  const [berth] = await sql`
-    select id, length_ft, capacity_mode from berths where id = ${input.berthId}`;
+  // These three lookups are independent of each other, and this runs on every debounced
+  // keystroke against a pooler that is a network hop away, so serialising them is felt.
+  const [berthRows, rows, vesselRows] = await Promise.all([
+    sql`select id, length_ft, capacity_mode from berths where id = ${input.berthId}`,
+    sql`
+      select id, berth_id, vessel_id, kind, status, label, start_date, end_date
+        from bookings
+       where berth_id = ${input.berthId}
+         and status = 'active'
+         and start_date <= ${input.end}::date
+         and end_date   >= ${input.start}::date`,
+    vesselLengthQuery(sql, input.kind, input.vesselId),
+  ]);
+
+  const berth = berthRows[0];
   if (!berth) {
     return { bookable: false, conflicts: [], fit: null, blockedBecause: 'Unknown berth.' };
   }
-
-  const rows = await sql`
-    select id, berth_id, vessel_id, kind, status, label, start_date, end_date
-      from bookings
-     where berth_id = ${input.berthId}
-       and status = 'active'
-       and start_date <= ${input.end}::date
-       and end_date   >= ${input.start}::date`;
 
   const existing: Booking[] = rows.map((r) => ({
     id: r.id as string,
@@ -79,8 +96,8 @@ export async function checkBooking(input: {
 
   let fit: FitResult | null = null;
   if (input.kind === 'vessel' && input.vesselId) {
-    const [v] = await sql`select length_ft from vessels where id = ${input.vesselId}`;
-    fit = checkFit((v?.length_ft as number | null) ?? null, (berth.length_ft as number | null) ?? null);
+    const v = vesselRows[0];
+    fit = checkFit(v?.length_ft ?? null, (berth.length_ft as number | null) ?? null);
   }
 
   return {
@@ -124,11 +141,57 @@ export async function createBooking(input: {
 export async function cancelBooking(id: string): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {
-    await sql`update bookings set status = 'cancelled' where id = ${id}`;
+    await sql.begin(async (tx) => {
+      await tx`update bookings set status = 'cancelled' where id = ${id}`;
+      // A cancelled booking occupies nothing, so anything flagged about it is moot.
+      // Left open, the queue would accumulate items pointing at bookings that are no
+      // longer on the board, and the nav badge would stay inflated.
+      await tx`
+        update review_items set resolved_at = now()
+         where booking_id = ${id} and resolved_at is null`;
+    });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };
   }
+}
+
+/**
+ * Recompute the too-long review items for one vessel.
+ *
+ * Fit is evaluated live on the board but stored in the queue, so the two drift apart
+ * unless the queue is refreshed whenever a length changes. Recording a length is the
+ * single most common action on the Vessels tab, so this is the likeliest way for Review
+ * to start under-reporting.
+ */
+async function refreshTooLongItems(
+  tx: { <T>(strings: TemplateStringsArray, ...args: unknown[]): Promise<T> } | ReturnType<typeof db>,
+  vesselId: string,
+) {
+  const sql = tx as ReturnType<typeof db>;
+
+  // Clear the vessel's existing open too-long items; they are about to be rebuilt.
+  await sql`
+    update review_items set resolved_at = now()
+     where type = 'too_long' and vessel_id = ${vesselId} and resolved_at is null`;
+
+  // Re-flag every live booking this vessel still has that exceeds its berth.
+  await sql`
+    insert into review_items (type, booking_id, vessel_id, berth_id, raw_text, detail)
+    select 'too_long', b.id, v.id, be.id, v.canonical_name,
+           'Vessel is ' || v.length_ft || '''' ||
+           ' but the berth is ' || be.length_ft || '''' ||
+           ' — over by ' || (v.length_ft - be.length_ft) || '''' ||
+           ' (' || b.start_date || '..' || b.end_date || ')'
+      from bookings b
+      join vessels v on v.id = b.vessel_id
+      join berths  be on be.id = b.berth_id
+     where v.id = ${vesselId}
+       and b.kind = 'vessel'
+       and b.status <> 'cancelled'
+       and v.length_ft is not null
+       and be.length_ft is not null
+       and v.length_ft > be.length_ft`;
 }
 
 /** Move a booking to a different berth. Both checks re-run against the NEW berth. */
@@ -157,12 +220,15 @@ export async function setVesselLength(
          set length_ft = ${lengthFt},
              length_source = ${lengthFt == null ? null : 'manual'}
        where id = ${vesselId}`;
-    // A recorded length resolves that vessel's missing-length review item.
+    // A recorded length resolves that vessel's missing-length item...
     if (lengthFt != null) {
       await sql`
         update review_items set resolved_at = now()
          where type = 'missing_length' and vessel_id = ${vesselId} and resolved_at is null`;
     }
+    // ...and answers a question that was previously unanswerable, which may reveal
+    // violations that were always there but could not be seen.
+    await refreshTooLongItems(sql, vesselId);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };

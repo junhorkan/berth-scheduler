@@ -27,6 +27,13 @@ export default function VesselLengthInput({
       setSaved('Enter a length in feet.');
       return;
     }
+    // Lengths are stored as whole feet. Postgres would silently round 45.5 to 46, and
+    // quietly altering a recorded measurement is the wrong failure mode in a system
+    // whose whole job is comparing that measurement against a berth.
+    if (n != null && !Number.isInteger(n)) {
+      setSaved('Whole feet only.');
+      return;
+    }
     start(async () => {
       const res = await setVesselLengthAction(vesselId, n);
       setSaved(res.ok ? 'ok' : res.error ?? 'Failed');

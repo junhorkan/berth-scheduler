@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { checkBookingAction, createBookingAction } from '../app/actions';
 import type { BerthRow } from '../db/queries';
 import type { CheckResult } from '../db/mutations';
@@ -46,14 +46,23 @@ export default function BookingPanel({
   const effectiveLabel = kind === 'vessel' ? vessel?.name ?? vesselName.trim() : label.trim();
 
   // Live verdict. Debounced so typing a date does not fire a request per keystroke.
+  //
+  // The generation counter matters: clearTimeout cancels a pending timer but cannot
+  // cancel a request already in flight. Without it a slow earlier check can resolve
+  // after a faster later one and overwrite the verdict — showing "berth is clear" for
+  // dates that conflict, or the reverse. The database would still refuse a bad write,
+  // but the user would have been told the opposite of the truth right up to the click.
+  const generation = useRef(0);
   useEffect(() => {
     if (!open || !berthId || !start || !end) return;
+    const mine = ++generation.current;
     setChecking(true);
     const t = setTimeout(async () => {
       try {
-        setCheck(await checkBookingAction({ berthId, vesselId, kind, start, end }));
+        const result = await checkBookingAction({ berthId, vesselId, kind, start, end });
+        if (mine === generation.current) setCheck(result);
       } finally {
-        setChecking(false);
+        if (mine === generation.current) setChecking(false);
       }
     }, 280);
     return () => clearTimeout(t);

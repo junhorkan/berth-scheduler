@@ -200,9 +200,13 @@ function Bar({
   const spanDays = placed.endDay - placed.startDay + 1;
   // Narrow bars carry no text: a truncated 'R...' is noise, and the tooltip has it all.
   const showLabel = spanDays >= MIN_DAYS_FOR_LABEL;
-  // A violation must always say WHY, even on a narrow bar — it is the one thing on the
-  // board nobody should have to hover to discover. The measurement outranks the name.
-  const showOverflow = fit?.verdict === 'too_long' && spanDays >= 2;
+  // A violation must ALWAYS say why, at any width. Six of the nine violations in the
+  // source are single-day bookings — including the worst, a 170' vessel in a 90' berth —
+  // so gating this on width hid most of them behind a hover. Narrow bars render the
+  // measurement as a badge above the bar, which already overflows its lane anyway.
+  const isTooLong = fit?.verdict === 'too_long';
+  const showOverflowInline = isTooLong && spanDays >= 3;
+  const showOverflowBadge = isTooLong && spanDays < 3;
 
   const classes = ['bar'];
   if (booking.kind === 'closure') classes.push('closure');
@@ -237,9 +241,14 @@ function Bar({
       aria-label={title.split('\n').slice(0, 3).join(', ')}
     >
       {placed.clippedStart && <span className="clip" aria-label="continues from previous month">&larr;</span>}
-      {showLabel && !showOverflow && <span className="lbl">{booking.label}</span>}
-      {showOverflow && (
+      {showLabel && !showOverflowInline && <span className="lbl">{booking.label}</span>}
+      {showOverflowInline && (
         <span className="ft">
+          {booking.vesselLengthFt}&prime; &gt; {berth.lengthFt}&prime;
+        </span>
+      )}
+      {showOverflowBadge && (
+        <span className="ftbadge">
           {booking.vesselLengthFt}&prime; &gt; {berth.lengthFt}&prime;
         </span>
       )}

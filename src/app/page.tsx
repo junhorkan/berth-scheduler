@@ -2,7 +2,7 @@ import Board from '../components/Board';
 import Nav from '../components/Nav';
 import BookingPanel from '../components/BookingPanel';
 import BookingDetail from '../components/BookingDetail';
-import { getBerths, getBookingsInRange, getSummary, getVessels, getBookingById } from '../db/queries';
+import { getBerths, getBookingsInRange, getSummary, getVesselOptions, getBookingById } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import { clampMonth, monthHref, MONTH_NAMES, step, DEFAULT_MONTH, DEFAULT_YEAR, FIRST_YEAR, LAST_YEAR } from '../lib/nav';
 
@@ -25,7 +25,7 @@ export default async function BoardPage({
     getBerths(),
     getBookingsInRange(bounds.start, bounds.end),
     getSummary(),
-    getVessels(),
+    getVesselOptions(),
   ]);
 
   const selected = sp.sel ? await getBookingById(sp.sel) : null;
@@ -59,7 +59,7 @@ export default async function BoardPage({
         </span>
         <BookingPanel
           berths={berths}
-          vessels={vessels.map((v) => ({ id: v.id, name: v.canonicalName, lengthFt: v.lengthFt }))}
+          vessels={vessels}
           defaultDate={bounds.start}
         />
       </div>

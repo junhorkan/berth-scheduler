@@ -62,8 +62,12 @@ export function clipToMonth(
 
 /**
  * Greedily pack spans into the fewest sub-lanes such that no two spans in a sub-lane
- * overlap. Input order is preserved as the tie-break, so the board is stable between
- * renders.
+ * overlap.
+ *
+ * NOTE the returned array is ordered by startDay, NOT by input order — do not pair it
+ * positionally against the input. Each entry carries its own `item`, so read the lane
+ * from the entry rather than by index. Sorting is stable, so equal start days keep their
+ * input order and the board is stable between renders.
  */
 export function packLanes<T>(
   items: readonly T[],

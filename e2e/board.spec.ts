@@ -27,6 +27,17 @@ test.describe('the board', () => {
     await expect(tooLong).toContainText('75');
   });
 
+  test('states the measurement on a SINGLE-DAY violation, not just wide ones', async ({ page }) => {
+    // Six of the nine violations in the source are one-day bookings, including the worst
+    // (S/Y Clear Beacon, 170ft in a 90ft berth, 2012-09-14). Gating the label on bar
+    // width hid two thirds of the violations behind a hover.
+    await page.goto('/?y=2012&m=9');
+    const violation = page.locator('.bar.toolong').first();
+    await expect(violation).toBeVisible();
+    await expect(violation).toContainText('170');
+    await expect(violation).toContainText('90');
+  });
+
   test('marks a stay that continues past the end of the month', async ({ page }) => {
     await page.goto(JULY_2010);
     // M/V NORTHERN HARBOR runs 2010-07-17 to 2010-08-01.
