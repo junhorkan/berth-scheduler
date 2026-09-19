@@ -54,32 +54,41 @@ Sample workbook: `data/Dock Schedule - Synthetic Sample.xlsx` — 28 sheets.
 
 - 23 year grids, 1997–2019 (**1997 starts in August**), plus `8YR Dock Summary`, `Science`,
   `Yachts`, `Tours`.
-- Grid: month header in col A → day numbers (cols C–AG) → day-of-week row → one row per berth.
-  **A booking is a merged cell range**; the merge *is* the date span.
-- **Layout drifts** — do not assume one parser fits all years:
-  - 1997–2005: starts row 1, header `AUGUST 1997`
-  - 2006–2016: 3-row title block, header `JANUARY 2006`
-  - 2017+: bare `January`
-- 2,061 raw cell entries → **~1,977 real stays** (62 runs of adjacent same-name cells are one
-  stay each, typed day-by-day instead of merged).
-- **277 entries end on day ≥28** — stays crossing a month boundary appear as two cells. Stitch
-  them or the data is subtly wrong.
+- Grid: month header in col A, a weekday-letter strip, a day-number strip, then one row per
+  berth. **A booking is a merged cell range**; the merge *is* the span.
+- **Day columns are a CALENDAR, not a fixed offset.** Day 1 sits under its real weekday, so it
+  begins at a different column every month (Aug 1997 → col 1, Jan 2010 → col 4, Jan 2017 →
+  col 2). Assuming a fixed "day 1 = column C" misdates the entire file silently. The importer
+  infers the offset from every available anchor and then verifies it against the real calendar.
+- **Two grid families:** 1997–2001 map columns straight onto days and print only a lone `1` on
+  the day-number row; 2002+ use the true calendar offset.
+- **The 2002, 2003 and 2004 sheets each OPEN with the previous December** carried over
+  (`DECEMBER 2001` at the top of the 2002 sheet). The year must come from the header, not the
+  sheet name — but their bookings merge with the original December rather than duplicating.
+- **The 2010 sheet labels its last two blocks `NOVEMBER 2018` / `DECEMBER 2018`** — a typo.
+  The 2018 sheet already owns those months. A stated year is trusted only when credible:
+  same year, or the previous December. Otherwise the sheet name wins and it is reported.
+- **Verified counts (from the real file, locked into tests):**
+  - 272/272 month blocks resolved (22 full years + Aug–Dec 1997 + 3 carry-overs)
+  - 2,212 raw cells → **2,031 stays**; 145 cells merged, **49 across a month boundary**
+  - by kind: 2,119 vessel · 38 event · 19 closure · 29 annotation · 7 unclassified
+  - **418 distinct vessels**, 7 berths
+  - 4 blocks could not be calendar-verified; 12 cells orphaned on damaged grid rows
 - **Four entry kinds share one cell space.** Classify, don't assume:
-  - vessel — `R/V Long Ketch` (312), `OSV AMBER REEF` (109)
-  - non-vessel event **that occupies a berth** — `Community sail day`, `Public open house`,
-    `Student tour`, `Donor reception`, `Rescue drill`
+  - vessel — `R/V Long Ketch`, `OSV AMBER REEF`
+  - non-vessel event **that occupies a berth** — `Community sail day`, `Student tour`
   - berth closure — `Dock maintenance - restricted access`, `Float rebuild - no usage permitted`
-  - annotation **occupying nothing** — `ETA 1200`, `Departs 0600`, `ETD PM`, bare `1400`
+  - annotation **occupying nothing** — `ETA 1200`, `Departs 0600`, bare `1400`
+  - anything else → `unclassified`, which becomes a Review item rather than a guess
 - Name variants are one vessel: `Barge SALT DORY` / `Barge Salt Dory`; `OSV` / `OS/V`.
-  Case-folding collapses 484 strings → 418.
-- Registry sheets are **self-inconsistent**: some vessels have a length in the name and a
-  *different* `LOA:` in the notes. Store both separately; never silently reconcile.
+- Registry sheets are **self-inconsistent**: some vessels state a length in the name AND a
+  different `LOA:` in the notes. Store both; never silently reconcile.
 - Duplicate berth rows within one month (`South Float East - 90'` at rows 49 **and** 52 in
   April 2017) are the **manual workaround for a double-booking**. Evidence, not noise.
-- **Only 19 of 418 grid vessels have a known length.** Seed exactly those 19 — do **not** invent
-  lengths to make the board look better.
-- Length data is extremely concentrated: entering **10** lengths makes **52%** of all bookings
-  verifiable. This is why the Vessels tab sorts by booking count among unknown-length vessels.
+- **Only 19 of 418 grid vessels have a known length.** Seed exactly those 19 — never invent a
+  length to make the board look better.
+- Length data is extremely concentrated: entering **10** lengths makes ~52% of bookings
+  verifiable. Hence the Vessels tab sorts by booking count among unknown-length vessels.
 
 ## Non-obvious modeling rules
 
