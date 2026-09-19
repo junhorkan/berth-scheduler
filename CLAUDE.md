@@ -71,6 +71,10 @@ Breaking any of these looks like an improvement and is not. Full argument for ea
 11. **Body text outside the grid never drops below 13px** (uppercase micro-labels may be
     11). When something will not fit, change its shape, not its point size — shrinking
     is how a readable page becomes an unreadable one, one commit at a time.
+12. **Nothing destructive is irreversible.** There are no accounts, and reversibility is
+    the answer to that rather than a gate. Cancelling is a soft delete restored from
+    Review; restoring re-runs the constraint, so it can be refused, and must be.
+    **Never use WHOI's name or marks** — the data is synthetic and the site is public.
 
 ## Structure
 
@@ -89,8 +93,8 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev       # local dev server
-npm test          # 228 unit tests, no database needed
-npm run e2e       # 40 Playwright specs; builds a fixture, then restores the sample
+npm test          # 235 unit tests, no database needed
+npm run e2e       # 42 specs. HITS THE LIVE DB: swaps in a fixture, restores after
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build

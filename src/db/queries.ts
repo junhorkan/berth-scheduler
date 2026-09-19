@@ -97,6 +97,41 @@ export async function getNearestBookedMonth(
   return { year: Number(iso.slice(0, 4)), month: Number(iso.slice(5, 7)) };
 }
 
+export type CancelledRow = {
+  id: string;
+  label: string;
+  berthName: string;
+  startDate: string;
+  endDate: string;
+  cancelledAt: string;
+};
+
+/**
+ * Bookings cancelled through the app, newest first.
+ *
+ * `cancelled_at is not null` is what keeps this honest: every imported row has a null
+ * here, so a freshly loaded sample shows no cancellation history at all, and the list
+ * only ever holds something a person undid in this system.
+ */
+export async function getRecentlyCancelled(limit = 8): Promise<CancelledRow[]> {
+  const sql = db();
+  const rows = await sql`
+    select b.id, b.label, b.start_date, b.end_date, b.cancelled_at, be.name as berth_name
+      from bookings b
+      join berths be on be.id = b.berth_id
+     where b.status = 'cancelled' and b.cancelled_at is not null
+     order by b.cancelled_at desc
+     limit ${limit}`;
+  return rows.map((r) => ({
+    id: r.id as string,
+    label: r.label as string,
+    berthName: r.berth_name as string,
+    startDate: (r.start_date as Date).toISOString().slice(0, 10),
+    endDate: (r.end_date as Date).toISOString().slice(0, 10),
+    cancelledAt: (r.cancelled_at as Date).toISOString(),
+  }));
+}
+
 export type SystemSummary = {
   berths: number;
   vessels: number;

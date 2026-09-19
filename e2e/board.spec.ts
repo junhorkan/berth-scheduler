@@ -249,6 +249,85 @@ test.describe('creating a booking', () => {
   });
 });
 
+/**
+ * Cancelling is open to anyone, because there are no accounts. The answer is not a
+ * login wall — it is that cancelling cannot destroy anything.
+ */
+test.describe('undoing a cancellation', () => {
+  const day = (d: number) =>
+    `${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+  // By accessible name, never bar text: a bar under MIN_DAYS_FOR_LABEL days wide
+  // renders no visible label, so hasText finds nothing on a short booking.
+  const bar = (page: import('@playwright/test').Page, label: string) =>
+    page.getByLabel(new RegExp(label));
+
+  async function bookEvent(page: import('@playwright/test').Page, label: string, from: number, to: number) {
+    await page.goto(FIXTURE_HREF);
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByRole('button', { name: 'Event', exact: true }).click();
+    await page.getByLabel('Description').fill(label);
+    await page.getByLabel('Berth', { exact: true }).selectOption({ label: 'Inner Channel — 55ft' });
+    const dates = page.locator('input[type="date"]');
+    await dates.first().fill(day(from));
+    await dates.nth(1).fill(day(to));
+    await page.getByRole('button', { name: 'Save booking' }).click();
+    await expect(bar(page, label)).toBeVisible();
+  }
+
+  async function cancel(page: import('@playwright/test').Page, label: string) {
+    // Navigate first: a bar only exists on the board, and callers reach here from
+    // /review as well.
+    await page.goto(FIXTURE_HREF);
+    // `once`, not `on`: these tests cancel twice, and a second persistent handler
+    // races the first for the same dialog — "Cannot accept dialog which is already
+    // handled".
+    page.once('dialog', (d) => d.accept());
+    await bar(page, label).click();
+    await page.getByRole('button', { name: 'Cancel booking' }).click();
+    await expect(bar(page, label)).toHaveCount(0);
+  }
+
+  test('a cancelled booking can be put back from Review', async ({ page }) => {
+    await bookEvent(page, 'E2E undo me', 10, 12);
+    await cancel(page, 'E2E undo me');
+
+    await page.goto('/review');
+    const row = page.locator('.undo .queue li', { hasText: 'E2E undo me' });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('Cancelled just now');
+
+    await row.getByRole('button', { name: 'Restore' }).click();
+    await expect(page.locator('.undo .queue li', { hasText: 'E2E undo me' })).toHaveCount(0);
+
+    await page.goto(FIXTURE_HREF);
+    await expect(bar(page, 'E2E undo me')).toBeVisible();
+
+    await cancel(page, 'E2E undo me');   // leave the fixture as it was found
+  });
+
+  test('refuses to restore into a slot that has been taken since', async ({ page }) => {
+    // The point of the whole feature: undo is not a licence to reintroduce a
+    // double-booking. The EXCLUDE constraint judges the restore exactly as it judges
+    // an insert, so the guarantee holds on this path too.
+    await bookEvent(page, 'E2E first holder', 13, 15);
+    await cancel(page, 'E2E first holder');
+
+    await bookEvent(page, 'E2E second holder', 13, 15);   // same berth, same days
+
+    await page.goto('/review');
+    const row = page.locator('.undo .queue li', { hasText: 'E2E first holder' });
+    await row.getByRole('button', { name: 'Restore' }).click();
+
+    await expect(row.locator('.restoreerr')).toContainText('Cannot restore');
+    await expect(row.locator('.restoreerr')).toContainText('booked for those dates');
+    // Still cancelled: a refused restore must not half-apply.
+    await expect(row).toBeVisible();
+
+    await cancel(page, 'E2E second holder');
+  });
+});
+
 test.describe('the other tabs', () => {
   test('Vessels lists the biggest data gaps first and states the leverage', async ({ page }) => {
     await page.goto('/vessels');

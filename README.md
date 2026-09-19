@@ -86,8 +86,8 @@ npm run dev
 ```
 
 ```bash
-npm test          # 228 unit tests, no database required
-npm run e2e       # 40 Playwright specs against a real server
+npm test          # 235 unit tests, no database required
+npm run e2e       # 42 Playwright specs against a real server
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify connection and that the constraint exists
 ```
@@ -104,7 +104,7 @@ src/app/      Next.js routes and components. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
-navigation and search rules are provably correct without a database — 228 unit tests run
+navigation and search rules are provably correct without a database — 235 unit tests run
 in well under a second with no infrastructure at all. The importer and the UI call the
 same functions, so the rule the board shows you is the rule the import applied.
 

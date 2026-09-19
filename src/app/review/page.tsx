@@ -1,8 +1,12 @@
 import Nav from '../../components/Nav';
 import { ResolveButton } from '../../components/ResolveButton';
 import { LoadSampleButton, ClearScheduleButton } from '../../components/SampleData';
-import { getReviewItems, getReviewCounts, getMissingLengthSummary } from '../../db/queries';
+import {
+  getReviewItems, getReviewCounts, getMissingLengthSummary, getRecentlyCancelled,
+} from '../../db/queries';
 import { groupReviewItems, describeOccurrences } from '../../lib/review';
+import { relativeTime } from '../../lib/cancelled';
+import { RestoreButton } from '../../components/RestoreButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,8 +36,8 @@ const LABEL: Record<string, { title: string; blurb: string; tone: string }> = {
 };
 
 export default async function ReviewPage() {
-  const [items, counts, missing] = await Promise.all([
-    getReviewItems(), getReviewCounts(), getMissingLengthSummary(),
+  const [items, counts, missing, cancelled] = await Promise.all([
+    getReviewItems(), getReviewCounts(), getMissingLengthSummary(), getRecentlyCancelled(),
   ]);
   // Only show a pill for a kind of item that exists. Permanently-zero pills are noise.
   const order = ['conflict', 'too_long', 'unclassified'].filter((t) => (counts[t] ?? 0) > 0);
@@ -131,6 +135,37 @@ export default async function ReviewPage() {
           <p className="note">Showing the first 200 open items of {Object.values(counts).reduce((a, b) => a + b, 0)}.</p>
         )}
       </div>
+
+      {/*
+        Anyone can cancel anything here, because there are no accounts. Rather than
+        restricting the action, it is reversible: a cancel is a soft delete, so undoing
+        one is a status change. Restoring re-runs the EXCLUDE constraint, so a slot
+        taken in the meantime refuses the restore — which is the correct answer.
+
+        Deliberately its own card, below the queue, and never a pill in the toolbar:
+        a cancellation is not an open problem and must not inflate the nav badge.
+      */}
+      {cancelled.length > 0 && (
+        <div className="board undo">
+          <h2 className="cardtitle">Recently cancelled</h2>
+          <ul className="queue">
+            {cancelled.map((c) => (
+              <li key={c.id}>
+                <div className="qmain">
+                  <span className="qtext">{c.label}</span>
+                  <span className="qdetail">
+                    {c.berthName} &middot; {c.startDate} to {c.endDate}
+                  </span>
+                  <span className="qmeta">Cancelled {relativeTime(c.cancelledAt)}</span>
+                </div>
+                <div className="qact">
+                  <RestoreButton id={c.id} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </main>
   );
 }

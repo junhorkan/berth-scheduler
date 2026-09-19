@@ -181,7 +181,7 @@ export async function cancelBooking(id: string): Promise<{ ok: boolean; error?: 
   const sql = db();
   try {
     await sql.begin(async (tx) => {
-      await tx`update bookings set status = 'cancelled' where id = ${id}`;
+      await tx`update bookings set status = 'cancelled', cancelled_at = now() where id = ${id}`;
       // A cancelled booking occupies nothing, so anything flagged about it is moot.
       // Left open, the queue would accumulate items pointing at bookings that are no
       // longer on the board, and the nav badge would stay inflated.
@@ -191,6 +191,54 @@ export async function cancelBooking(id: string): Promise<{ ok: boolean; error?: 
     });
     return { ok: true };
   } catch (e) {
+    return { ok: false, error: describeDbError(e) };
+  }
+}
+
+/**
+ * Put a cancelled booking back.
+ *
+ * This is the answer to "anyone can cancel anyone's booking" on a public deployment.
+ * Restricting the action would need accounts; making it reversible needs one column,
+ * and a cancel was already a soft delete, so the row never went anywhere.
+ *
+ * It restores to `active` and never to `conflict_unresolved`. If the berth was taken
+ * in the meantime the EXCLUDE constraint refuses the update, and that refusal is the
+ * correct outcome: restoring outside the constraint would put back a double-booking,
+ * which is the one thing this system claims cannot happen. So the guarantee is
+ * enforced on this path by the same three lines of SQL that enforce it on the others.
+ */
+export async function restoreBooking(id: string): Promise<{ ok: boolean; error?: string }> {
+  const sql = db();
+  try {
+    let missing = false;
+    await sql.begin(async (tx) => {
+      const [row] = await tx`
+        select cancelled_at from bookings where id = ${id} and status = 'cancelled'`;
+      if (!row) { missing = true; return; }
+
+      // Only the items that cancelling closed. Both timestamps were written by the same
+      // transaction, so anything resolved by hand beforehand has an earlier resolved_at
+      // and stays resolved — the coordinator's decision is not undone by this one.
+      if (row.cancelled_at != null) {
+        await tx`
+          update review_items set resolved_at = null
+           where booking_id = ${id} and resolved_at >= ${row.cancelled_at as Date}`;
+      }
+
+      await tx`
+        update bookings set status = 'active', cancelled_at = null where id = ${id}`;
+    });
+    if (missing) return { ok: false, error: 'That booking is no longer cancelled.' };
+    return { ok: true };
+  } catch (e) {
+    // The shared message talks about refusing a booking, which is the wrong noun here.
+    if ((e as { code?: string }).code === '23P01') {
+      return {
+        ok: false,
+        error: 'Cannot restore: that berth has been booked for those dates since it was cancelled.',
+      };
+    }
     return { ok: false, error: describeDbError(e) };
   }
 }

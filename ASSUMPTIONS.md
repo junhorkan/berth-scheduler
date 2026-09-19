@@ -14,6 +14,11 @@ changing bookings directly. Nothing is requested, queued, or approved.
 That assumption shapes more of the interface than any other choice here:
 
 - **No accounts, and no per-user anything.** Everyone who opens it has the same powers.
+  A real deployment would sit behind the institution's own sign-on; that is assumed, not
+  built. Instead of a gate, **cancelling is reversible** — a cancelled booking is
+  restored from Review, so the worst an anonymous visitor can do is undone in one click.
+  A typed "booked by" name was rejected: it is spoofable, so it would charge every
+  booking friction for a guarantee it cannot make.
 - **A booking is committed the moment it is saved.** There is no pending state, because
   there is nobody to approve it.
 - **The Review tab exists at all.** It is a coordinator's work queue; a visitor-facing
@@ -24,6 +29,19 @@ That assumption shapes more of the interface than any other choice here:
 If visitors booked directly, the conflict and fit rules would survive intact — they are
 properties of the berth, not of who is asking — but the surrounding interface would be a
 different product: a request flow, an approval queue, and accounts.
+
+## The facility is not WHOI
+
+**The brief says "a WHOI marine research facility".** The name used here is
+`Harborview Marine Research Center`, which is the name carried in the sample workbook.
+WHOI is a real institution; this deployment is public; and every row in it is synthetic —
+facility name, the seven berth labels and all 418 vessel names come from the supplied
+sample. Using a real organisation's name or logo would state a relationship that does not
+exist, so it is not used.
+
+Woods Hole survives in one place, because there it is a fact rather than a claim:
+`FACILITY_TIME_ZONE` is `America/New_York`, since that is where the brief's facility is
+and resolving "today" in the server's UTC would roll the board a month early.
 
 ## The berths
 

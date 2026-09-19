@@ -108,3 +108,21 @@ The remaining INFO-level performance advice was measured and rejected:
 
 Adding four indexes to silence a linter that measurement says is wrong would be worse
 than the finding.
+
+## The test suite writes to the live database
+
+There is one database. `npm run e2e` deletes every booking and vessel, seeds its own
+fixture three months ahead of today, and restores the sample in `global-teardown`.
+
+**While it runs, the public URL serves the fixture.** Someone loading
+berth-scheduler.vercel.app mid-run sees seven test vessels in a month three ahead, and
+the empty-month pointer truthfully names that month — which reads as a bug and is not
+one. This has actually happened, and it is the reason to know about it:
+
+- **Do not run the suite when anyone might be looking**, and especially not once a link
+  has been handed to somebody.
+- If a run is interrupted before teardown, put the data back with the **Load the sample
+  schedule** button on Review, or `npm run import`.
+- The proper fix is a second database — a Supabase branch, or a local Postgres for the
+  suite — pointed at by `DATABASE_URL` in a test env file. It was not worth the setup
+  inside this project's time budget, and this note is the mitigation.

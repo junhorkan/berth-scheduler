@@ -26,6 +26,8 @@ built is usually more informative than the thing that was.
 | 17 | [Repetition is not information](#17-repetition-is-not-information) |
 | 18 | [An empty month is not an empty page](#18-an-empty-month-is-not-an-empty-page) |
 | 19 | [The type scale was borrowed, not invented](#19-the-type-scale-was-borrowed-not-invented) |
+| 20 | [Cancelling is reversible, not restricted](#20-cancelling-is-reversible-not-restricted) |
+| 21 | [The facility is not WHOI](#21-the-facility-is-not-whoi) |
 
 ---
 
@@ -256,6 +258,10 @@ action. Auth was out of scope for the brief anyway.
 
 The berths survive a clear deliberately — they are the facility, defined in a migration,
 not schedule data.
+
+**Amended.** Open access left one real hole: anyone could cancel anyone's booking. The
+answer is [20](#20-cancelling-is-reversible-not-restricted) — make it undoable rather
+than gated.
 
 ---
 
@@ -512,3 +518,71 @@ that is a shape constraint, not a reading one. The tooltip carries the full sent
 `font-size: 10px; /* Reduced from 12px */` — a table that would not fit was shrunk until
 it did, twice. That is the failure invariant 11 exists to prevent here: when something
 does not fit, change its shape, not its point size.
+
+---
+
+## 20. Cancelling is reversible, not restricted
+
+**Decision.** No sign-in. A cancelled booking can be restored from Review, and the
+confirmation dialog says so **before** you click, not after.
+
+**Why not authentication.** Three reasons, in order of how much they settle it:
+
+- **It does not solve the problem.** Signing in with Google proves *who you are*; it does
+  not stop you cancelling somebody else's booking. That needs ownership recorded per
+  booking and checked on cancel. Auth is only the identity source — and the expensive
+  half of the work.
+- **It gates the one thing the URL has to prove.** The brief names *"whether it works"*
+  first, and it is the only criterion a reviewer can judge from a link. A login wall in
+  front of a public demo — or a mismatched OAuth redirect URI, which is the usual way
+  this breaks — turns a working app into a broken sign-in screen.
+- **The harm was already small, and undo takes it to zero.** `cancelBooking` was always a
+  soft delete: `status = 'cancelled'`, the row untouched. The undo data existed and was
+  simply not on screen.
+
+**What it cost.** One nullable column, `bookings.cancelled_at`. It earns its place twice:
+it orders the *Recently cancelled* list, and it picks out exactly which review items to
+re-open. Cancel stamps the column and resolves that booking's open items in one
+transaction, so `resolved_at >= cancelled_at` finds the ones cancelling closed and leaves
+anything a coordinator had resolved by hand alone.
+
+Imported rows have `cancelled_at = null`, so the list only ever holds something a person
+undid here — a freshly loaded sample shows no cancellation history rather than 2,031 rows
+of it.
+
+**Restore goes to `active`, never back to `conflict_unresolved`.** If the berth was taken
+meanwhile, the `EXCLUDE` constraint refuses the update and the refusal is shown. That is
+the correct outcome: restoring outside the constraint would put back a double-booking,
+which is the one thing this system claims cannot happen
+([1](#1-the-database-prevents-double-booking-not-the-application)). The guarantee is
+enforced on this path by the same three lines of SQL as everywhere else, and a spec
+exercises exactly that case.
+
+**Rejected: a "booked by" name field.** Attribution without accounts is spoofable by
+typing a different name, so it would have added friction to every booking in exchange for
+a guarantee it cannot make. The honest version of that idea is in `ASSUMPTIONS.md`: this
+is a staff tool that would sit behind institutional SSO in a real deployment.
+
+---
+
+## 21. The facility is not WHOI
+
+**Decision.** The app is branded `Harborview Marine Research Center`, the name carried in
+the sample workbook. WHOI's name, logo and marks appear nowhere.
+
+**Why.** The brief opens *"A WHOI marine research facility needs to manage berths of
+varying lengths."* WHOI — the Woods Hole Oceanographic Institution — is a real, operating
+institution. This deployment is public and unauthenticated, and every row in it is
+synthetic: the facility name, the seven berth labels and all 418 vessel names come from
+the supplied workbook, not from WHOI's real waterfront. Putting a real organisation's
+marks on a public page states a relationship that does not exist.
+
+Nothing is lost by declining. The reviewers wrote the prompt, the submission form records
+which option was chosen, and the app is transparently a berth scheduler loaded with their
+own sample data. There was no ambiguity for a logo to resolve.
+
+**Where Woods Hole does survive: where it is factual.** `FACILITY_TIME_ZONE` is
+`America/New_York` because the brief's facility is in Woods Hole, Massachusetts, and
+resolving "today" in the server's UTC would roll the board a month early at 8pm on the
+last day of a month (`src/lib/nav.ts`). That is a statement about a timezone, not a claim
+of affiliation.

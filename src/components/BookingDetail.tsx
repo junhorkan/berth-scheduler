@@ -33,7 +33,12 @@ export default function BookingDetail({
   const moved = berthId !== booking.berthId;
 
   function doCancel() {
-    if (!confirm(`Cancel "${booking.label}" (${booking.startDate} to ${booking.endDate})? The berth becomes free.`)) return;
+    // Say it is reversible BEFORE the click, not after: the reassurance is worthless
+    // to someone deciding whether to press the button if they only find it afterwards.
+    if (!confirm(
+      `Cancel "${booking.label}" (${booking.startDate} to ${booking.endDate})? `
+      + 'The berth becomes free. You can restore it from Review.',
+    )) return;
     setError(null);
     start(async () => {
       const res = await cancelBookingAction(booking.id);

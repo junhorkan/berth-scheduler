@@ -33,6 +33,16 @@ export async function createBookingAction(input: {
 export async function cancelBookingAction(id: string) {
   const res = await m.cancelBooking(id);
   revalidatePath('/');
+  // Review now lists it under Recently cancelled, so that page is stale too.
+  revalidatePath('/review');
+  return res;
+}
+
+/** Undo a cancellation. Refused by the constraint if the slot was taken meanwhile. */
+export async function restoreBookingAction(id: string) {
+  const res = await m.restoreBooking(id);
+  revalidatePath('/');
+  revalidatePath('/review');
   return res;
 }
 
