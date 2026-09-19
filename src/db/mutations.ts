@@ -196,7 +196,18 @@ export async function resetToImported(): Promise<{ ok: boolean; error?: string }
       await tx`delete from berths`;
       await tx`insert into berths       select * from berths_seed`;
       await tx`insert into vessels      select * from vessels_seed`;
-      await tx`insert into bookings     select * from bookings_seed`;
+      // Columns are listed explicitly because `during` is a GENERATED column and
+      // Postgres refuses to have one written to. `select *` would include it.
+      await tx`
+        insert into bookings (
+          id, berth_id, vessel_id, kind, status, label, start_date, end_date,
+          exclusive, notes, source, import_year, import_sheet, import_row, import_col,
+          created_at)
+        select
+          id, berth_id, vessel_id, kind, status, label, start_date, end_date,
+          exclusive, notes, source, import_year, import_sheet, import_row, import_col,
+          created_at
+        from bookings_seed`;
       await tx`insert into review_items select * from review_items_seed`;
     });
     return { ok: true };

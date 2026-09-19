@@ -203,3 +203,44 @@ export async function getReviewCounts(): Promise<Record<string, number>> {
      where resolved_at is null group by type`;
   return Object.fromEntries(rows.map((r) => [r.type as string, r.n as number]));
 }
+
+export type BookingDetailRow = BookingRow & {
+  berthName: string;
+  berthLengthFt: number | null;
+  vesselName: string | null;
+  source: string;
+  importSheet: string | null;
+  importRow: number | null;
+};
+
+export async function getBookingById(id: string): Promise<BookingDetailRow | null> {
+  const sql = db();
+  const [r] = await sql`
+    select b.id, b.berth_id, b.vessel_id, b.kind, b.status, b.label,
+           b.start_date, b.end_date, b.notes, b.source, b.import_sheet, b.import_row,
+           be.name as berth_name, be.length_ft as berth_length_ft,
+           v.canonical_name as vessel_name, v.length_ft as vessel_length_ft
+      from bookings b
+      join berths be on be.id = b.berth_id
+      left join vessels v on v.id = b.vessel_id
+     where b.id = ${id}`;
+  if (!r) return null;
+  return {
+    id: r.id as string,
+    berthId: r.berth_id as string,
+    vesselId: r.vessel_id as string | null,
+    kind: r.kind as BookingKind,
+    status: r.status as BookingStatus,
+    label: r.label as string,
+    startDate: (r.start_date as Date).toISOString().slice(0, 10),
+    endDate: (r.end_date as Date).toISOString().slice(0, 10),
+    notes: r.notes as string | null,
+    vesselLengthFt: r.vessel_length_ft as number | null,
+    berthName: r.berth_name as string,
+    berthLengthFt: r.berth_length_ft as number | null,
+    vesselName: r.vessel_name as string | null,
+    source: r.source as string,
+    importSheet: r.import_sheet as string | null,
+    importRow: r.import_row as number | null,
+  };
+}

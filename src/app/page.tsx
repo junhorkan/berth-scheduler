@@ -1,6 +1,8 @@
 import Board from '../components/Board';
 import Nav from '../components/Nav';
-import { getBerths, getBookingsInRange, getSummary } from '../db/queries';
+import BookingPanel from '../components/BookingPanel';
+import BookingDetail from '../components/BookingDetail';
+import { getBerths, getBookingsInRange, getSummary, getVessels, getBookingById } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import { clampMonth, monthHref, MONTH_NAMES, step, DEFAULT_MONTH, DEFAULT_YEAR, FIRST_YEAR, LAST_YEAR } from '../lib/nav';
 
@@ -10,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function BoardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ y?: string; m?: string }>;
+  searchParams: Promise<{ y?: string; m?: string; sel?: string }>;
 }) {
   const sp = await searchParams;
   const { year, month } = clampMonth(
@@ -19,12 +21,14 @@ export default async function BoardPage({
   );
 
   const bounds = monthBounds(year, month);
-  const [berths, bookings, summary] = await Promise.all([
+  const [berths, bookings, summary, vessels] = await Promise.all([
     getBerths(),
     getBookingsInRange(bounds.start, bounds.end),
     getSummary(),
+    getVessels(),
   ]);
 
+  const selected = sp.sel ? await getBookingById(sp.sel) : null;
   const prev = step(year, month, -1);
   const next = step(year, month, 1);
   const years = Array.from({ length: LAST_YEAR - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
@@ -53,12 +57,21 @@ export default async function BoardPage({
         <span style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
           {bookings.length} booking{bookings.length === 1 ? '' : 's'} this month
         </span>
+        <BookingPanel
+          berths={berths}
+          vessels={vessels.map((v) => ({ id: v.id, name: v.canonicalName, lengthFt: v.lengthFt }))}
+          defaultDate={bounds.start}
+        />
       </div>
 
       {bookings.length === 0 ? (
         <div className="board"><p className="empty">No bookings in {MONTH_NAMES[month - 1]} {year}.</p></div>
       ) : (
-        <Board berths={berths} bookings={bookings} year={year} month={month} />
+        <Board berths={berths} bookings={bookings} year={year} month={month} selectedId={sp.sel} />
+      )}
+
+      {selected && (
+        <BookingDetail booking={selected} berths={berths} closeHref={monthHref(year, month)} />
       )}
 
       <p className="note">

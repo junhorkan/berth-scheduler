@@ -43,11 +43,13 @@ export default function Board({
   bookings,
   year,
   month,
+  selectedId,
 }: {
   berths: BerthRow[];
   bookings: BookingRow[];
   year: number;
   month: number;
+  selectedId?: string;
 }) {
   const days = daysInMonth(year, month);
   const dayNums = Array.from({ length: days }, (_, i) => i + 1);
@@ -91,6 +93,9 @@ export default function Board({
               rowHeight={rowHeight}
               days={days}
               dow={dow}
+              year={year}
+              month={month}
+              selectedId={selectedId}
             />
           );
         })}
@@ -108,6 +113,9 @@ function BerthLane({
   rowHeight,
   days,
   dow,
+  year,
+  month,
+  selectedId,
 }: {
   berth: BerthRow;
   packed: { item: Placed; lane: number }[];
@@ -115,6 +123,9 @@ function BerthLane({
   rowHeight: number;
   days: number;
   dow: number[];
+  year: number;
+  month: number;
+  selectedId?: string;
 }) {
   return (
     <>
@@ -147,6 +158,9 @@ function BerthLane({
             lane={lane}
             laneCount={laneCount}
             days={days}
+            year={year}
+            month={month}
+            selected={selectedId === item.booking.id}
           />
         ))}
       </div>
@@ -160,12 +174,18 @@ function Bar({
   lane,
   laneCount,
   days,
+  year,
+  month,
+  selected,
 }: {
   placed: Placed;
   berth: BerthRow;
   lane: number;
   laneCount: number;
   days: number;
+  year: number;
+  month: number;
+  selected: boolean;
 }) {
   const { booking } = placed;
   const { left, width } = barGeometry(placed.startDay, placed.endDay, days);
@@ -191,6 +211,7 @@ function Bar({
   else if (fit?.verdict === 'unverified') classes.push('unknown');
   else classes.push('vessel');
   if (booking.status === 'conflict_unresolved') classes.push('unresolved');
+  if (selected) classes.push('selected');
 
   // Sub-lanes stack upward from the bottom of the row.
   const bottom = 3 + (laneCount - 1 - lane) * (TRACK + 8);
@@ -208,7 +229,8 @@ function Bar({
     .join('\n');
 
   return (
-    <div
+    <a
+      href={`/?y=${year}&m=${month}&sel=${booking.id}`}
       className={classes.join(' ')}
       style={{ left: `${left}%`, width: `${width}%`, height: heightPx, bottom }}
       title={title}
@@ -222,7 +244,7 @@ function Bar({
         </span>
       )}
       {placed.clippedEnd && <span className="clip" aria-label="continues into next month">&rarr;</span>}
-    </div>
+    </a>
   );
 }
 
