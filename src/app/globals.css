@@ -388,6 +388,14 @@ a { color: var(--vessel); }
 }
 
 
+/* ---- Counts, inline in the toolbar rather than a band of their own ---- */
+
+.facts { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+.facts b { font-weight: 650; color: var(--ink); }
+.facts i { width: 1px; height: 11px; background: var(--axis); display: inline-block; }
+.facts .flagged { color: var(--critical); font-weight: 650; text-decoration: none; }
+.facts .flagged:hover { text-decoration: underline; }
+
 /* ---- Stat strip: figures with uppercase micro-captions ---- */
 
 .stats {
@@ -409,3 +417,35 @@ a { color: var(--vessel); }
 @media (max-width: 720px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+
+/* ---- Hover tooltip: the explanation the board already had, made instant ---- */
+
+/*
+ * Below the bar by default, above it for the last two lanes.
+ *
+ * `.board` sets overflow-x: auto, which forces overflow-y to compute to auto, so the
+ * card clips vertically as well. A tooltip placed above a bar in the top lane is
+ * therefore invisible — it renders correctly and is cut off by the card.
+ */
+.bar[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; top: calc(100% + 6px);
+  z-index: 30; pointer-events: none; opacity: 0;
+  padding: 5px 9px; border-radius: 6px; white-space: nowrap;
+  background: var(--ink); color: var(--surface);
+  font-size: 11px; font-weight: 500; letter-spacing: 0.01em;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  transition: opacity 90ms ease;
+}
+.bar[data-tip]:hover::after,
+.bar[data-tip]:focus-visible::after { opacity: 1; }
+/* The last two lanes have nothing below them, so theirs go above. */
+.gridrow > .lane:nth-last-child(-n + 2) .bar[data-tip]::after {
+  top: auto; bottom: calc(100% + 6px);
+}
+.bar.tipleft[data-tip]::after { left: 0; }
+.bar.tipright[data-tip]::after { right: 0; }
+.bar[data-tip]::after { max-width: 560px; overflow: hidden; text-overflow: ellipsis; }
+
+.legend-hint { color: var(--ink-muted); font-style: italic; }

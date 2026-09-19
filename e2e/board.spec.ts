@@ -112,6 +112,20 @@ test.describe('the board', () => {
     }
   });
 
+  test('explains every bar in plain language on hover', async ({ page }) => {
+    // The board carried this text all along, in a native `title` that took about a
+    // second to appear. Most people never waited, so it looked unexplained.
+    await page.goto(FIXTURE_HREF);
+    const tooLong = page.locator('.bar.toolong').first();
+    const tip = await tooLong.getAttribute('data-tip');
+    expect(tip).toContain('does not fit');
+    expect(tip).toMatch(/\d+ft berth/);
+
+    // No formulas on the bar itself either.
+    await expect(tooLong).toContainText('in');
+    await expect(tooLong).not.toContainText('\u203a');
+  });
+
   test('distinguishes unknown-length vessels from confirmed ones', async ({ page }) => {
     await page.goto(FIXTURE_HREF);
     await expect(page.locator('.bar.unknown')).not.toHaveCount(0);

@@ -47,7 +47,10 @@ in [DECISIONS.md](DECISIONS.md); this is the short form.
    is exclusive.
 5. **The berths live in a migration**, not in application code. They are the facility.
 6. **Bar height is `vessel length ÷ berth length`.** The misfit is geometry, not a badge,
-   and it states its measurement at any width including a single day.
+   and it states its measurement at any width including a single day. Say it in words —
+   `170ft in 90ft berth`, never `170′ > 90′`. Every bar carries a plain-language
+   `data-tip` shown instantly on hover; **do not go back to the native `title`**, which
+   took a second to appear and left the board looking unexplained.
 7. **Every date bound comes from `lib/nav`, and none is hard-coded.** The floor stretches
    to the earliest booking so imported history stays reachable; the form refuses a start
    date before today. A fixed bound has hidden real bookings three times. A date input's
@@ -80,7 +83,7 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 ```bash
 npm run dev       # local dev server
 npm test          # 219 unit tests, no database needed
-npm run e2e       # 36 Playwright specs; builds a fixture, then restores the sample
+npm run e2e       # 37 Playwright specs; builds a fixture, then restores the sample
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build

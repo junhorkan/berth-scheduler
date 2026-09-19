@@ -16,6 +16,13 @@ import { todayISO } from '../lib/nav';
 import { barHeightRatio, checkFit } from '../domain/fit';
 
 const WEEKDAY = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** `2010-07-09` -> `9 Jul`. Read from the string, never through Date. */
+function formatDay(iso: string): string {
+  return `${Number(iso.slice(8, 10))} ${MONTH_ABBR[Number(iso.slice(5, 7)) - 1]}`;
+}
 
 /**
  * Inner track height in px representing exactly the berth's full length.
@@ -237,7 +244,13 @@ function Bar({
   const showOverflowInline = isTooLong && spanDays >= 3;
   const showOverflowBadge = isTooLong && spanDays < 3;
 
-  const classes = ['bar'];
+  // An absolutely positioned tooltip still counts toward scrollable overflow, so one
+  // anchored left on a right-hand bar widens the card and makes it lurch sideways on
+  // hover. Bars past the midpoint hang their tooltip the other way instead.
+  const tipSide = left > 55 ? 'tipright' : 'tipleft';
+
+  const classes = [
+    tipSide,'bar'];
   if (booking.kind === 'closure') classes.push('closure');
   else if (booking.kind === 'event') classes.push('event');
   else if (fit?.verdict === 'too_long') classes.push('toolong');
@@ -249,36 +262,43 @@ function Bar({
   // Sub-lanes stack upward from the bottom of the row.
   const bottom = 3 + (laneCount - 1 - lane) * (TRACK + 8);
 
-  const title = [
+  // Plain language, one line, shown instantly on hover. The native `title` attribute
+  // held this already but took about a second to appear and most people never waited,
+  // so the board looked unexplained while carrying its own explanation.
+  const tip = [
     booking.label,
-    `${booking.startDate} to ${booking.endDate}`,
-    `${berth.name}${berth.lengthFt != null ? ` (${berth.lengthFt}ft)` : ''}`,
-    booking.vesselLengthFt != null ? `vessel ${booking.vesselLengthFt}ft` : 'vessel length not recorded',
-    fit ? fit.reason : booking.kind,
-    booking.status === 'conflict_unresolved' ? 'UNRESOLVED CONFLICT from the legacy schedule' : '',
-    booking.notes ?? '',
+    `${formatDay(booking.startDate)} \u2013 ${formatDay(booking.endDate)}`,
+    `${berth.name}${berth.lengthFt != null ? ` \u00b7 ${berth.lengthFt}ft berth` : ''}`,
+    fit?.verdict === 'too_long'
+      ? `does not fit: vessel is ${booking.vesselLengthFt}ft`
+      : fit?.verdict === 'unverified'
+        ? 'length not recorded, so the fit cannot be checked'
+        : booking.vesselLengthFt != null
+          ? `vessel ${booking.vesselLengthFt}ft \u2014 fits`
+          : null,
+    booking.status === 'conflict_unresolved' ? 'UNRESOLVED CONFLICT' : null,
   ]
     .filter(Boolean)
-    .join('\n');
+    .join('  \u00b7  ');
 
   return (
     <a
       href={`/?y=${year}&m=${month}&sel=${booking.id}`}
       className={classes.join(' ')}
       style={{ left: `${left}%`, width: `${width}%`, height: heightPx, bottom }}
-      title={title}
-      aria-label={title.split('\n').slice(0, 3).join(', ')}
+      data-tip={tip}
+      aria-label={tip}
     >
       {placed.clippedStart && <span className="clip" aria-label="continues from previous month">&larr;</span>}
       {showLabel && !showOverflowInline && <span className="lbl">{booking.label}</span>}
       {showOverflowInline && (
         <span className="ft">
-          {booking.vesselLengthFt}&prime; &gt; {berth.lengthFt}&prime;
+          {booking.vesselLengthFt}ft in {berth.lengthFt}ft berth
         </span>
       )}
       {showOverflowBadge && (
         <span className="ftbadge">
-          {booking.vesselLengthFt}&prime; &gt; {berth.lengthFt}&prime;
+          {booking.vesselLengthFt}ft in {berth.lengthFt}ft berth
         </span>
       )}
       {placed.clippedEnd && <span className="clip" aria-label="continues into next month">&rarr;</span>}
@@ -289,14 +309,12 @@ function Bar({
 function Legend() {
   return (
     <div className="legend">
-      <div><span className="sw vessel" />vessel, fits</div>
-      <div><span className="sw unknown" />length not recorded</div>
-      <div><span className="sw toolong" />does not fit the berth</div>
-      <div><span className="sw event" />non-vessel event</div>
-      <div><span className="sw closure" />berth closed</div>
-      <div style={{ color: 'var(--ink-muted)' }}>
-        bar height = vessel length &divide; berth length
-      </div>
+      <div><span className="sw vessel" />Vessel fits its berth</div>
+      <div><span className="sw unknown" />Length unknown &mdash; fit not checked</div>
+      <div><span className="sw toolong" />Too long: bar breaks out of its lane</div>
+      <div><span className="sw event" />Event, not a vessel</div>
+      <div><span className="sw closure" />Berth closed</div>
+      <div className="legend-hint">Hover any bar for detail, or click it to edit.</div>
     </div>
   );
 }

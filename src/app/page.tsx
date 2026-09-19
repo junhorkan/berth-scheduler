@@ -52,25 +52,6 @@ export default async function BoardPage({
     <main className="shell">
       <Nav current="board" />
 
-      <div className="stats">
-        <div className="stat">
-          <b>{berths.length}</b>
-          <span>Berths</span>
-        </div>
-        <div className="stat">
-          <b>{bookings.length}</b>
-          <span>Booked in {MONTH_NAMES[month - 1]}</span>
-        </div>
-        <div className="stat">
-          <b>{summary.vessels.toLocaleString()}</b>
-          <span>Vessels on register</span>
-        </div>
-        <div className={`stat${summary.openReviewItems > 0 ? ' flagged' : ''}`}>
-          <b>{summary.openReviewItems}</b>
-          <span>Needs review</span>
-        </div>
-      </div>
-
       <div className="toolbar">
         <a className="navbtn" href={monthHref(prev.year, prev.month)} aria-label="Previous month">&lsaquo;</a>
         <span className="month">{MONTH_NAMES[month - 1]} {year}</span>
@@ -82,6 +63,19 @@ export default async function BoardPage({
         <MonthJump year={year} month={month} years={years} />
 
         <span className="spacer" />
+        <span className="facts">
+          <b>{berths.length}</b> berths
+          <i />
+          <b>{bookings.length}</b> in {MONTH_NAMES[month - 1]}
+          <i />
+          <b>{summary.vessels.toLocaleString()}</b> vessels
+          {summary.openReviewItems > 0 && (
+            <>
+              <i />
+              <a href="/review" className="flagged">{summary.openReviewItems} to review</a>
+            </>
+          )}
+        </span>
         <BookingPanel
           berths={berths}
           vessels={vessels}
@@ -115,12 +109,6 @@ export default async function BoardPage({
         <BookingDetail booking={selected} berths={berths} closeHref={monthHref(year, month)} />
       )}
 
-      {summary.vessels > 0 && (
-      <p className="note">
-        {summary.vessels - summary.vesselsWithLength} of {summary.vessels} vessels have no recorded
-        length, so their bookings cannot be checked against berth length. Hatched bars mark those.
-      </p>
-      )}
     </main>
   );
 }
