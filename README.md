@@ -52,7 +52,9 @@ is the central design decision. See `DECISIONS.md`.
 - **The legacy schedule is imported, and removable.** 23 years of bookings are loaded so
   the conflict and size checks can be tried against real, messy data. **Clear the
   schedule** empties it and **Load the sample schedule** puts it back, both on Review —
-  an empty schedule is a supported state, not a broken one.
+  an empty schedule is a supported state, not a broken one. Because all of it is
+  historical, the board's own month is usually empty, so an empty month names the
+  nearest month that is not and links to it.
 - **Find** — one box, searching every vessel name, event label and closure note across
   all 276 months at once. Results group by identity, so a vessel with 267 bookings is one
   block and not 267 rows, and each result jumps straight to its own month on the board.
@@ -85,7 +87,7 @@ npm run dev
 
 ```bash
 npm test          # 228 unit tests, no database required
-npm run e2e       # 38 Playwright specs against a real server
+npm run e2e       # 39 Playwright specs against a real server
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify connection and that the constraint exists
 ```

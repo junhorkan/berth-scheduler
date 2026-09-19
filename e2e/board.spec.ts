@@ -27,10 +27,25 @@ test.describe('the board', () => {
     await page.goto(EMPTY_MONTH_HREF);
     await expect(page.locator('.rail')).toHaveCount(7);
     await expect(page.locator('.bar')).toHaveCount(0);
-    // The grid itself is the answer, and the toolbar already counts the month, so no
-    // panel restates it. The legend goes too: five colours explaining nothing.
+    // The legend goes: five colours explaining nothing.
     await expect(page.locator('.legend')).toHaveCount(0);
     await expect(page.getByRole('button', { name: '+ New booking' })).toBeVisible();
+  });
+
+  test('an empty month points at the month that is not empty', async ({ page }) => {
+    // The blank grid alone cannot distinguish "nothing is booked here" from "this page
+    // is broken", which is exactly what the live front door looked like: today's month
+    // held nothing and every booking sat in the imported years.
+    await page.goto(EMPTY_MONTH_HREF);
+    const note = page.locator('.boardnote');
+    await expect(note).toContainText('Nothing booked in');
+    await expect(note).toContainText('free for the whole month');
+
+    // The pointer has to lead somewhere that is actually occupied, or it is worse
+    // than no pointer at all.
+    await note.getByRole('link').click();
+    await expect(page.locator('.bar').first()).toBeVisible();
+    await expect(page.locator('.boardnote')).toHaveCount(0);
   });
 
   test('navigates across the whole bookable window', async ({ page }) => {

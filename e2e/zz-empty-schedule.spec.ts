@@ -20,7 +20,7 @@ test.describe('an empty schedule', () => {
 
   test('offers the sample as an explicit choice rather than preloading it', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: /Load the sample schedule/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /load the sample schedule/i })).toBeVisible();
   });
 
   test('has an empty review queue and no badge', async ({ page }) => {

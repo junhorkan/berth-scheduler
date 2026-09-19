@@ -4,7 +4,10 @@ import BookingPanel from '../components/BookingPanel';
 import BookingDetail from '../components/BookingDetail';
 import { LoadSampleButton } from '../components/SampleData';
 import MonthJump from '../components/MonthJump';
-import { getBerths, getBookingsInRange, getSummary, getVesselOptions, getBookingById } from '../db/queries';
+import {
+  getBerths, getBookingsInRange, getSummary, getVesselOptions, getBookingById,
+  getNearestBookedMonth,
+} from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import {
   clampMonth, monthHref, MONTH_NAMES, step, currentMonth, firstYear, lastYear,
@@ -46,6 +49,10 @@ export default async function BoardPage({
   const years = Array.from({ length: lastYear() - navFirst + 1 }, (_, i) => navFirst + i);
   const onToday = isCurrentMonth(year, month);
   const scheduleIsEmpty = summary.bookings === 0;
+  // A month with nothing in it is a fair answer, but on its own it is indistinguishable
+  // from a broken page. When the schedule has bookings somewhere else, say where.
+  const elsewhere =
+    bookings.length > 0 || scheduleIsEmpty ? null : await getNearestBookedMonth(bounds.start);
   // A new booking defaults to today when you are on this month, and to the 1st otherwise.
   const newBookingDate = onToday ? todayISO() : bounds.start;
 
@@ -86,21 +93,40 @@ export default async function BoardPage({
         />
       </div>
 
-      {bookings.length === 0 && scheduleIsEmpty && (
-        // Only when the whole schedule is empty is there something to say that the
-        // grid does not already show: that the sample can be loaded.
-        <div className="panel">
-          <p className="note" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <LoadSampleButton label="\u21bb Load the sample schedule" />
-            <span>
-              23 years of legacy bookings to try the conflict and size checks against.
-              Removable at any time from Review.
-            </span>
+      <Board
+        berths={berths}
+        bookings={bookings}
+        year={year}
+        month={month}
+        selectedId={sp.sel}
+        emptyNote={
+          // Inside the board card, above the grid it explains — not a band of its own.
+          <p className="boardnote">
+            <b>Nothing booked in {MONTH_NAMES[month - 1]} {year}.</b>{' '}
+            {scheduleIsEmpty ? (
+              <>
+                All {berths.length} berths are free. Start with{' '}
+                <b>+ New booking</b>, or{' '}
+                <LoadSampleButton label="load the sample schedule" /> &mdash; 23 years of
+                legacy bookings to try the conflict and size checks against, removable
+                at any time from Review.
+              </>
+            ) : (
+              <>
+                All {berths.length} berths are free for the whole month.
+                {elsewhere && (
+                  <>
+                    {' '}The nearest month with bookings is{' '}
+                    <a href={monthHref(elsewhere.year, elsewhere.month)}>
+                      {MONTH_NAMES[elsewhere.month - 1]} {elsewhere.year}
+                    </a>.
+                  </>
+                )}
+              </>
+            )}
           </p>
-        </div>
-      )}
-
-      <Board berths={berths} bookings={bookings} year={year} month={month} selectedId={sp.sel} />
+        }
+      />
 
       {selected && (
         <BookingDetail booking={selected} berths={berths} closeHref={monthHref(year, month)} />

@@ -10,6 +10,7 @@
  * (time on one axis, quay space on the other, rectangle height = vessel length),
  * adapted to fixed discrete berths.
  */
+import type { ReactNode } from 'react';
 import type { BerthRow, BookingRow } from '../db/queries';
 import { barGeometry, clipToMonth, daysInMonth, packLanes } from '../lib/layout';
 import { todayISO } from '../lib/nav';
@@ -58,12 +59,15 @@ export default function Board({
   year,
   month,
   selectedId,
+  emptyNote,
 }: {
   berths: BerthRow[];
   bookings: BookingRow[];
   year: number;
   month: number;
   selectedId?: string;
+  /** Shown above the grid when this month holds nothing. The grid still draws. */
+  emptyNote?: ReactNode;
 }) {
   const days = daysInMonth(year, month);
   const dayNums = Array.from({ length: days }, (_, i) => i + 1);
@@ -88,6 +92,7 @@ export default function Board({
 
   return (
     <div className="board">
+      {bookings.length === 0 && emptyNote}
       <div className="gridrow" style={{ ['--days' as string]: days }}>
         {/* day header */}
         <div />
@@ -246,7 +251,10 @@ function Bar({
 
   // An absolutely positioned tooltip still counts toward scrollable overflow, so one
   // anchored left on a right-hand bar widens the card and makes it lurch sideways on
-  // hover. Bars past the midpoint hang their tooltip the other way instead.
+  // hover. Bars past the midpoint hang their tooltip the other way instead. The
+  // violation badge hangs off the same class, for the same reason and one worse: it
+  // is always visible, so a late-month violation read `120ft in 75ft be` — the one
+  // measurement that must survive at any width, cut off by the card.
   const tipSide = left > 55 ? 'tipright' : 'tipleft';
 
   const classes = [

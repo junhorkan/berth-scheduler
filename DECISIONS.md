@@ -24,6 +24,7 @@ built is usually more informative than the thing that was.
 | 15 | [Missing lengths are derived, not queued](#15-missing-lengths-are-derived-not-queued) |
 | 16 | [Light only, one obvious action, no control that only confirms another](#16-light-only-one-obvious-action-no-control-that-only-confirms-another) |
 | 17 | [Repetition is not information](#17-repetition-is-not-information) |
+| 18 | [An empty month is not an empty page](#18-an-empty-month-is-not-an-empty-page) |
 
 ---
 
@@ -401,3 +402,38 @@ render, which is the kind of bug that only appears once real data has repeats in
 **Related:** the same instinct as [16](#16-light-only-one-obvious-action-no-control-that-only-confirms-another) —
 a control that only confirms another is repetition too.
 
+---
+
+## 18. An empty month is not an empty page
+
+**Decision.** A month with nothing booked still draws all seven berth lanes, and adds one
+line inside the board card naming the nearest month that *does* have bookings, as a link.
+
+**Why.** The live URL's front door was a blank grid. Every imported booking sits in
+1997–2019, the board opens on today, and today is September 2026 — so the first thing a
+visitor saw was seven empty lanes and no indication that 1,977 bookings existed one click
+away. A blank grid cannot be distinguished from a page that failed to load, and the
+visitor who assumes the latter never finds out otherwise.
+
+The pointer is computed, never hard-coded: `getNearestBookedMonth()` looks forward from
+the month on screen first and falls back to the most recent booking behind it. Forward
+first because a schedule in use runs ahead of its reader; the fallback is what reaches
+imported history, which is entirely in the past. It runs only when the month on screen is
+empty, so the common path does not pay for it.
+
+**Not a contradiction of [17](#17-repetition-is-not-information).** What was removed there
+was a bordered band announcing *"Nothing booked in September 2026"* while the toolbar
+already read `0 in September` — a third statement of a fact the screen gave twice. What
+is here states something nothing else on the page knows: **where the bookings are.** The
+empty-month clause is the sentence's setup; the month name is the payload, and it is a
+link. Repetition is still not information. A pointer is.
+
+**Rejected: landing on the last month with data.** It would have filled the front door
+immediately, and it would have made a live scheduler open in 2019. The board opens on
+today because the facility is in today ([8](#8-the-board-opens-on-today-you-can-look-back-but-not-book-back));
+an empty today is a true statement about the schedule and must be allowed to be one.
+
+**Rejected: hiding the grid behind the message.** Tried earlier and reverted: replacing
+the board with a line of text made an empty month look like a failure, where seven
+labelled lanes look like a schedule waiting for a booking. The grid stays; the sentence
+sits above it.

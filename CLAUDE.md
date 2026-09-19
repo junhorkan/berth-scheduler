@@ -27,9 +27,8 @@ keeping them apart.**
   once somebody records it, and most never will.
   → An advisory warning. Amber in the UI. **Never blocks.**
 
-If you find yourself unifying these into one "validation" concept, stop. It forces either
-blocking on unknowns (the tool becomes unusable) or softening the overlap guarantee (the
-strongest claim in the project is lost).
+Unifying these into one "validation" concept forces either blocking on unknowns (the
+tool becomes unusable) or softening the overlap guarantee (the strongest claim here).
 
 ## Invariants
 
@@ -50,13 +49,16 @@ in [DECISIONS.md](DECISIONS.md); this is the short form.
 6. **Bar height is `vessel length ÷ berth length`**, stated at any width including a
    single day. Say it in words — `170ft in 90ft berth`, never `170′ > 90′`. Every bar
    carries a plain-language `data-tip` shown instantly; **never the native `title`**,
-   which took a second and left the board looking unexplained.
+   which took a second and left the board looking unexplained. Tip and badge hang off
+   the side the bar sits on, or the card clips the one thing that must not be clipped.
 7. **Every date bound comes from `lib/nav`; none is hard-coded.** The floor stretches to
    the earliest booking so imported history stays reachable; the form refuses a start
-   before today. A fixed bound has hidden real bookings three times. A date input's `min`
-   guards only the picker, so the save path checks too.
-8. **An empty schedule is a supported state, not a degraded one.** It still renders the
-   full grid. Building it is what exposed the two bugs in invariant 2.
+   before today, in the save path as well, since `min` only guards the picker. A fixed
+   bound has hidden real bookings three times.
+8. **Empty is a supported state, not a degraded one — and never a silent one.** An
+   empty month still draws the full grid, and says in one line where the bookings
+   actually are: a blank grid cannot be told apart from a broken page. Building the
+   empty path is what exposed the two bugs in invariant 2.
 9. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review.
    `/search` is a destination, **not a fourth tab** — do not add it to the nav, and do not
    delete it for breaking the rule.
@@ -83,16 +85,14 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 ```bash
 npm run dev       # local dev server
 npm test          # 228 unit tests, no database needed
-npm run e2e       # 38 Playwright specs; builds a fixture, then restores the sample
+npm run e2e       # 39 Playwright specs; builds a fixture, then restores the sample
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build
 ```
 
 Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERATIONS.md).
-
-**Do not run `npm run build` while `npm run dev` is running** — they contend over
-`.next` and both hang.
+**Never `npm run build` while `npm run dev` runs** — they contend over `.next` and hang.
 
 ## Gotchas that cost time before
 

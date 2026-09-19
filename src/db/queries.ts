@@ -71,6 +71,32 @@ export async function getBookingsInRange(start: string, end: string): Promise<Bo
   }));
 }
 
+/**
+ * The month nearest `fromISO` that actually holds a booking — forward first, then back.
+ *
+ * An empty board asks one question: is there nothing booked, or am I looking in the
+ * wrong place? Without an answer the front door of a live schedule is a blank grid.
+ * Forward first because a schedule people are using runs ahead of them; the fallback
+ * reaches imported history, which is entirely behind.
+ *
+ * Called only when the month on screen is empty, so the common path never pays for it.
+ */
+export async function getNearestBookedMonth(
+  fromISO: string,
+): Promise<{ year: number; month: number } | null> {
+  const sql = db();
+  const [r] = await sql`
+    select coalesce(
+      (select min(start_date) from bookings
+        where status <> 'cancelled' and end_date >= ${fromISO}),
+      (select max(start_date) from bookings where status <> 'cancelled')
+    ) as d`;
+  const d = r?.d as Date | null;
+  if (!d) return null;
+  const iso = d.toISOString().slice(0, 10);
+  return { year: Number(iso.slice(0, 4)), month: Number(iso.slice(5, 7)) };
+}
+
 export type SystemSummary = {
   berths: number;
   vessels: number;
