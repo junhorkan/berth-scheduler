@@ -3,6 +3,7 @@ import Nav from '../components/Nav';
 import BookingPanel from '../components/BookingPanel';
 import BookingDetail from '../components/BookingDetail';
 import { LoadSampleButton } from '../components/SampleData';
+import MonthJump from '../components/MonthJump';
 import { getBerths, getBookingsInRange, getSummary, getVesselOptions, getBookingById } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import {
@@ -78,16 +79,7 @@ export default async function BoardPage({
           <a className="navbtn today" href={monthHref(today.year, today.month)}>Today</a>
         )}
 
-        <form method="get" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <label htmlFor="y" style={{ fontSize: 12, color: 'var(--ink-muted)' }}>Jump to</label>
-          <select id="y" name="y" defaultValue={year} style={selectStyle}>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <select name="m" defaultValue={month} style={selectStyle}>
-            {MONTH_NAMES.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
-          </select>
-          <button type="submit" style={buttonStyle}>Go</button>
-        </form>
+        <MonthJump year={year} month={month} years={years} />
 
         <span className="spacer" />
         <BookingPanel
@@ -133,14 +125,4 @@ export default async function BoardPage({
   );
 }
 
-const selectStyle: React.CSSProperties = {
-  font: 'inherit', fontSize: 12, padding: '3px 6px',
-  border: '1px solid var(--axis)', borderRadius: 6,
-  background: 'var(--surface)', color: 'var(--ink)',
-};
 
-const buttonStyle: React.CSSProperties = {
-  font: 'inherit', fontSize: 12, padding: '3px 10px',
-  border: '1px solid var(--axis)', borderRadius: 6,
-  background: 'var(--surface)', color: 'var(--ink)', cursor: 'pointer',
-};

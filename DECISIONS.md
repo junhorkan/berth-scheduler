@@ -138,10 +138,30 @@ validator rather than looking at them:
 - **violet for events** passed in light mode but collapsed into blue in dark mode
   (1.9 ΔE under protanopia).
 
-Yellow passes both modes. It is below 3:1 against the light surface, so the relief rule
+Yellow passes both. It is below 3:1 against the light surface, so the relief rule
 applies: event bars always carry a visible label, and identity never rests on colour
 alone — unknown-length bars also carry a texture, and a misfit breaks its lane
 geometrically.
+
+**The dark theme was later removed** and the app is light only. It is read in a daylit
+setting, one theme is one thing to keep correct, and the three mark hues were validated
+against the light surface. (The violet rejection above is kept because it is why the
+palette is what it is, not because the mode still exists.)
+
+---
+
+## 7a. One obvious action, and no control that only confirms another
+
+**Decision.** `+ New booking` is the only filled button on the board. Choosing a month
+from the pickers navigates immediately.
+
+**Why.** The month jump used to be a label, two dropdowns and a **Go** button — four
+things to express one intent. Choosing the month *is* the instruction; the button existed
+only because the form was plain HTML, not because anyone needed to confirm. Removing it
+also removed the question of what happens if you change a dropdown and forget to press it.
+
+The same reasoning trimmed the masthead: the title said *Harborview Marine Research
+Center* and a label beside it said *Dock Schedule*, which is the same sentence twice.
 
 ---
 

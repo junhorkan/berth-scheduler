@@ -15,17 +15,21 @@
  * always carry a visible text label, and identity never rests on colour alone —
  * unknown-length bars also carry a 45-degree texture, and a misfit bar breaks its lane
  * geometrically.
+ *
+ * Light only, deliberately. A dark theme was removed rather than left as an automatic
+ * flip: this is read in a daylit kitchen-and-dock setting, one theme is one thing to
+ * keep correct, and the mark hues were validated against the light surface.
  */
 :root {
   color-scheme: light;
-  --surface: #fcfcfb;
-  --plane: #f9f9f7;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --ink-muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --ring: rgba(11, 11, 11, 0.1);
+  --surface: #ffffff;
+  --plane: #f6f5f2;
+  --ink: #17171a;
+  --ink-2: #5c5b57;
+  --ink-muted: #94928c;
+  --grid: #ececE6;
+  --axis: #dcdad2;
+  --ring: rgba(23, 23, 26, 0.07);
 
   --vessel: #2a78d6;
   --vessel-fill: #e8f1fc;
@@ -37,29 +41,6 @@
   --unknown-hatch: #c3c2b7;
 
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme='light'])) {
-    color-scheme: dark;
-    --surface: #1a1a19;
-    --plane: #0d0d0d;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --ink-muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --ring: rgba(255, 255, 255, 0.1);
-
-    --vessel: #3987e5;
-    --vessel-fill: #14263a;
-    --event: #c98500;
-    --event-fill: #332708;
-    --critical: #d03b3b;
-    --critical-fill: #3a1716;
-    --unknown-fill: #262625;
-    --unknown-hatch: #4a4a47;
-  }
 }
 
 * { box-sizing: border-box; }
@@ -112,6 +93,16 @@ a { color: var(--vessel); }
   font-size: 14px; line-height: 1;
 }
 .navbtn:hover { border-color: var(--ink-2); }
+
+/* The one thing this tool exists for should look like it; see .btn.primary below. */
+
+.jump { display: flex; gap: 6px; align-items: center; }
+.jump select {
+  font: inherit; font-size: 12px; padding: 4px 6px;
+  border: 1px solid var(--axis); border-radius: 6px;
+  background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.jump select:hover { border-color: var(--ink-2); }
 .spacer { margin-left: auto; }
 
 /* ----------------------------------------------------------------- board */
@@ -144,7 +135,7 @@ a { color: var(--vessel); }
   background-image: repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px 100%);
   background-size: calc(100% / var(--days)) 100%;
 }
-.lane .wkndcol { position: absolute; top: 0; bottom: 0; background: var(--plane); opacity: 0.55; }
+.lane .wkndcol { position: absolute; top: 0; bottom: 0; background: var(--plane); opacity: 0.7; }
 
 /* A bar's HEIGHT is vessel length / berth length, so a vessel that does not fit
    overflows its lane as a consequence of arithmetic, not as a special case. */
@@ -180,7 +171,10 @@ a { color: var(--vessel); }
 .clip { flex: none; font-family: var(--mono); opacity: 0.8; }
 
 /* --------------------------------------------------------------- legend */
-.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 11px; color: var(--ink-2); align-items: center; }
+.legend {
+  display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px;
+  font-size: 10px; color: var(--ink-muted); align-items: center;
+}
 .legend div { display: flex; align-items: center; gap: 5px; }
 .sw { width: 18px; height: 10px; border-radius: 2px; flex: none; }
 .sw.vessel { background: var(--vessel-fill); border: 1px solid var(--vessel); }
@@ -259,7 +253,11 @@ a { color: var(--vessel); }
 .qact { display: flex; gap: 6px; flex: none; padding-top: 2px; }
 
 /* ------------------------------------------------------- booking panel */
-.btn.primary { border-color: var(--vessel); color: var(--vessel); font-weight: 600; }
+.btn.primary {
+  background: var(--vessel); border-color: var(--vessel);
+  color: #fff; font-weight: 650;
+}
+.btn.primary:hover { filter: brightness(0.93); border-color: var(--vessel); }
 
 .overlay {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.28); z-index: 40;

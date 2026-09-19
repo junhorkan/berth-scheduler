@@ -37,6 +37,17 @@ test.describe('the board', () => {
     await expect(page.locator('.month')).toHaveText(`October ${FIXTURE_YEAR - 1}`);
   });
 
+  test('jumps to a month the moment one is chosen, with no confirm step', async ({ page }) => {
+    // This replaced a label, two selects and a "Go" button. Choosing the month IS the
+    // instruction; the button existed only because the form was plain HTML.
+    await page.goto(FIXTURE_HREF);
+    await page.getByLabel('Jump to year').selectOption(String(FIXTURE_YEAR + 1));
+    await expect(page.locator('.month')).toContainText(String(FIXTURE_YEAR + 1));
+
+    await page.getByLabel('Jump to month').selectOption('3');
+    await expect(page.locator('.month')).toHaveText(`March ${FIXTURE_YEAR + 1}`);
+  });
+
   test('marks today on the board, and only in the current month', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('.todaycol')).toHaveCount(7); // one per berth lane

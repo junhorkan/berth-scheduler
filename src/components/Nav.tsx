@@ -15,7 +15,6 @@ export default async function Nav({
   return (
     <header className="masthead">
       <h1>Harborview Marine Research Center</h1>
-      <span className="sub">Dock Schedule</span>
 
       <form className="find" method="get" action="/search" role="search">
         <input
