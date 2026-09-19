@@ -1,11 +1,33 @@
 import { getSummary } from '../db/queries';
 
-export default async function Nav({ current }: { current: 'board' | 'vessels' | 'review' }) {
+/**
+ * `search` is a destination, not a fourth tab: it leaves all three tab links
+ * unhighlighted, because the results page belongs to no section of the app.
+ */
+export default async function Nav({
+  current,
+  query = '',
+}: {
+  current: 'board' | 'vessels' | 'review' | 'search';
+  query?: string;
+}) {
   const summary = await getSummary();
   return (
     <header className="masthead">
       <h1>Harborview Marine Research Center</h1>
       <span className="sub">Dock Schedule</span>
+
+      <form className="find" method="get" action="/search" role="search">
+        <input
+          type="search"
+          name="q"
+          defaultValue={query}
+          placeholder="Find a vessel or event"
+          aria-label="Find a vessel or event across all years"
+        />
+        <button type="submit">Find</button>
+      </form>
+
       <nav className="tabs">
         <a href="/" aria-current={current === 'board' ? 'page' : undefined}>Board</a>
         <a href="/vessels" aria-current={current === 'vessels' ? 'page' : undefined}>Vessels</a>

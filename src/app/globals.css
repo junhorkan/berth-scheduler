@@ -316,3 +316,55 @@ a { color: var(--vessel); }
   border: 1px solid var(--critical); border-radius: 3px; padding: 0 3px;
   pointer-events: none; z-index: 7;
 }
+
+/* ---- Search: the masthead box and its results page ---- */
+
+.find { display: flex; gap: 6px; align-items: center; }
+.find input {
+  font: inherit; font-size: 12px; padding: 4px 8px; width: 210px;
+  border: 1px solid var(--axis); border-radius: 6px;
+  background: var(--surface); color: var(--ink);
+}
+.find input::placeholder { color: var(--ink-muted); }
+.find input:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
+.find button {
+  font: inherit; font-size: 12px; padding: 4px 10px; cursor: pointer;
+  border: 1px solid var(--axis); border-radius: 6px;
+  background: var(--surface); color: var(--ink);
+}
+.find button:hover { border-color: var(--ink-2); }
+
+.sgroup {
+  background: var(--surface); border: 1px solid var(--ring);
+  border-radius: 10px; padding: 10px 12px; margin-top: 10px;
+}
+.shead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.shead b { font-size: 14px; font-weight: 650; }
+.smeta { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); }
+
+/* The kind is named in text, never by colour alone. */
+.skind {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 1px 5px; border-radius: 7px; border: 1px solid var(--axis);
+  color: var(--ink-muted);
+}
+.skind.vessel { color: var(--vessel); border-color: var(--vessel); }
+.skind.event { color: var(--event); border-color: var(--event); }
+
+.tbl.shits td { padding: 4px 8px 4px 0; font-size: 12px; }
+.tbl.shits tr:last-child td { border-bottom: 0; }
+.smonth { font-family: var(--mono); font-size: 11px; color: var(--ink-2); width: 76px; }
+.sberth { width: 190px; }
+.sspan { font-family: var(--mono); font-size: 11px; width: 130px; }
+.sjump { font-size: 11px; color: var(--vessel); text-decoration: none; white-space: nowrap; }
+.sjump:hover { text-decoration: underline; }
+.smore {
+  display: inline-block; margin: 6px 12px 0 0;
+  font-size: 11px; color: var(--ink-2); text-decoration: none;
+}
+.smore:hover { color: var(--ink); text-decoration: underline; }
+
+@media (max-width: 720px) {
+  .find { order: 3; width: 100%; }
+  .find input { width: 100%; }
+}

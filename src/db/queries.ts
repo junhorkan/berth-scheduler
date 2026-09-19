@@ -4,6 +4,9 @@
 import { cache } from 'react';
 import { db } from './client';
 import type { BookingKind, BookingStatus, BerthCapacityMode } from '../domain/types';
+import { canonicalVesselName } from '../domain/normalize';
+import { isSearchable, likePattern } from '../lib/search';
+import type { SearchHit } from '../lib/search';
 
 export type BerthRow = {
   id: string;
@@ -262,5 +265,62 @@ export async function getBookingById(id: string): Promise<BookingDetailRow | nul
     source: r.source as string,
     importSheet: r.import_sheet as string | null,
     importRow: r.import_row as number | null,
+  };
+}
+
+/**
+ * A ceiling on rows returned by one search.
+ *
+ * Deliberately above the total booking count in the imported workbook (~1,974), so with
+ * this dataset no real query is truncated — the limit exists to bound the query if the
+ * schedule grows, and the page says so when it bites rather than silently showing less.
+ */
+export const SEARCH_LIMIT = 2500;
+
+export type SearchResult = { hits: SearchHit[]; truncated: boolean };
+
+/**
+ * Every booking whose label or vessel name contains the query, across all 23 years.
+ *
+ * Two arms, because the label and the vessel identity are not the same string. The
+ * label is the raw spreadsheet text, which is what makes events ('Community sail day')
+ * and closures ('Dock maintenance - restricted access') findable at all. The vessel arm
+ * matches `normalized_name`, so a query typed as `OS/V` finds hulls stored as `OSV`
+ * after canonicalization — searching the label alone would miss them.
+ *
+ * Cancelled bookings are excluded: this answers "what is on the schedule", and the
+ * board does not draw them either.
+ */
+export async function searchBookings(query: string): Promise<SearchResult> {
+  if (!isSearchable(query)) return { hits: [], truncated: false };
+
+  const sql = db();
+  const pattern = likePattern(query);
+  const vesselPattern = likePattern(canonicalVesselName(query).normalized);
+
+  const rows = await sql`
+    select b.id, b.label, b.vessel_id, b.kind, b.status, b.start_date, b.end_date,
+           be.name as berth_name, v.canonical_name as vessel_name
+      from bookings b
+      join berths be on be.id = b.berth_id
+      left join vessels v on v.id = b.vessel_id
+     where b.status <> 'cancelled'
+       and (b.label ilike ${pattern} or v.normalized_name like ${vesselPattern})
+     order by b.start_date desc
+     limit ${SEARCH_LIMIT}`;
+
+  return {
+    hits: rows.map((r) => ({
+      id: r.id as string,
+      label: r.label as string,
+      vesselId: r.vessel_id as string | null,
+      vesselName: r.vessel_name as string | null,
+      kind: r.kind as BookingKind,
+      status: r.status as BookingStatus,
+      startDate: (r.start_date as Date).toISOString().slice(0, 10),
+      endDate: (r.end_date as Date).toISOString().slice(0, 10),
+      berthName: r.berth_name as string,
+    })),
+    truncated: rows.length === SEARCH_LIMIT,
   };
 }

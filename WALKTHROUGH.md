@@ -103,6 +103,9 @@ Be specific — this answer is better than a general one:
   exists in the file. Inventing depths would produce confident wrong answers.
 - **Nothing is silently dropped.** Every cell the importer couldn't classify becomes a
   review item with a pointer back to its original sheet, row and column.
+- **Search treats user input as text, not as a pattern.** A typed `%` is escaped before
+  it reaches SQL; unescaped it would match all 2,031 bookings. Small thing, but it is the
+  same instinct that puts the conflict rule in the database.
 - **The colours were validated, not chosen.** Two palettes were rejected by running a
   colour-vision checker: orange for events was too close to the red used for violations,
   and violet collapsed into blue in dark mode for protanopes.
@@ -116,15 +119,19 @@ Be specific — this answer is better than a general one:
 2. **Point at the red bar on North Pier Face.** *"That one breaks out of its row because
    the bar's height is vessel length over berth length. It's a 120-foot vessel in a
    75-foot berth. Nothing in the spreadsheet could have told you that."*
-3. **Click + New booking.** Vessel `R/V Long Ketch`, berth South Float East, July 6–8.
+3. **Type `long ketch` in the search box.** *"The board shows one month; there are 276
+   of them. This searches all of them at once. One vessel, 267 bookings, 2009 to 2019 —
+   grouped, because a flat list of 267 rows answers nothing. Any result jumps straight to
+   its own month."* Search finds events and closures too, not just vessels.
+4. **Click + New booking.** Vessel `R/V Long Ketch`, berth South Float East, July 6–8.
    *"Red — the berth is taken, and Save is disabled. There's no override. Amber — we
    can't verify the length, but that one doesn't stop me."*
-4. **Change the dates to July 22–24.** *"Berth is clear, Save enables, and the amber
+5. **Change the dates to July 22–24.** *"Berth is clear, Save enables, and the amber
    warning is still there. That's the whole design: one rule is a wall, the other is
    advice."*
-5. **Go to Vessels.** *"Sorted by how many bookings each missing length blocks. Ten
+6. **Go to Vessels.** *"Sorted by how many bookings each missing length blocks. Ten
    entries here makes half the schedule checkable."*
-6. **Go to Review.** *"Everything the import couldn't resolve, including one genuine
+7. **Go to Review.** *"Everything the import couldn't resolve, including one genuine
    double-booking from 2017 that I kept rather than deleted, and each row traces back to
    its spreadsheet cell."*
 

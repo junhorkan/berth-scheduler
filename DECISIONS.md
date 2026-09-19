@@ -193,8 +193,35 @@ experimenting cannot cause lasting damage. Auth was out of scope for the brief a
 
 ## 12. No in-app page explaining the project
 
-**Decision.** Three tabs — Board, Vessels, Review. No "About" or "Notes" page.
+**Decision.** Three tabs — Board, Vessels, Review. No "About" or "Notes" page. Search is
+a destination reached from the masthead box, not a fourth tab.
 
 **Why.** This is a tool for a dock coordinator, not a portfolio piece that argues for
 itself. A coordinator does not want a migration report; they want a to-do list, which is
 what Review is. All rationale lives in these repo files.
+
+---
+
+## 13. Search groups by identity, and is a page rather than a dropdown
+
+**Decision.** A box in the masthead submits to a server-rendered `/search` page. Results
+are grouped by vessel or event label — name, total bookings, year range — with six
+bookings shown per group and the rest behind *Show all*.
+
+**Why grouped.** `R/V Long Ketch` has 267 bookings. A flat list of matches would bury
+every other result under one vessel, and answer "does this vessel exist?" and "when was
+it here?" equally badly. Grouping answers both at once, and makes the concentration in
+the data visible rather than annoying.
+
+**Why a page, not a live dropdown.** Every other interaction in the app is a plain form
+or link rendered on the server. A typeahead would have been the only client-side
+component in the project, needing debouncing and an extra endpoint, on the last day —
+and it buys nothing a results page does not already give. The whole feature is one
+query, one pure grouping function, and a page.
+
+**Why it is not a fourth tab.** Decision 12 stands: three tabs. A results page you reach
+by searching is a destination, not a section of the app, and the nav does not grow.
+
+**One detail worth stating.** A typed `%` or `_` is escaped before it reaches SQL.
+Unescaped, searching `100%` matches all 2,031 bookings — the user typed text, not a
+pattern. There is a unit test and an end-to-end test for exactly that.

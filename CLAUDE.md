@@ -52,11 +52,14 @@ Breaking any of these looks like an improvement and is not:
    an empty grid that reads as broken.
 8. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review. This is
    a coordinator's tool, not a portfolio piece. Rationale belongs in `DECISIONS.md`.
+   `/search` is a destination reached from the masthead box, **not a fourth tab** — do
+   not add it to the nav, and do not remove it for violating the three-tab rule.
 
 ## Structure
 
 ```
 src/domain/   pure rules: conflicts, fit, classification. No DB, no React.
+src/lib/      pure view helpers: month nav, bar geometry, search grouping.
 src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
 src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.
@@ -69,8 +72,8 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev       # local dev server
-npm test          # 186 unit tests, no database needed
-npm run e2e       # 13 Playwright specs against a real server
+npm test          # 207 unit tests, no database needed
+npm run e2e       # 24 Playwright specs against a real server
 npm run import    # reload the workbook into the database
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build
