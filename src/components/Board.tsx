@@ -17,8 +17,14 @@ import { barHeightRatio, checkFit } from '../domain/fit';
 
 const WEEKDAY = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-/** Inner track height in px that represents exactly the berth's full length. */
-const TRACK = 30;
+/**
+ * Inner track height in px representing exactly the berth's full length.
+ *
+ * Seven 30px lanes left most of a desktop viewport empty and made every bar a thin
+ * sliver. At this height the board fills the screen it is given, and a vessel that
+ * overhangs its lane overhangs it by a visible amount rather than a few pixels.
+ */
+const TRACK = 52;
 /** Beyond this the bar would cover two rows; the numeric label still tells the truth. */
 const MAX_RATIO = 2.4;
 /**
@@ -27,7 +33,7 @@ const MAX_RATIO = 2.4;
  * empty berth, and "is anything booked here" must never be ambiguous. Proportionality
  * still governs everything above the floor, including every overflow case.
  */
-const MIN_BAR_PX = 9;
+const MIN_BAR_PX = 14;
 /** Below this many days a bar is too narrow to hold readable text. */
 const MIN_DAYS_FOR_LABEL = 3;
 

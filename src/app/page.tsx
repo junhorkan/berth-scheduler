@@ -44,6 +44,25 @@ export default async function BoardPage({
     <main className="shell">
       <Nav current="board" />
 
+      <div className="stats">
+        <div className="stat">
+          <b>{berths.length}</b>
+          <span>Berths</span>
+        </div>
+        <div className="stat">
+          <b>{bookings.length}</b>
+          <span>Booked in {MONTH_NAMES[month - 1]}</span>
+        </div>
+        <div className="stat">
+          <b>{summary.vessels.toLocaleString()}</b>
+          <span>Vessels on register</span>
+        </div>
+        <div className={`stat${summary.openReviewItems > 0 ? ' flagged' : ''}`}>
+          <b>{summary.openReviewItems}</b>
+          <span>Needs review</span>
+        </div>
+      </div>
+
       <div className="toolbar">
         <a className="navbtn" href={monthHref(prev.year, prev.month)} aria-label="Previous month">&lsaquo;</a>
         <span className="month">{MONTH_NAMES[month - 1]} {year}</span>
@@ -64,9 +83,6 @@ export default async function BoardPage({
         </form>
 
         <span className="spacer" />
-        <span style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
-          {bookings.length} booking{bookings.length === 1 ? '' : 's'} this month
-        </span>
         <BookingPanel
           berths={berths}
           vessels={vessels}
