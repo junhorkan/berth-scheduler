@@ -128,7 +128,7 @@ export default function Board({
         })}
       </div>
 
-      <Legend />
+      {bookings.length > 0 && <Legend />}
     </div>
   );
 }

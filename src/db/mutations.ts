@@ -270,9 +270,25 @@ export async function setVesselLength(
 }
 
 export async function resolveReviewItem(id: string): Promise<{ ok: boolean; error?: string }> {
+  return resolveReviewItems([id]);
+}
+
+/**
+ * Resolve a whole group at once.
+ *
+ * The queue folds repeated rows — one vessel too long for one berth across four
+ * bookings is one decision, so marking it done has to close all four. Resolving them
+ * one at a time would leave the group half-present on the next render.
+ */
+export async function resolveReviewItems(
+  ids: string[],
+): Promise<{ ok: boolean; error?: string }> {
+  if (ids.length === 0) return { ok: true };
   const sql = db();
   try {
-    await sql`update review_items set resolved_at = now() where id = ${id}`;
+    await sql`
+      update review_items set resolved_at = now()
+       where id = any(${ids}::uuid[]) and resolved_at is null`;
     return { ok: true };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };

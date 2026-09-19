@@ -15,7 +15,6 @@ test.describe('an empty schedule', () => {
     await page.goto('/');
     await expect(page.locator('.rail')).toHaveCount(7);   // every berth still listed
     await expect(page.locator('.bar')).toHaveCount(0);
-    await expect(page.getByText(/Every berth below is free/)).toBeVisible();
     await expect(page.getByRole('button', { name: '+ New booking' })).toBeVisible();
   });
 

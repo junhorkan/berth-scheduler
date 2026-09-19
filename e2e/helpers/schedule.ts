@@ -75,6 +75,10 @@ const BOOKINGS: Row[] = [
     label: 'R/V Test Tern',    start: d(5),  end: d(8) },
   { vessel: 'S/Y Test Beacon',  berth: 'South Float East', kind: 'vessel',
     label: 'S/Y Test Beacon',  start: d(14), end: d(14) },
+  // The same oversized vessel in the same berth a second time. One problem, two
+  // bookings — the case the review queue has to fold rather than list twice.
+  { vessel: 'R/V Test Tern',    berth: 'North Pier Face',  kind: 'vessel',
+    label: 'R/V Test Tern',    start: d(20), end: d(22) },
   { vessel: 'M/V Test Drifter', berth: 'North Pier West',  kind: 'vessel',
     label: 'M/V Test Drifter', start: d(2),  end: d(20) },
   { vessel: null, berth: 'North Pier East', kind: 'event',

@@ -27,7 +27,10 @@ test.describe('the board', () => {
     await page.goto(EMPTY_MONTH_HREF);
     await expect(page.locator('.rail')).toHaveCount(7);
     await expect(page.locator('.bar')).toHaveCount(0);
-    await expect(page.getByText(/Nothing booked in/)).toBeVisible();
+    // The grid itself is the answer, and the toolbar already counts the month, so no
+    // panel restates it. The legend goes too: five colours explaining nothing.
+    await expect(page.locator('.legend')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '+ New booking' })).toBeVisible();
   });
 
   test('navigates across the whole bookable window', async ({ page }) => {
@@ -218,6 +221,25 @@ test.describe('the other tabs', () => {
     await page.goto('/review');
     await expect(page.getByText('No recorded length')).toHaveCount(2); // pill + row
     await expect(page.getByText(/cannot be checked against berth length/)).toBeVisible();
+  });
+
+  test('folds repeated problems into one row instead of one per booking', async ({ page }) => {
+    // The fixture books one oversized vessel repeatedly; the queue showed a near
+    // identical row for each, which buried the items that actually differ.
+    await page.goto('/review');
+    const rows = page.locator('.queue li');
+    const groupedBadges = page.locator('.qcount');
+
+    // At least one group folded several occurrences, and it says how many.
+    await expect(groupedBadges.first()).toBeVisible();
+    const folded = Number((await groupedBadges.first().innerText()).replace(/\D/g, ''));
+    expect(folded).toBeGreaterThan(1);
+
+    // Rows on screen are fewer than the occurrences behind them.
+    const rowCount = await rows.count();
+    expect(rowCount).toBeGreaterThan(0);
+    await expect(page.getByText(/bookings, \d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}/).first())
+      .toBeVisible();
   });
 
   test('every open review item offers an action', async ({ page }) => {

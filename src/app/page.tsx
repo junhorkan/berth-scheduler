@@ -45,6 +45,7 @@ export default async function BoardPage({
   const navFirst = firstYear(undefined, earliest);
   const years = Array.from({ length: lastYear() - navFirst + 1 }, (_, i) => navFirst + i);
   const onToday = isCurrentMonth(year, month);
+  const scheduleIsEmpty = summary.bookings === 0;
   // A new booking defaults to today when you are on this month, and to the 1st otherwise.
   const newBookingDate = onToday ? todayISO() : bounds.start;
 
@@ -85,21 +86,17 @@ export default async function BoardPage({
         />
       </div>
 
-      {bookings.length === 0 && (
+      {bookings.length === 0 && scheduleIsEmpty && (
+        // Only when the whole schedule is empty is there something to say that the
+        // grid does not already show: that the sample can be loaded.
         <div className="panel">
-          <p style={{ margin: 0 }}>
-            <b>Nothing booked in {MONTH_NAMES[month - 1]} {year}.</b> Every berth below is free
-            &mdash; use <b>+ New booking</b> to reserve one.
+          <p className="note" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <LoadSampleButton label="\u21bb Load the sample schedule" />
+            <span>
+              23 years of legacy bookings to try the conflict and size checks against.
+              Removable at any time from Review.
+            </span>
           </p>
-          {summary.bookings === 0 && (
-            <p className="note" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <LoadSampleButton label="\u21bb Load the sample schedule" />
-              <span>
-                23 years of legacy bookings to try the conflict and size checks against.
-                Removable at any time from Review.
-              </span>
-            </p>
-          )}
         </div>
       )}
 

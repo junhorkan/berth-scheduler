@@ -64,6 +64,13 @@ export async function resetToImportedAction() {
   return res;
 }
 
+export async function resolveReviewGroupAction(ids: string[]) {
+  const res = await m.resolveReviewItems(ids);
+  revalidatePath('/review');
+  revalidatePath('/');
+  return res;
+}
+
 export async function clearScheduleAction() {
   const res = await m.clearSchedule();
   revalidatePath('/');

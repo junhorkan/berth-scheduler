@@ -2,6 +2,7 @@ import Nav from '../../components/Nav';
 import { ResolveButton } from '../../components/ResolveButton';
 import { LoadSampleButton, ClearScheduleButton } from '../../components/SampleData';
 import { getReviewItems, getReviewCounts, getMissingLengthSummary } from '../../db/queries';
+import { groupReviewItems, describeOccurrences } from '../../lib/review';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,8 @@ export default async function ReviewPage() {
   ]);
   // Only show a pill for a kind of item that exists. Permanently-zero pills are noise.
   const order = ['conflict', 'too_long', 'unclassified'].filter((t) => (counts[t] ?? 0) > 0);
+  // One row per problem, not per affected booking.
+  const groups = groupReviewItems(items);
 
   return (
     <main className="shell">
@@ -85,30 +88,43 @@ export default async function ReviewPage() {
           <p className="empty">Nothing needs attention.</p>
         ) : items.length === 0 ? null : (
           <ul className="queue">
-            {items.map((r) => (
-              <li key={r.id} className={LABEL[r.type].tone}>
-                <div className="qmain">
-                  <span className="qtitle">{LABEL[r.type].title}</span>
-                  {r.rawText && <span className="qtext">{r.rawText}</span>}
-                  {r.detail && <span className="qdetail">{r.detail}</span>}
-                  <span className="qmeta">
-                    {r.berthName && <>{r.berthName}</>}
-                    {r.bookingStart && <> &middot; {r.bookingStart}</>}
-                    {r.importSheet && (
-                      <> &middot; from sheet {r.importSheet}, row {r.importRow}, col {r.importCol}</>
-                    )}
-                  </span>
-                </div>
-                <div className="qact">
-                  {r.bookingStart ? (
-                    <a className="btn" href={`/?y=${r.bookingStart.slice(0, 4)}&m=${Number(r.bookingStart.slice(5, 7))}`}>
-                      Show on board
-                    </a>
-                  ) : null}
-                  <ResolveButton id={r.id} />
-                </div>
-              </li>
-            ))}
+            {groups.map((group) => {
+              const head = group.rows[0];
+              const when = describeOccurrences(group);
+              return (
+                <li key={group.key} className={LABEL[group.type].tone}>
+                  <div className="qmain">
+                    <span className="qtitle">
+                      {LABEL[group.type].title}
+                      {group.rows.length > 1 && (
+                        <span className="qcount">{group.rows.length}&times;</span>
+                      )}
+                    </span>
+                    {head.rawText && <span className="qtext">{head.rawText}</span>}
+                    {head.detail && <span className="qdetail">{head.detail}</span>}
+                    <span className="qmeta">
+                      {head.berthName && <>{head.berthName}</>}
+                      {when && <> &middot; {when}</>}
+                      {group.rows.length === 1 && head.importSheet && (
+                        <> &middot; from sheet {head.importSheet}, row {head.importRow}, col{' '}
+                        {head.importCol}</>
+                      )}
+                    </span>
+                  </div>
+                  <div className="qact">
+                    {head.bookingStart ? (
+                      <a
+                        className="btn"
+                        href={`/?y=${head.bookingStart.slice(0, 4)}&m=${Number(head.bookingStart.slice(5, 7))}&sel=${head.bookingId ?? ''}`}
+                      >
+                        Show on board
+                      </a>
+                    ) : null}
+                    <ResolveButton ids={group.ids} />
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
         {items.length >= 200 && (

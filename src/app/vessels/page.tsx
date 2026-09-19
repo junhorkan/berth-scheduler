@@ -41,14 +41,14 @@ export default async function VesselsPage() {
               <th style={{ width: 120 }}>Length</th>
               <th style={{ width: 110, textAlign: 'right' }}>Bookings</th>
               <th style={{ width: 110 }}>Last seen</th>
-              <th>Operator</th>
             </tr>
           </thead>
           <tbody>
             {vessels.map((v) => (
-              <tr key={v.id} className={v.lengthFt == null ? 'needs' : undefined}>
+              <tr key={v.id}>
                 <td>
                   {v.canonicalName}
+                  {v.operator && <span className="sub-note">{v.operator}</span>}
                   {v.loaFt != null && v.lengthFt != null && v.loaFt !== v.lengthFt && (
                     <span className="flag" title="The source states two different lengths for this vessel. Both are kept; neither is silently chosen.">
                       source also says LOA {v.loaFt}&prime;
@@ -62,7 +62,6 @@ export default async function VesselsPage() {
                 <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-muted)' }}>
                   {v.lastSeen ?? '—'}
                 </td>
-                <td style={{ color: 'var(--ink-2)', fontSize: 12 }}>{v.operator ?? ''}</td>
               </tr>
             ))}
           </tbody>

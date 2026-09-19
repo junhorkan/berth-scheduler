@@ -40,9 +40,11 @@ in [DECISIONS.md](DECISIONS.md); this is the short form.
    without infrastructure.
 2. **Never invent a vessel length, and never gate a booking on picking a known vessel.**
    Booking registers the vessel; a gate once made vessel bookings impossible entirely.
-3. **Nothing vanishes silently.** What the importer cannot place becomes a review item
-   with its sheet/row/column. Missing lengths are the one exception — **derived, not
-   stored**, because a stored count went stale.
+3. **Nothing vanishes silently, but repetition is not information.** What the importer
+   cannot place becomes a review item with its sheet/row/column. Missing lengths are
+   derived, not stored. Identical problems **fold into one row with a count**
+   (`lib/review.ts`) — one vessel too long for one berth across four bookings is one
+   decision, and listing it four times buried everything else. Conflicts never fold.
 4. **`Small craft slips` is pooled** and exempt from conflict detection. Every other berth
    is exclusive.
 5. **The berths live in a migration**, not in application code. They are the facility.
@@ -82,8 +84,8 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev       # local dev server
-npm test          # 219 unit tests, no database needed
-npm run e2e       # 37 Playwright specs; builds a fixture, then restores the sample
+npm test          # 228 unit tests, no database needed
+npm run e2e       # 38 Playwright specs; builds a fixture, then restores the sample
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build

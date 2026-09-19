@@ -449,3 +449,11 @@ a { color: var(--vessel); }
 .bar[data-tip]::after { max-width: 560px; overflow: hidden; text-overflow: ellipsis; }
 
 .legend-hint { color: var(--ink-muted); font-style: italic; }
+
+.qcount {
+  margin-left: 6px; padding: 0 5px; border-radius: 7px;
+  background: var(--plane); color: var(--ink-2);
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+}
+
+.sub-note { margin-left: 8px; font-size: 11px; color: var(--ink-muted); }
