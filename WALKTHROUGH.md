@@ -85,8 +85,10 @@ about itself.
   it reaches SQL; unescaped it would match the whole schedule. Same instinct as putting
   the conflict rule in the database.
 - **The colours were validated, not chosen.** Two palettes were rejected by running a
-  colour-vision checker: orange for events sat too close to the red used for violations,
-  and violet collapsed into blue in dark mode for protanopes.
+  colour-vision checker rather than looking at them: orange for events sat too close to
+  the red used for violations, and violet collapsed into blue for protanopes. (That was
+  while a dark theme still existed; the app is light only now, which is why those hues
+  survived the switch unchanged — they were validated against the light surface.)
 
 ---
 
@@ -123,7 +125,7 @@ board renders one; watching the system refuse a booking proves the rule is real.
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
 > `src/domain` and `src/lib`, which import nothing from the database or the UI — 219 unit
-> tests run in under a second with no infrastructure. 34 Playwright specs build their own
+> tests run in under a second with no infrastructure. 36 Playwright specs build their own
 > fixture against a real server and restore the sample afterwards, so the app is left in
 > the state it ships in.
 >

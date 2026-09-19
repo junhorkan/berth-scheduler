@@ -5,6 +5,27 @@ built is usually more informative than the thing that was.
 
 ---
 
+| # | Decision |
+|---|---|
+| 1 | [The database prevents double-booking, not the application](#1-the-database-prevents-double-booking-not-the-application) |
+| 2 | [Fit warns; it never blocks](#2-fit-warns-it-never-blocks) |
+| 3 | [A conflict is always refused; there is no override](#3-a-conflict-is-always-refused-there-is-no-override) |
+| 4 | [The bar's height is the fit check](#4-the-bars-height-is-the-fit-check) |
+| 5 | [No scheduler library; the timeline is hand-rolled CSS Grid](#5-no-scheduler-library-the-timeline-is-hand-rolled-css-grid) |
+| 6 | [No ORM; SQL is the single source of truth](#6-no-orm-sql-is-the-single-source-of-truth) |
+| 7 | [Colours were validated, not chosen by eye](#7-colours-were-validated-not-chosen-by-eye) |
+| 8 | [The board opens on today; you can look back, but not book back](#8-the-board-opens-on-today-you-can-look-back-but-not-book-back) |
+| 9 | [The Vessels list is ordered by bookings blocked](#9-the-vessels-list-is-ordered-by-bookings-blocked) |
+| 10 | [Month at a time, and no drag-and-drop](#10-month-at-a-time-and-no-drag-and-drop) |
+| 11 | [Public, unauthenticated, with a reset](#11-public-unauthenticated-with-a-reset) |
+| 12 | [No in-app page explaining the project](#12-no-in-app-page-explaining-the-project) |
+| 13 | [Search groups by identity, and is a page rather than a dropdown](#13-search-groups-by-identity-and-is-a-page-rather-than-a-dropdown) |
+| 14 | [The legacy schedule is imported, and removable](#14-the-legacy-schedule-is-imported-and-removable) |
+| 15 | [Missing lengths are derived, not queued](#15-missing-lengths-are-derived-not-queued) |
+| 16 | [Light only, one obvious action, no control that only confirms another](#16-light-only-one-obvious-action-no-control-that-only-confirms-another) |
+
+---
+
 ## 1. The database prevents double-booking, not the application
 
 **Decision.** A Postgres exclusion constraint:
@@ -147,21 +168,6 @@ geometrically.
 setting, one theme is one thing to keep correct, and the three mark hues were validated
 against the light surface. (The violet rejection above is kept because it is why the
 palette is what it is, not because the mode still exists.)
-
----
-
-## 7a. One obvious action, and no control that only confirms another
-
-**Decision.** `+ New booking` is the only filled button on the board. Choosing a month
-from the pickers navigates immediately.
-
-**Why.** The month jump used to be a label, two dropdowns and a **Go** button — four
-things to express one intent. Choosing the month *is* the instruction; the button existed
-only because the form was plain HTML, not because anyone needed to confirm. Removing it
-also removed the question of what happens if you change a dropdown and forget to press it.
-
-The same reasoning trimmed the masthead: the title said *Harborview Marine Research
-Center* and a label beside it said *Dock Schedule*, which is the same sentence twice.
 
 ---
 
@@ -339,3 +345,22 @@ else ever created one. A derived count cannot go stale.
 **What it costs.** Per-vessel dismissal is gone — there is no row to mark done. That is
 the right trade: the fix for a missing length is recording it, not dismissing it.
 
+---
+
+## 16. Light only, one obvious action, no control that only confirms another
+
+**Decision.** The app is light only. `+ New booking` is the only filled button on the
+board. Choosing a month from the pickers navigates immediately.
+
+**Why.** The month jump used to be a label, two dropdowns and a **Go** button — four
+things to express one intent. Choosing the month *is* the instruction; the button existed
+only because the form was plain HTML, not because anyone needed to confirm. Removing it
+also removed the question of what happens if you change a dropdown and forget to press it.
+
+The same reasoning trimmed the masthead: the title said *Harborview Marine Research
+Center* and a label beside it said *Dock Schedule*, which is the same sentence twice.
+
+**Light only** for the same reason — one theme is one thing to keep correct, and it is
+read in a daylit setting. Next's default 404 carries its own `prefers-color-scheme` rule,
+so it is replaced; that page is also deliberately database-free, because the screen shown
+when something is already wrong should not depend on the database being awake.

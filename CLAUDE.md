@@ -33,38 +33,34 @@ strongest claim in the project is lost).
 
 ## Invariants
 
-Breaking any of these looks like an improvement and is not:
+Breaking any of these looks like an improvement and is not. The full argument for each is
+in [DECISIONS.md](DECISIONS.md); this is the short form.
 
-1. **`src/domain` and `src/lib` import nothing from `db` or `app`.** They are pure and
-   unit-tested without infrastructure.
-2. **Never invent a vessel length**, and never gate a booking on picking a known vessel.
-   Booking registers the vessel with a null length; that is how the register fills. A
-   gate requiring an existing vessel once made vessel bookings impossible entirely.
-3. **Nothing vanishes silently.** Whatever the importer cannot place becomes a review
-   item carrying its sheet/row/column — never a dropped row or a log line. Missing
-   lengths are the one exception: **derived, not stored** (one row per vessel was 93% of
-   the queue and went stale). Unknown is a first-class answer — a vessel with no recorded
-   length is drawn hatched and never assumed to fit.
-4. **`Small craft slips` is pooled** (many boats at once) and exempt from conflict
-   detection. Every other berth is exclusive.
-5. **The berths are defined in a migration**, not created by application code. They are
-   the facility; without them there is nothing to book into.
-6. **Bar height is `vessel length ÷ berth length`.** The misfit is geometry, not a badge.
-   A violation states its measurement at *any* width, including a single day.
-7. **The board opens on today**, with every bound computed per request so the window
-   slides with the calendar. **Booking and viewing are deliberately different**: the form
-   refuses a start date before today, while the board still reaches a year back, or a
-   booking made last month becomes unreachable when the year turns. All of it comes from
-   `lib/nav`; **never hard-code a second bound** — that is how the form once accepted
-   dates the board could not reach, making saved bookings invisible. A date input's `min`
-   constrains only the picker, so the save path checks it too.
-8. **An empty schedule is the normal case, not a degraded one.** It ships empty. An empty
-   month still renders the full grid; replacing it with a line of text made "empty" read
-   as "broken".
-9. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review — a
-   coordinator's tool, not a portfolio piece. Rationale belongs in `DECISIONS.md`.
-   `/search` is a destination reached from the masthead, **not a fourth tab**: do not add
-   it to the nav, and do not delete it for breaking the three-tab rule.
+1. **`src/domain` and `src/lib` import nothing from `db` or `app`.** Pure, and unit-tested
+   without infrastructure.
+2. **Never invent a vessel length, and never gate a booking on picking a known vessel.**
+   Booking registers the vessel; a gate once made vessel bookings impossible entirely.
+3. **Nothing vanishes silently.** What the importer cannot place becomes a review item
+   with its sheet/row/column. Missing lengths are the one exception — **derived, not
+   stored**, because a stored count went stale.
+4. **`Small craft slips` is pooled** and exempt from conflict detection. Every other berth
+   is exclusive.
+5. **The berths live in a migration**, not in application code. They are the facility.
+6. **Bar height is `vessel length ÷ berth length`.** The misfit is geometry, not a badge,
+   and it states its measurement at any width including a single day.
+7. **Every date bound comes from `lib/nav`, and none is hard-coded.** The floor stretches
+   to the earliest booking so imported history stays reachable; the form refuses a start
+   date before today. A fixed bound has hidden real bookings three times. A date input's
+   `min` guards only the picker, so the save path checks too.
+8. **An empty schedule is a supported state, not a degraded one.** It still renders the
+   full grid. Building it is what exposed the two bugs in invariant 2.
+9. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review.
+   `/search` is a destination, **not a fourth tab** — do not add it to the nav, and do not
+   delete it for breaking the rule.
+10. **Light only, and one obvious action.** Do not reinstate a dark theme: the mark hues
+    are validated against the light surface, and the custom 404 exists because Next's
+    default carries its own dark rule. `+ New booking` is the only filled button, and
+    **no control may exist only to confirm another**.
 
 ## Structure
 
