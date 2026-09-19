@@ -4,7 +4,10 @@ import BookingPanel from '../components/BookingPanel';
 import BookingDetail from '../components/BookingDetail';
 import { getBerths, getBookingsInRange, getSummary, getVesselOptions, getBookingById } from '../db/queries';
 import { monthBounds } from '../lib/layout';
-import { clampMonth, monthHref, MONTH_NAMES, step, DEFAULT_MONTH, DEFAULT_YEAR, FIRST_YEAR, LAST_YEAR } from '../lib/nav';
+import {
+  clampMonth, monthHref, MONTH_NAMES, step, currentMonth, lastYear, lastBookableISO,
+  todayISO, isCurrentMonth, FIRST_YEAR, SAMPLE_LAST_YEAR, BUSIEST_MONTH,
+} from '../lib/nav';
 
 // A cached schedule is a wrong schedule.
 export const dynamic = 'force-dynamic';
@@ -15,9 +18,10 @@ export default async function BoardPage({
   searchParams: Promise<{ y?: string; m?: string; sel?: string }>;
 }) {
   const sp = await searchParams;
+  const today = currentMonth();
   const { year, month } = clampMonth(
-    sp.y ? Number(sp.y) : DEFAULT_YEAR,
-    sp.m ? Number(sp.m) : DEFAULT_MONTH,
+    sp.y ? Number(sp.y) : today.year,
+    sp.m ? Number(sp.m) : today.month,
   );
 
   const bounds = monthBounds(year, month);
@@ -31,7 +35,10 @@ export default async function BoardPage({
   const selected = sp.sel ? await getBookingById(sp.sel) : null;
   const prev = step(year, month, -1);
   const next = step(year, month, 1);
-  const years = Array.from({ length: LAST_YEAR - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
+  const years = Array.from({ length: lastYear() - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
+  const onToday = isCurrentMonth(year, month);
+  // A new booking defaults to today when you are on this month, and to the 1st otherwise.
+  const newBookingDate = onToday ? todayISO() : bounds.start;
 
   return (
     <main className="shell">
@@ -41,6 +48,9 @@ export default async function BoardPage({
         <a className="navbtn" href={monthHref(prev.year, prev.month)} aria-label="Previous month">&lsaquo;</a>
         <span className="month">{MONTH_NAMES[month - 1]} {year}</span>
         <a className="navbtn" href={monthHref(next.year, next.month)} aria-label="Next month">&rsaquo;</a>
+        {!onToday && (
+          <a className="navbtn today" href={monthHref(today.year, today.month)}>Today</a>
+        )}
 
         <form method="get" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <label htmlFor="y" style={{ fontSize: 12, color: 'var(--ink-muted)' }}>Jump to</label>
@@ -60,15 +70,27 @@ export default async function BoardPage({
         <BookingPanel
           berths={berths}
           vessels={vessels}
-          defaultDate={bounds.start}
+          defaultDate={newBookingDate}
+          maxDate={lastBookableISO()}
         />
       </div>
 
-      {bookings.length === 0 ? (
-        <div className="board"><p className="empty">No bookings in {MONTH_NAMES[month - 1]} {year}.</p></div>
-      ) : (
-        <Board berths={berths} bookings={bookings} year={year} month={month} selectedId={sp.sel} />
+      {bookings.length === 0 && (
+        <div className="panel">
+          <p style={{ margin: 0 }}>
+            <b>Nothing booked in {MONTH_NAMES[month - 1]} {year}.</b> The berths below are free
+            {year > SAMPLE_LAST_YEAR && <> &mdash; use <b>+ New booking</b> to reserve one</>}.
+          </p>
+          <p className="note" style={{ marginTop: 6 }}>
+            The imported sample schedule runs August {FIRST_YEAR} to December {SAMPLE_LAST_YEAR}.{' '}
+            <a href={monthHref(BUSIEST_MONTH.year, BUSIEST_MONTH.month)}>
+              See {MONTH_NAMES[BUSIEST_MONTH.month - 1]} {BUSIEST_MONTH.year}
+            </a>, its busiest month.
+          </p>
+        </div>
       )}
+
+      <Board berths={berths} bookings={bookings} year={year} month={month} selectedId={sp.sel} />
 
       {selected && (
         <BookingDetail booking={selected} berths={berths} closeHref={monthHref(year, month)} />

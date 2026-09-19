@@ -37,10 +37,11 @@ is the central design decision. See `DECISIONS.md`.
 
 ## What it does
 
-- **Board** — berths down, days across, one month at a time. A bar's **height is
-  `vessel length ÷ berth length`**, so a vessel that does not fit visibly breaks out of
-  its lane. Create, cancel and reassign bookings, for vessels, non-vessel events and
-  berth closures alike.
+- **Board** — berths down, days across, one month at a time, **opening on today and
+  navigable three years ahead**. A bar's **height is `vessel length ÷ berth length`**, so
+  a vessel that does not fit visibly breaks out of its lane. Create, cancel and reassign
+  bookings, for vessels, non-vessel events and berth closures alike. The imported sample
+  covers 1997–2019; the schedule itself runs forward from today.
 - **Vessels** — the registry, ordered by *bookings blocked* rather than alphabetically.
   Recording just ten lengths makes ~51% of the schedule verifiable; the page says so.
 - **Review** — the coordinator's queue: unresolved conflicts, size violations, missing

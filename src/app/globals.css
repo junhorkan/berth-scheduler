@@ -368,3 +368,8 @@ a { color: var(--vessel); }
   .find { order: 3; width: 100%; }
   .find input { width: 100%; }
 }
+
+.navbtn.today {
+  width: auto; padding: 0 10px; font-size: 12px; font-weight: 600;
+  color: var(--vessel); border-color: var(--vessel);
+}

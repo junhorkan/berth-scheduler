@@ -48,8 +48,11 @@ Breaking any of these looks like an improvement and is not:
 6. **Bar height is `vessel length ÷ berth length`.** The misfit is geometry, not a badge.
    A violation states its measurement at *any* width — six of the nine violations are
    single-day.
-7. **The board opens on July 2010**, not today. Today is outside the data and would show
-   an empty grid that reads as broken.
+7. **The board opens on today and runs three years ahead.** The imported sample ends in
+   December 2019; that is a fact about the sample, **never a bound on the app**. Pinning
+   the range to the data once made future bookings saveable but unreachable. An empty
+   month must still render the full grid — replacing it with a line of text is what made
+   "empty" read as "broken".
 8. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review. This is
    a coordinator's tool, not a portfolio piece. Rationale belongs in `DECISIONS.md`.
    `/search` is a destination reached from the masthead box, **not a fourth tab** — do

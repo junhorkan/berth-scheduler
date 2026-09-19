@@ -142,14 +142,30 @@ geometrically.
 
 ---
 
-## 8. The board opens on July 2010
+## 8. The board opens on the current month, and runs three years ahead
 
-**Decision.** Not today's date.
+**Decision.** The board opens on today. The navigable range starts in August 1997 and
+ends three years from now, computed at request time rather than fixed.
 
-**Why.** Today is outside the imported range, so a date-based default greets everyone
-with an empty grid that reads as broken. July 2010 is the densest month containing all
-four bar states at once — a confirmed fit, a vessel too long for its berth, a non-vessel
-event, and many unrecorded lengths. The board explains itself on arrival.
+**Why.** This is a scheduling tool for a facility that exists now, so next month has to
+be reachable. An earlier version opened on July 2010 — the densest month in the sample —
+and bounded the range to the sample's own extent, December 2019.
+
+**That bound was a bug, not a preference.** Nothing limited the dates on save, so a
+booking could be created for 2026, stored correctly, and then be permanently invisible
+because the board could not navigate to the month it landed in. It violated the project's
+own rule that nothing vanishes silently. "Where the board opens" is a presentation
+choice; "how far the board can go" is a capability, and conflating them cost a feature.
+
+**The thing that made today look broken has been fixed separately.** An empty month used
+to replace the grid with a line of text, which reads as a failure. It now renders the
+full grid — seven labelled berth lanes across the month — with a note that the imported
+sample covers 1997–2019 and a link to its busiest month. An empty schedule looks like an
+empty schedule.
+
+**Detail:** "today" is resolved in `America/New_York`, the facility's timezone. The
+server runs in UTC, where 10pm on the 30th is already the 1st — the board would have
+rolled a month ahead of the one on the coordinator's wall.
 
 ---
 

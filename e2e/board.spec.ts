@@ -8,11 +8,70 @@ import { test, expect } from '@playwright/test';
 const JULY_2010 = '/?y=2010&m=7';
 
 test.describe('the board', () => {
-  test('opens on July 2010 so all four bar states are visible on arrival', async ({ page }) => {
+  test('opens on the current month, like a tool that is actually in use', async ({ page }) => {
+    // The imported sample ends in 2019, but the facility exists now. Opening on today
+    // is what makes this a schedule rather than an archive.
+    const now = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York', year: 'numeric', month: '2-digit',
+    }).format(new Date());
+    const [year, month] = now.split('-');
+    const name = new Date(Date.UTC(Number(year), Number(month) - 1, 1))
+      .toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
+
     await page.goto('/');
-    await expect(page.getByText('July 2010')).toBeVisible();
-    // The landing month must never be empty — that reads as a broken app.
+    // The month label specifically — an empty month also names itself in the notice.
+    await expect(page.locator('.month')).toHaveText(`${name} ${year}`);
+  });
+
+  test('renders the grid even when the month is empty, so it never reads as broken', async ({ page }) => {
+    // Replacing the board with one line of text is what made an empty month look like a
+    // failure. Seven labelled berth lanes look like a schedule waiting for a booking.
+    await page.goto('/?y=2027&m=3');
+    await expect(page.locator('.rail')).toHaveCount(7);
+    await expect(page.locator('.bar')).toHaveCount(0);
+    await expect(page.getByText(/Nothing booked in March 2027/)).toBeVisible();
+  });
+
+  test('navigates past the end of the imported data into the future', async ({ page }) => {
+    // The sample stopping in 2019 was being enforced as a hard limit, which put any
+    // future booking somewhere the board could not reach.
+    await page.goto('/?y=2027&m=6');
+    await expect(page.locator('.month')).toHaveText('June 2027');
+    await page.goto('/?y=2026&m=10');
+    await expect(page.locator('.month')).toHaveText('October 2026');
+  });
+
+  test('offers a way back to today from a historical month', async ({ page }) => {
+    await page.goto(JULY_2010);
     await expect(page.locator('.bar')).not.toHaveCount(0);
+    await page.getByRole('link', { name: 'Today' }).click();
+    await expect(page.locator('.navbtn.today')).toHaveCount(0);
+  });
+
+  test('books a berth in the FUTURE and shows it on the board', async ({ page }) => {
+    // The bug this covers: the form accepted a 2026 date, the row saved, and the board
+    // could not navigate to the month it landed in. The booking existed and was invisible.
+    await page.goto('/?y=2027&m=5');
+    await expect(page.locator('.bar')).toHaveCount(0);
+
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByRole('button', { name: 'Event', exact: true }).click();
+    await page.getByLabel('Description').fill('E2E future event');
+    await page.getByLabel('Berth').selectOption({ label: 'Inner Channel — 55ft' });
+    await page.getByLabel('Dates').fill('2027-05-10');
+    await page.locator('input[type="date"]').nth(1).fill('2027-05-12');
+
+    await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
+    await page.getByRole('button', { name: 'Save booking' }).click();
+
+    const created = page.locator('.bar', { hasText: 'E2E future event' });
+    await expect(created).toBeVisible();
+
+    // Clean up so the demo data is unchanged.
+    page.on('dialog', (d) => d.accept());
+    await created.click();
+    await page.getByRole('button', { name: 'Cancel booking' }).click();
+    await expect(page.locator('.bar', { hasText: 'E2E future event' })).toHaveCount(0);
   });
 
   test('draws a vessel that does not fit taller than its lane', async ({ page }) => {

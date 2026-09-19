@@ -114,8 +114,11 @@ Be specific — this answer is better than a general one:
 
 ## A five-minute demo script
 
-1. **Open the board.** It lands on July 2010. *"Almost every bar is hatched — that means
-   we don't know the vessel's length. That's the real state of this facility's data."*
+1. **Open the board.** It lands on the current month, empty. *"This is a live schedule,
+   so it opens on today. The sample data the facility gave me runs 1997 to 2019 — the
+   berths are free from here forward, and I can book one right now."* Click through to
+   July 2010. *"Almost every bar is hatched — that means we don't know the vessel's
+   length. That's the real state of this facility's data."*
 2. **Point at the red bar on North Pier Face.** *"That one breaks out of its row because
    the bar's height is vessel length over berth length. It's a 120-foot vessel in a
    75-foot berth. Nothing in the spreadsheet could have told you that."*
