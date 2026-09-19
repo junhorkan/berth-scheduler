@@ -69,3 +69,25 @@ the single most important guarantee in the project. Not worth the trade.
 
 `DATABASE_URL` in `.env.local` (gitignored) and as a `sensitive` Vercel env var. The
 password contains characters that **must be percent-encoded** in the URI.
+
+## Advisory findings deliberately not acted on
+
+`get_advisors` is clean of ERROR and WARN findings except the `btree_gist` one above.
+The remaining INFO-level performance advice was measured and rejected:
+
+- **Unindexed foreign keys** on `bookings.vessel_id` and the three `review_items` keys.
+  The queries that touch them aggregate every row, so the planner correctly chooses a
+  sequential scan and would not use an index. `getVessels()` — the heaviest query in the
+  app, 418 vessels joined against 2,031 bookings — plans as a hash right join and runs in
+  **2.6 ms**. The `/vessels` page takes ~220 ms end to end; that is network and rendering,
+  not database.
+
+  The other usual reason to index a foreign key is cascading deletes, and
+  `resetToImported` already deletes children before parents, so `delete from vessels`
+  checks an empty `bookings` table.
+
+- **Seed tables have no primary key.** They are snapshots, only ever read wholesale and
+  replaced wholesale. A key would carry cost and buy nothing.
+
+Adding four indexes to silence a linter that measurement says is wrong would be worse
+than the finding.
