@@ -4,8 +4,8 @@ Berth reservation management for a marine research facility.
 
 **Live:** https://berth-scheduler.vercel.app
 
-Replaces a 28-sheet Excel workbook holding 23 years of bookings (1997–2019), in which
-double-bookings were caught by eye and vessel/berth size was not checked at all.
+Replaces a spreadsheet in which double-bookings were caught by eye and vessel/berth size
+was not checked at all.
 
 ---
 
@@ -24,60 +24,35 @@ EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active')
 No application code path, race condition or concurrent request can store an overlap.
 This is not a check that runs before an insert; it is a property of the table.
 
-**2. Vessel too long for its berth.** Not checked today — and, it turns out, *not
-checkable*: of 418 vessels in the schedule, only **20** have a recorded length anywhere
-in the source. **97% of bookings cannot be verified**, and among the 54 that can, **9 are
-physically impossible** (the worst a 170′ vessel in a 90′ berth).
+**2. Vessel too long for its berth.** Not checked today, and *not always checkable*: a
+vessel's length is only known once somebody records it, and the coordinator booking a
+visiting vessel by email rarely has its LOA to hand.
 → Cannot be made impossible. Made **visible**, with the missing data collectable as a
-side effect of normal work. The check warns and never blocks, because blocking on data
-that mostly does not exist would make the tool unusable.
+side effect of normal work — booking a vessel registers it, and its length can be filled
+in later. The check warns and never blocks, because blocking on data that often does not
+exist would make the tool unusable.
 
 That asymmetry — a hard database constraint for one, an advisory warning for the other —
 is the central design decision. See `DECISIONS.md`.
 
 ## What it does
 
-- **Board** — berths down, days across, one month at a time, **opening on today and
-  navigable three years ahead**. A bar's **height is `vessel length ÷ berth length`**, so
-  a vessel that does not fit visibly breaks out of its lane. Create, cancel and reassign
-  bookings, for vessels, non-vessel events and berth closures alike. The imported sample
-  covers 1997–2019; the schedule itself runs forward from today.
-- **Vessels** — the registry, ordered by *bookings blocked* rather than alphabetically.
-  Recording just ten lengths makes ~51% of the schedule verifiable; the page says so.
-- **Review** — the coordinator's queue: unresolved conflicts, size violations, missing
-  lengths, and cells the importer would not guess at. Every row traces back to its
-  original spreadsheet cell.
-- **Sample data is optional.** The app starts with an empty schedule and its seven
-  berths. The 23-year workbook loads and clears from the Review tab, so the conflict and
-  size checks can be tried against real, messy data without that data being installed as
-  the facility's own. Booking a vessel the register does not know **adds it**, which is
-  how the register fills from an empty start.
+- **Board** — berths down, days across, one month at a time, **opening on today**, with
+  the schedule reaching three years either side. A bar's **height is
+  `vessel length ÷ berth length`**, so a vessel that does not fit visibly breaks out of
+  its lane. Create, cancel and reassign bookings, for vessels, non-vessel events and
+  berth closures alike.
+- **Vessels** — the register, ordered by *bookings blocked* rather than alphabetically,
+  so the highest-leverage gaps come first. It fills itself: booking a vessel adds it.
+- **Review** — the coordinator's queue: size violations, and a single derived row saying
+  how much of the schedule cannot be fit-checked yet. Clearing the schedule back to the
+  shipped state lives here too.
+- **It starts empty.** The app ships with an empty schedule and its seven berths — the
+  normal state of a reservation system is the schedule its users have made. The sample
+  workbook attached to the brief is not loaded; see `DECISIONS.md` #14.
 - **Find** — one box, searching every vessel name, event label and closure note across
   all 276 months at once. Results group by identity, so a vessel with 267 bookings is one
   block and not 267 rows, and each result jumps straight to its own month on the board.
-
-## Importing the legacy workbook
-
-`npm run import` parses all 23 sheets and reconciles exactly:
-
-```
-2,212 source cells → 2,031 stays     (145 cells merged, 49 across a month boundary)
-        7 berths · 418 vessels · 427 review items
-   272 / 272 month blocks resolved
-```
-
-Three source defects had to be handled, each documented in `ASSUMPTIONS.md`:
-
-- **Day columns are a calendar, not a fixed offset.** Day 1 sits under its real weekday,
-  so it begins at a different column every month. Assuming a constant offset silently
-  misdates the entire file.
-- **The 2002, 2003 and 2004 sheets each open with the previous December**, so the year
-  must come from the header text, not the sheet name.
-- **The 2010 sheet labels two blocks `NOVEMBER 2018` / `DECEMBER 2018`** — a typo, since
-  the 2018 sheet already owns those months.
-
-Nothing is dropped. Annotations, unclassifiable cells and 12 cells orphaned on damaged
-rows are all counted and surfaced.
 
 ## Running it locally
 
@@ -89,7 +64,6 @@ npm run dev
 
 ```bash
 npm test          # 186 unit tests, no database required
-npm run import    # load the workbook into the database
 npm run db:check  # verify connection and that the constraint exists
 ```
 
@@ -99,14 +73,13 @@ Requires Node 24.
 
 ```
 src/domain/   PURE business rules. No database, no React. Unit tested.
-src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
 src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.
 ```
 
-`src/domain` imports nothing from `db` or `app`, so the conflict and fit rules are
-provably correct without a database. The importer and the UI call the same functions, so
-the rule the board shows you is the rule the import applied.
+`src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
+navigation and search rules are provably correct without a database — 107 unit tests run
+in well under a second with no infrastructure at all.
 
 ## Stack
 
@@ -123,5 +96,5 @@ booking fills its lane, and none can draw a bar that **overhangs** its row.
   ping keeps it awake. If the site ever errors after a long quiet period, opening the
   Supabase dashboard restores it.
 - **The app is public and unauthenticated by design**, so a reviewer can exercise the
-  conflict check without credentials. `↺ Reset to imported state` on the Review tab
-  restores all 2,031 imported bookings, so experimenting is safe.
+  conflict check without credentials. **Clear the schedule** on the Review tab restores
+  the state the app ships in, so experimenting is safe.

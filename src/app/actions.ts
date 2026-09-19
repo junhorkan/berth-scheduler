@@ -64,10 +64,3 @@ export async function clearScheduleAction() {
   return res;
 }
 
-export async function resetToImportedAction() {
-  const res = await m.resetToImported();
-  revalidatePath('/');
-  revalidatePath('/vessels');
-  revalidatePath('/review');
-  return res;
-}

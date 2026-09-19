@@ -1,20 +1,20 @@
 import { test, expect } from '@playwright/test';
+import { REGULAR_BOOKING_COUNT } from './helpers/schedule';
 
 /**
- * Search exists because the board shows one month and the schedule spans 276 of them.
+ * Search exists because the board shows one month and the schedule spans many.
  * These assert the path a coordinator actually takes: name in the box, booking on screen.
  */
 
-test.describe('finding a booking across 23 years', () => {
+test.describe('finding a booking', () => {
   test('finds a vessel from the masthead and jumps to it on the board', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('searchbox', { name: /find a vessel or event/i }).fill('long ketch');
+    await page.getByRole('searchbox', { name: /find a vessel or event/i }).fill('test harbor');
     await page.getByRole('button', { name: 'Find' }).click();
 
-    await expect(page.locator('.shead b', { hasText: 'R/V Long Ketch' })).toBeVisible();
+    await expect(page.locator('.shead b', { hasText: 'R/V Test Harbor' })).toBeVisible();
 
-    // Landing on the booking's own month with it selected is the whole point of the jump:
-    // a result you cannot reach is not a result.
+    // A result you cannot reach is not a result.
     await page.locator('.sjump').first().click();
     await expect(page).toHaveURL(/\?y=\d{4}&m=\d{1,2}&sel=/);
     await expect(page.locator('.bar')).not.toHaveCount(0);
@@ -34,18 +34,17 @@ test.describe('finding a booking across 23 years', () => {
   });
 
   test('folds the OS/V spelling into OSV, so the typo variant still finds the hull', async ({ page }) => {
-    // The source writes the same prefix both ways; canonicalVesselName folds them.
     await page.goto('/search?q=OS%2FV');
-    await expect(page.locator('.shead b', { hasText: 'OSV AMBER REEF' })).toBeVisible();
+    await expect(page.locator('.shead b', { hasText: 'OSV Test Osprey' })).toBeVisible();
   });
 
   test('collapses a busy vessel and expands it on request', async ({ page }) => {
-    await page.goto('/search?q=long+ketch');
-    // 267 bookings must not render as 267 rows by default.
+    await page.goto('/search?q=test+regular');
+    // A vessel with many bookings must not render as many rows by default.
     await expect(page.locator('.smonth')).toHaveCount(6);
 
     await page.locator('.smore').first().click();
-    await expect(page.locator('.smonth')).toHaveCount(267);
+    await expect(page.locator('.smonth')).toHaveCount(REGULAR_BOOKING_COUNT);
     await expect(page.getByText('Show fewer')).toBeVisible();
   });
 
@@ -68,9 +67,9 @@ test.describe('finding a booking across 23 years', () => {
   });
 
   test('keeps the query in the box so it can be refined', async ({ page }) => {
-    await page.goto('/search?q=long+ketch');
+    await page.goto('/search?q=test+harbor');
     await expect(page.getByRole('searchbox', { name: /find a vessel or event/i }))
-      .toHaveValue('long ketch');
+      .toHaveValue('test harbor');
   });
 
   test('every result row has a complete accessible jump label', async ({ page }) => {

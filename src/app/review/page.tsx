@@ -1,6 +1,6 @@
 import Nav from '../../components/Nav';
 import { ResolveButton } from '../../components/ResolveButton';
-import { LoadSampleButton, ClearScheduleButton } from '../../components/SampleData';
+import { ClearScheduleButton } from '../../components/SampleData';
 import { getReviewItems, getReviewCounts, getMissingLengthSummary } from '../../db/queries';
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,8 @@ export default async function ReviewPage() {
   const [items, counts, missing] = await Promise.all([
     getReviewItems(), getReviewCounts(), getMissingLengthSummary(),
   ]);
-  const order = ['conflict', 'too_long', 'unclassified'];
+  // Only show a pill for a kind of item that exists. Permanently-zero pills are noise.
+  const order = ['conflict', 'too_long', 'unclassified'].filter((t) => (counts[t] ?? 0) > 0);
 
   return (
     <main className="shell">
@@ -53,7 +54,6 @@ export default async function ReviewPage() {
           </span>
         )}
         <span className="spacer" />
-        <LoadSampleButton />
         <ClearScheduleButton />
       </div>
 

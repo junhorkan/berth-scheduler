@@ -24,13 +24,15 @@ export default function BookingPanel({
   berths,
   vessels,
   defaultDate,
+  minDate,
   maxDate,
 }: {
   berths: BerthRow[];
   vessels: { id: string; name: string; lengthFt: number | null }[];
   defaultDate: string;
-  /** The bookable horizon, from lib/nav. Hard-coding it here let the form accept dates
+  /** The bookable window, from lib/nav. Hard-coding it here let the form accept dates
    *  the board could not navigate to, which is how a saved booking became invisible. */
+  minDate: string;
   maxDate: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -189,7 +191,7 @@ export default function BookingPanel({
         <div className="field">
           <label htmlFor="s">Dates</label>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
-            <input id="s" type="date" value={start} min="1997-08-01" max={maxDate}
+            <input id="s" type="date" value={start} min={minDate} max={maxDate}
                    onChange={(e) => { setStart(e.target.value); if (e.target.value > end) setEnd(e.target.value); }} />
             <span style={{ color: 'var(--ink-muted)' }}>to</span>
             <input type="date" value={end} min={start} max={maxDate}

@@ -289,13 +289,11 @@ export async function resolveReviewItem(id: string): Promise<{ ok: boolean; erro
 /**
  * Empty the schedule, keeping the berths.
  *
- * The sample workbook is a demonstration, not this facility's real history, so the
- * app's normal state is an empty schedule the coordinator fills themselves. Berths
- * survive because they are the facility itself — without them there are no lanes to
- * book into and the board would have nothing to draw.
- *
- * The `*_seed` tables are untouched, so this is reversible: loadSampleSchedule()
- * puts the whole workbook back.
+ * The app is public and unauthenticated, so this is the safety net: whatever a
+ * visitor does, one action restores the state the app ships in. Berths survive
+ * because they are the facility itself — without them there are no lanes to book
+ * into and the board has nothing to draw. They are defined in a migration, not
+ * created here.
  */
 export async function clearSchedule(): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
@@ -304,36 +302,6 @@ export async function clearSchedule(): Promise<{ ok: boolean; error?: string }> 
       await tx`delete from review_items`;
       await tx`delete from bookings`;
       await tx`delete from vessels`;
-    });
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: describeDbError(e) };
-  }
-}
-
-export async function resetToImported(): Promise<{ ok: boolean; error?: string }> {
-  const sql = db();
-  try {
-    await sql.begin(async (tx) => {
-      await tx`delete from review_items`;
-      await tx`delete from bookings`;
-      await tx`delete from vessels`;
-      await tx`delete from berths`;
-      await tx`insert into berths       select * from berths_seed`;
-      await tx`insert into vessels      select * from vessels_seed`;
-      // Columns are listed explicitly because `during` is a GENERATED column and
-      // Postgres refuses to have one written to. `select *` would include it.
-      await tx`
-        insert into bookings (
-          id, berth_id, vessel_id, kind, status, label, start_date, end_date,
-          exclusive, notes, source, import_year, import_sheet, import_row, import_col,
-          created_at)
-        select
-          id, berth_id, vessel_id, kind, status, label, start_date, end_date,
-          exclusive, notes, source, import_year, import_sheet, import_row, import_col,
-          created_at
-        from bookings_seed`;
-      await tx`insert into review_items select * from review_items_seed`;
     });
     return { ok: true };
   } catch (e) {

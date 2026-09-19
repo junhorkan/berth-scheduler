@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  clampMonth, step, currentMonth, lastYear, todayISO, isCurrentMonth,
-  lastBookableISO, FIRST_YEAR, FIRST_MONTH, YEARS_AHEAD,
+  clampMonth, step, currentMonth, firstYear, lastYear, todayISO, isCurrentMonth,
+  firstBookableISO, lastBookableISO, YEARS_BACK, YEARS_AHEAD,
 } from './nav';
 
 /** A fixed instant so every assertion below is deterministic: 11:00 EDT, 19 Sep 2026. */
@@ -26,31 +26,34 @@ describe('currentMonth', () => {
   });
 });
 
-describe('lastYear', () => {
-  // The sample data ends in 2019; that is a fact about the sample, not a limit on
-  // the facility. Pinning the bound to the data made future bookings unreachable.
-  it('looks ahead of today rather than stopping at the imported data', () => {
-    expect(lastYear(NOW)).toBe(2026 + YEARS_AHEAD);
-    expect(lastYear(NOW)).toBeGreaterThan(2019);
+describe('the bookable window', () => {
+  // Both bounds move with the current date. A fixed bound once made future bookings
+  // saveable but unreachable, because the board could not navigate to them.
+  it('reaches back far enough to record a season already past', () => {
+    expect(firstYear(NOW)).toBe(2026 - YEARS_BACK);
   });
-  it('gives the date inputs a matching ceiling', () => {
-    expect(lastBookableISO(NOW)).toBe(`${2026 + YEARS_AHEAD}-12-31`);
+  it('reaches forward far enough to plan the next ones', () => {
+    expect(lastYear(NOW)).toBe(2026 + YEARS_AHEAD);
+  });
+  it('gives the date inputs the same bounds as the navigation', () => {
+    expect(firstBookableISO(NOW)).toBe(`${firstYear(NOW)}-01-01`);
+    expect(lastBookableISO(NOW)).toBe(`${lastYear(NOW)}-12-31`);
   });
 });
 
 describe('clampMonth', () => {
   it('rolls month 0 back into the previous December', () => {
-    expect(clampMonth(2010, 0, NOW)).toEqual({ year: 2009, month: 12 });
+    expect(clampMonth(2025, 0, NOW)).toEqual({ year: 2024, month: 12 });
   });
   it('rolls month 13 forward into the next January', () => {
-    expect(clampMonth(2010, 13, NOW)).toEqual({ year: 2011, month: 1 });
+    expect(clampMonth(2025, 13, NOW)).toEqual({ year: 2026, month: 1 });
   });
-  it('stops at the start of the data, which is August 1997', () => {
-    expect(clampMonth(1997, 1, NOW)).toEqual({ year: FIRST_YEAR, month: FIRST_MONTH });
-    expect(clampMonth(1990, 5, NOW)).toEqual({ year: FIRST_YEAR, month: FIRST_MONTH });
+  it('refuses a year before the window opens', () => {
+    expect(clampMonth(1997, 1, NOW)).toEqual({ year: firstYear(NOW), month: 1 });
+    expect(clampMonth(1990, 5, NOW)).toEqual({ year: firstYear(NOW), month: 1 });
   });
 
-  it('reaches today and the future instead of clamping to 2019', () => {
+  it('reaches today and the future', () => {
     expect(clampMonth(2026, 9, NOW)).toEqual({ year: 2026, month: 9 });
     expect(clampMonth(2027, 3, NOW)).toEqual({ year: 2027, month: 3 });
   });
@@ -66,16 +69,16 @@ describe('clampMonth', () => {
 
 describe('step', () => {
   it('walks forward across a year boundary', () => {
-    expect(step(2010, 12, 1, NOW)).toEqual({ year: 2011, month: 1 });
+    expect(step(2025, 12, 1, NOW)).toEqual({ year: 2026, month: 1 });
   });
   it('walks backward across a year boundary', () => {
-    expect(step(2011, 1, -1, NOW)).toEqual({ year: 2010, month: 12 });
+    expect(step(2026, 1, -1, NOW)).toEqual({ year: 2025, month: 12 });
   });
-  it('walks past the end of the sample data without being blocked', () => {
-    expect(step(2019, 12, 1, NOW)).toEqual({ year: 2020, month: 1 });
-  });
-  it('stops at the bookable horizon', () => {
+  it('stops at the far end of the bookable window', () => {
     expect(step(lastYear(NOW), 12, 1, NOW)).toEqual({ year: lastYear(NOW), month: 12 });
+  });
+  it('stops at the near end of the bookable window', () => {
+    expect(step(firstYear(NOW), 1, -1, NOW)).toEqual({ year: firstYear(NOW), month: 1 });
   });
 });
 
@@ -83,6 +86,6 @@ describe('isCurrentMonth', () => {
   it('recognizes the facility’s own month', () => {
     expect(isCurrentMonth(2026, 9, NOW)).toBe(true);
     expect(isCurrentMonth(2026, 8, NOW)).toBe(false);
-    expect(isCurrentMonth(2010, 7, NOW)).toBe(false);
+    expect(isCurrentMonth(2025, 7, NOW)).toBe(false);
   });
 });

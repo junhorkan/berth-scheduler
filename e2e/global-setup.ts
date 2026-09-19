@@ -1,6 +1,6 @@
-import { loadSampleSchedule } from './helpers/schedule';
+import { seedFixture } from './helpers/schedule';
 
-/** Most specs assert against the sample workbook, so put it in place first. */
+/** Most specs assert against the fixture month, so build it first. */
 export default async function globalSetup() {
-  await loadSampleSchedule();
+  await seedFixture();
 }

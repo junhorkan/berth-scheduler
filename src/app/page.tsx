@@ -2,12 +2,11 @@ import Board from '../components/Board';
 import Nav from '../components/Nav';
 import BookingPanel from '../components/BookingPanel';
 import BookingDetail from '../components/BookingDetail';
-import { LoadSampleButton } from '../components/SampleData';
 import { getBerths, getBookingsInRange, getSummary, getVesselOptions, getBookingById } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import {
-  clampMonth, monthHref, MONTH_NAMES, step, currentMonth, lastYear, lastBookableISO,
-  todayISO, isCurrentMonth, FIRST_YEAR, SAMPLE_LAST_YEAR, BUSIEST_MONTH,
+  clampMonth, monthHref, MONTH_NAMES, step, currentMonth, firstYear, lastYear,
+  firstBookableISO, lastBookableISO, todayISO, isCurrentMonth,
 } from '../lib/nav';
 
 // A cached schedule is a wrong schedule.
@@ -36,9 +35,8 @@ export default async function BoardPage({
   const selected = sp.sel ? await getBookingById(sp.sel) : null;
   const prev = step(year, month, -1);
   const next = step(year, month, 1);
-  const years = Array.from({ length: lastYear() - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
+  const years = Array.from({ length: lastYear() - firstYear() + 1 }, (_, i) => firstYear() + i);
   const onToday = isCurrentMonth(year, month);
-  const scheduleIsEmpty = summary.bookings === 0;
   // A new booking defaults to today when you are on this month, and to the 1st otherwise.
   const newBookingDate = onToday ? todayISO() : bounds.start;
 
@@ -73,6 +71,7 @@ export default async function BoardPage({
           berths={berths}
           vessels={vessels}
           defaultDate={newBookingDate}
+          minDate={firstBookableISO()}
           maxDate={lastBookableISO()}
         />
       </div>
@@ -83,25 +82,6 @@ export default async function BoardPage({
             <b>Nothing booked in {MONTH_NAMES[month - 1]} {year}.</b> Every berth below is free
             &mdash; use <b>+ New booking</b> to reserve one.
           </p>
-          {scheduleIsEmpty ? (
-            // The sample is a demonstration, not this facility's history, so it is not
-            // loaded by default. Offer it here, where someone evaluating the system
-            // is certain to be looking.
-            <p className="note" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <LoadSampleButton label="↻ Load the sample schedule" />
-              <span>
-                23 years of real bookings ({FIRST_YEAR}&ndash;{SAMPLE_LAST_YEAR}) to try the
-                conflict and size checks against. Removable at any time from Review.
-              </span>
-            </p>
-          ) : (
-            <p className="note" style={{ marginTop: 6 }}>
-              The loaded sample schedule runs August {FIRST_YEAR} to December {SAMPLE_LAST_YEAR}.{' '}
-              <a href={monthHref(BUSIEST_MONTH.year, BUSIEST_MONTH.month)}>
-                See {MONTH_NAMES[BUSIEST_MONTH.month - 1]} {BUSIEST_MONTH.year}
-              </a>, its busiest month.
-            </p>
-          )}
         </div>
       )}
 

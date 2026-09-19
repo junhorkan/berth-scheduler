@@ -1,17 +1,13 @@
 /** Month navigation helpers shared by the board chrome. */
 
-export const FIRST_YEAR = 1997;
-/** 1997 is a partial year in the source: its schedule starts in August. */
-export const FIRST_MONTH = 8;
-
 /**
- * How far ahead the schedule can be booked.
+ * How far the schedule reaches either side of today.
  *
- * The imported sample ends in December 2019, but that is a fact about the sample, NOT
- * a limit on the facility. A berth booked for next season must be reachable, so the
- * upper bound is computed from today rather than pinned to the data. Three years is
- * generous for a research schedule without making the year list absurd.
+ * Both bounds are computed from the current date rather than fixed, so the window
+ * moves with the facility. Far enough back to record a season that has already
+ * happened, far enough forward to plan the next ones, without an absurd year list.
  */
+export const YEARS_BACK = 3;
 export const YEARS_AHEAD = 3;
 
 /**
@@ -22,14 +18,6 @@ export const YEARS_AHEAD = 3;
  * board a month ahead of the one on their wall.
  */
 export const FACILITY_TIME_ZONE = 'America/New_York';
-
-/** The extent of the imported sample, for pointing people at data that exists. */
-export const SAMPLE_LAST_YEAR = 2019;
-/**
- * The densest month in the sample: 27 bookings, and the only one containing all four
- * bar states at once. Used for the "see the imported schedule" jump, not as a default.
- */
-export const BUSIEST_MONTH = { year: 2010, month: 7 };
 
 export const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -50,12 +38,20 @@ export function currentMonth(now?: Date): { year: number; month: number } {
   return { year: Number(iso.slice(0, 4)), month: Number(iso.slice(5, 7)) };
 }
 
+/** The earliest year that can be navigated to or booked. */
+export function firstYear(now?: Date): number {
+  return currentMonth(now).year - YEARS_BACK;
+}
+
 /** The furthest year that can be navigated to or booked. */
 export function lastYear(now?: Date): number {
   return currentMonth(now).year + YEARS_AHEAD;
 }
 
-/** The furthest date that can be booked, for the date inputs' `max`. */
+/** The bookable window, for the date inputs' `min` and `max`. */
+export function firstBookableISO(now?: Date): string {
+  return `${firstYear(now)}-01-01`;
+}
 export function lastBookableISO(now?: Date): string {
   return `${lastYear(now)}-12-31`;
 }
@@ -69,11 +65,8 @@ export function clampMonth(
   if (!Number.isFinite(year) && !Number.isFinite(month)) return fallback;
   if (m < 1) { m = 12; y -= 1; }
   if (m > 12) { m = 1; y += 1; }
-  // The data begins in AUGUST 1997, not January, so the lower bound is a month bound
-  // and not just a year bound.
-  if (y < FIRST_YEAR || (y === FIRST_YEAR && m < FIRST_MONTH)) {
-    return { year: FIRST_YEAR, month: FIRST_MONTH };
-  }
+  const min = firstYear(now);
+  if (y < min) return { year: min, month: 1 };
   const max = lastYear(now);
   if (y > max) return { year: max, month: 12 };
   return { year: y, month: m };

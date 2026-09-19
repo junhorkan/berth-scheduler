@@ -43,14 +43,14 @@ least once after any deploy that changes `vercel.json`.
 
 ## Database access posture
 
-**All eight tables have RLS enabled with no policies.** That denies every PostgREST role;
-the application reaches the database as the owning role, which RLS does not apply to.
-This is deliberate — there is no client-side database access anywhere in the app, so a
-policy would open a door nothing needs.
+**Every table has RLS enabled with no policies.** That denies every PostgREST role; the
+application reaches the database as the owning role, which RLS does not apply to. This is
+deliberate — there is no client-side database access anywhere in the app, so a policy
+would open a door nothing needs.
 
-The four `*_seed` tables initially had RLS *disabled*, which exposed the pristine import
-through the REST API while the live tables were closed. Fixed; `get_advisors` is clean of
-ERROR-level findings.
+A set of `*_seed` tables once held the imported legacy workbook, and they had RLS
+*disabled* while the live tables were closed. They have since been dropped along with the
+importer. `get_advisors` is clean of ERROR-level findings.
 
 One WARN is accepted and not fixed: **`btree_gist` lives in the `public` schema.** Moving
 it risks the operator-class resolution that the `EXCLUDE` constraint depends on, which is
@@ -65,6 +65,17 @@ the single most important guarantee in the project. Not worth the trade.
   db:check` shows it; connections recycle and carry a statement timeout to survive it.
 - Supabase transaction pooler, port 6543, **requires `prepare: false`**.
 
+## Schema
+
+There is no DDL file in the repo; the schema lives in Supabase and is changed through
+migrations. Two are worth knowing about:
+
+- **The berths are defined in a migration**, idempotently. They used to be created as a
+  side effect of importing the legacy workbook, so removing that importer would have left
+  the facility itself defined nowhere.
+- **`review_items.type` is constrained** to the kinds the app can actually produce.
+  Missing lengths are derived at read time, not stored, so that value is not accepted.
+
 ## Environment
 
 `DATABASE_URL` in `.env.local` (gitignored) and as a `sensitive` Vercel env var. The
@@ -78,16 +89,13 @@ The remaining INFO-level performance advice was measured and rejected:
 - **Unindexed foreign keys** on `bookings.vessel_id` and the three `review_items` keys.
   The queries that touch them aggregate every row, so the planner correctly chooses a
   sequential scan and would not use an index. `getVessels()` — the heaviest query in the
-  app, 418 vessels joined against 2,031 bookings — plans as a hash right join and runs in
-  **2.6 ms**. The `/vessels` page takes ~220 ms end to end; that is network and rendering,
+  app — plans as a hash right join; measured against a few thousand rows it ran in
+  **2.6 ms**, while the page took ~220 ms end to end. That time is network and rendering,
   not database.
 
   The other usual reason to index a foreign key is cascading deletes, and
-  `resetToImported` already deletes children before parents, so `delete from vessels`
+  `clearSchedule` already deletes children before parents, so `delete from vessels`
   checks an empty `bookings` table.
-
-- **Seed tables have no primary key.** They are snapshots, only ever read wholesale and
-  replaced wholesale. A key would carry cost and buy nothing.
 
 Adding four indexes to silence a linter that measurement says is wrong would be worse
 than the finding.

@@ -4,7 +4,7 @@ import { clearSchedule } from './helpers/schedule';
 /**
  * How the app actually ships: an empty schedule with the berths in place.
  *
- * Named to sort last, because it clears the sample every other spec depends on.
+ * Named to sort last, because it clears the fixture every other spec depends on.
  */
 test.describe('an empty schedule', () => {
   test.beforeAll(async () => {
@@ -19,15 +19,10 @@ test.describe('an empty schedule', () => {
     await expect(page.getByRole('button', { name: '+ New booking' })).toBeVisible();
   });
 
-  test('offers the sample as an explicit choice rather than preloading it', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('button', { name: /Load the sample schedule/ })).toBeVisible();
-  });
-
-  test('has an empty review queue, with no missing-length noise', async ({ page }) => {
+  test('has an empty review queue and no badge', async ({ page }) => {
     await page.goto('/review');
     await expect(page.getByText('Nothing needs attention.')).toBeVisible();
-    // The Review badge should be absent entirely, not showing a zero.
+    // The badge should be absent entirely, not showing a zero.
     await expect(page.locator('.tabs .count')).toHaveCount(0);
   });
 
@@ -62,53 +57,26 @@ test.describe('an empty schedule', () => {
     // The registry now knows it, so a length can be recorded and fit-checking begins.
     await page.goto('/vessels');
     await expect(page.getByText('R/V Test Cutter')).toBeVisible();
-
-    await page.goto('/');
-    page.on('dialog', (d) => d.accept());
-    await created.click();
-    await page.getByRole('button', { name: 'Cancel booking' }).click();
-    await expect(page.getByLabel(/R\/V Test Cutter/)).toHaveCount(0);
-  });
-});
-
-test.describe('loading and clearing the sample through the UI', () => {
-  test.beforeAll(async () => {
-    await clearSchedule();
-  });
-  test.afterAll(async () => {
-    await clearSchedule();
   });
 
-  test('loads the sample from the board, then clears it from Review', async ({ page }) => {
-    // The buttons are the whole feature. Exercising the SQL directly, as the rest of
-    // the suite does, would not catch a broken server action or a wired-up-wrong button.
+  test('clears back to the shipped state from Review', async ({ page }) => {
+    // The app is public and unauthenticated, so this is the safety net: whatever a
+    // visitor does, one button restores the state the app ships in.
     page.on('dialog', (d) => d.accept());
 
-    await page.goto('/');
-    await expect(page.locator('.bar')).toHaveCount(0);
-    await page.getByRole('button', { name: /Load the sample schedule/ }).click();
-
-    // July 2010 is the sample's busiest month; bars there prove the load landed.
-    await expect
-      .poll(async () => {
-        await page.goto('/?y=2010&m=7');
-        return page.locator('.bar').count();
-      }, { timeout: 30_000 })
-      .toBeGreaterThan(0);
-
-    // The queue now holds the items that need a decision, and no missing-length noise.
     await page.goto('/review');
-    await expect(page.getByText('Unresolved conflict').first()).toBeVisible();
-
     await page.getByRole('button', { name: /Clear the schedule/ }).click();
+
     await expect
       .poll(async () => {
-        await page.goto('/?y=2010&m=7');
-        return page.locator('.bar').count();
+        await page.goto('/vessels');
+        return page.getByText('R/V Test Cutter').count();
       }, { timeout: 30_000 })
       .toBe(0);
 
-    // Berths are the facility, not sample data, so they survive a clear.
+    // Berths are the facility, not schedule data, so they survive a clear.
+    await page.goto('/');
     await expect(page.locator('.rail')).toHaveCount(7);
+    await expect(page.locator('.bar')).toHaveCount(0);
   });
 });

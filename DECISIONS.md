@@ -36,9 +36,10 @@ reassignment onto an occupied berth refused.
 **Decision.** A vessel too long for its berth produces a visible warning. Saving is still
 allowed. Only a conflict disables Save.
 
-**Why.** This is a direct consequence of the data. Only 20 of 418 vessels have a recorded
-length, so ~97% of bookings cannot be fit-checked at all. A system that refused to save
-anything it could not verify would refuse almost everything and be abandoned in a week.
+**Why.** A vessel's length is only known once somebody records it, and in practice most
+never will — the coordinator booking a visiting vessel by email does not have its LOA to
+hand. A system that refused to save anything it could not verify would refuse almost
+everything and be abandoned in a week.
 
 The deeper point: **the two problems in the brief are different shapes.** Overlap is
 decidable from data we always have. Fit depends on data that mostly does not exist.
@@ -46,8 +47,10 @@ Treating both as "validation" would force one of two bad outcomes — blocking o
 or softening the overlap guarantee. Keeping them distinct lets each be as strict as it
 can honestly be.
 
-**Rejected:** requiring a length before a vessel can be booked. Clean in principle; it
-would have made importing 23 years of history impossible without inventing data.
+**Rejected:** requiring a length before a vessel can be booked. Clean in principle, but
+it makes the common case — a vessel nobody has measured yet — unbookable, and invites
+someone to type a plausible number to get past the form. A guess recorded as fact is
+worse than an honest blank.
 
 **Rejected:** a conflict override with a written reason. Tempting for realism, but it
 turns "this system cannot double-book" into "this system usually does not double-book",
@@ -55,21 +58,20 @@ which is a far weaker claim and a far weaker guarantee.
 
 ---
 
-## 3. History that violates the rule is kept, not discarded
+## 3. A conflict is always refused; there is no override
 
-**Decision.** Imported bookings that overlap load with `status = 'conflict_unresolved'`,
-and the constraint applies `WHERE status = 'active'`.
+**Decision.** Overlapping bookings on an exclusive berth cannot be saved. No reason
+field, no supervisor confirmation, no escape hatch.
 
-**Why.** The source contains a real overlap: utility work booked on South Float East
-during `OSV AMBER REEF`'s stay of 2017-07-09 to 18. Three options existed — drop the row,
-relax the constraint, or represent the state honestly. Dropping it would make the system
-disagree with reality; relaxing the constraint would sacrifice the guarantee for one
-1997–2019 artefact.
+**Why.** An override turns "this system cannot double-book" into "this system usually
+does not double-book", which is a far weaker claim and a far weaker guarantee. The
+honest response to a genuine need for two vessels on one berth is rafting — modelled
+properly as berth capacity in feet — not a checkbox that disables the rule.
 
-The status column resolves the tension: history loads intact and appears on the board
-flagged for resolution, while everything created through the app is `active` and
-therefore still cannot overlap. **The claim "this system cannot create a double-booking"
-remains literally true.**
+**Consequence worth stating:** `bookings.status` still carries a `conflict_unresolved`
+value, and the exclusion constraint applies `WHERE status = 'active'`. Nothing in the
+app creates that status now. It is the seam an import path would need, and it costs
+nothing to leave in place.
 
 ---
 
@@ -94,8 +96,9 @@ still governs everything above the floor, including every overflow.
 
 **Borrowed as an anti-pattern:** tape-chart documentation warns the chart must never be
 used to judge availability, because reservations without an assigned room are omitted
-from it. A view that silently omits records is dangerous, which is why everything the
-importer could not place surfaces in Review rather than vanishing.
+from it. A view that silently omits records is dangerous, which is why a booking the
+board cannot draw is treated as a bug rather than a display detail — and why a fixed
+date window that hid future bookings was one.
 
 ---
 
@@ -148,8 +151,8 @@ geometrically.
 ends three years from now, computed at request time rather than fixed.
 
 **Why.** This is a scheduling tool for a facility that exists now, so next month has to
-be reachable. An earlier version opened on July 2010 — the densest month in the sample —
-and bounded the range to the sample's own extent, December 2019.
+be reachable. An earlier version opened on a month from the attached sample and bounded
+the range to that sample's own extent, ending in 2019.
 
 **That bound was a bug, not a preference.** Nothing limited the dates on save, so a
 booking could be created for 2026, stored correctly, and then be permanently invisible
@@ -159,9 +162,8 @@ choice; "how far the board can go" is a capability, and conflating them cost a f
 
 **The thing that made today look broken has been fixed separately.** An empty month used
 to replace the grid with a line of text, which reads as a failure. It now renders the
-full grid — seven labelled berth lanes across the month — with a note that the imported
-sample covers 1997–2019 and a link to its busiest month. An empty schedule looks like an
-empty schedule.
+full grid — seven labelled berth lanes across the month, ready to be booked into. An
+empty schedule looks like an empty schedule.
 
 **Detail:** "today" is resolved in `America/New_York`, the facility's timezone. The
 server runs in UTC, where 10pm on the 30th is already the 1st — the board would have
@@ -174,10 +176,11 @@ rolled a month ahead of the one on the coordinator's wall.
 **Decision.** Vessels with no recorded length first, ranked by how many bookings they
 make unverifiable.
 
-**Why.** "398 vessels are missing a length" sounds hopeless. But bookings are extremely
-concentrated: recording the top ten makes **1,002 of 1,974 bookings — 51% — verifiable**.
-Alphabetical ordering hides that; this ordering is the argument, and the page states the
-number.
+**Why.** "Most vessels are missing a length" sounds hopeless, and alphabetical ordering
+keeps it that way. Bookings concentrate heavily on a few regular vessels, so recording a
+handful of lengths makes a large share of the schedule verifiable. This ordering surfaces
+the highest-leverage gaps first, and the page states how many bookings the next entries
+would unlock — so the work looks finite instead of endless.
 
 ---
 
@@ -198,12 +201,16 @@ virtualising 23 years is a large amount of work for a small gain.
 
 ## 11. Public, unauthenticated, with a reset
 
-**Decision.** No login. Anyone can add, edit and cancel. A visible **Reset to imported
-state** restores all 2,031 bookings from a snapshot taken at import time.
+**Decision.** No login. Anyone can add, edit and cancel. A visible **Clear the schedule**
+restores the state the app ships in: an empty schedule with the berths intact.
 
 **Why.** The most important thing to demonstrate is the conflict check refusing a
-booking, and a login wall prevents anyone from trying it. The reset makes that safe:
-experimenting cannot cause lasting damage. Auth was out of scope for the brief anyway.
+booking, and a login wall prevents anyone from trying it. Clearing makes that safe:
+experimenting cannot cause lasting damage, because the shipped state is reachable in one
+action. Auth was out of scope for the brief anyway.
+
+The berths survive a clear deliberately — they are the facility, defined in a migration,
+not schedule data.
 
 ---
 
@@ -239,34 +246,39 @@ query, one pure grouping function, and a page.
 by searching is a destination, not a section of the app, and the nav does not grow.
 
 **One detail worth stating.** A typed `%` or `_` is escaped before it reaches SQL.
-Unescaped, searching `100%` matches all 2,031 bookings — the user typed text, not a
-pattern. There is a unit test and an end-to-end test for exactly that.
+Unescaped, searching `100%` matches every booking in the schedule — the user typed text,
+not a pattern. There is a unit test and an end-to-end test for exactly that.
 
 ---
 
-## 14. The sample schedule is not loaded by default
+## 14. The sample schedule is not used at all
 
-**Decision.** The deployed app starts with an empty schedule and seven berths. The
-23-year sample loads and clears on demand from the Review tab.
+**Decision.** The attached workbook is not loaded, and the importer that read it has been
+removed. The app ships with an empty schedule and seven berths. The only thing taken from
+the sample is the berths themselves, now defined in a migration.
 
-**Why.** The brief attached a sample workbook; it did not ask for it to be installed as
-the facility's data. It is synthetic, it ends in 2019, and someone making a reservation
-does not need fictional bookings in the way. A reservation system's normal state is the
-schedule its users have made.
+**Why.** The brief attached a sample schedule; it never asked for it to be installed as
+the facility's data. Comparing the three options offered makes that clear: one attached
+nothing, one attached a blank reporting form, and nobody would preload an application
+with the contents of a form. The schedule is a specification artefact — it shows that
+berths have lengths, bookings are date ranges, and events occupy berths too.
 
-**What that forced us to fix.** Starting empty exposed two things that had been hidden
-by always having 418 vessels on the register:
+A reservation system's normal state is the schedule its users have made. Shipping with
+23 years of fictional bookings in the way is not that.
+
+**What it cost.** The two problems the brief names can no longer be demonstrated against
+real data; anyone evaluating the system has to create a conflict and an oversized vessel
+themselves. That is a real loss, accepted because an application preloaded with invented
+records is a worse thing to hand over.
+
+**What it forced us to fix.** Starting empty exposed two failures hidden by always having
+hundreds of vessels on the register:
 
 - The booking form refused to save a vessel it did not already know, advising the user to
   "add it on the Vessels tab first" — which that tab cannot do. From an empty register,
-  **no vessel booking could be created at all**. Booking now registers the vessel.
-- An empty month replaced the board with a line of text, so "empty" read as "broken".
-  The grid now always renders.
-
-**Why it is still available.** It is the evidence: 398 of 418 vessels with no recorded
-length, nine physically impossible bookings, one real double-booking preserved from
-history. One click loads it, one click clears it, and the `*_seed` tables make both
-directions safe.
+  **no vessel booking could be created at all.**
+- `createBooking` stored `vessel_id = null` for an unknown name, so even past that gate
+  the register could never have filled and no length could ever have been recorded.
 
 ---
 
@@ -279,7 +291,7 @@ single derived row states the count and points at the Vessels tab.
 burying the 29 items that need a decision. The stored form was also wrong twice over:
 cancelling a vessel's last booking left an item insisting its bookings could not be
 checked, and clearing a length produced no item at all, because nothing outside the
-importer ever created one. A derived count cannot go stale.
+else ever created one. A derived count cannot go stale.
 
 **What it costs.** Per-vessel dismissal is gone — there is no row to mark done. That is
 the right trade: the fix for a missing length is recording it, not dismissing it.
