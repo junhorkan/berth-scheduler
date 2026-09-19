@@ -96,8 +96,9 @@ Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERAT
   fails; list columns explicitly.
 - `todayISO()` resolves in `America/New_York`, not the server's UTC. Using UTC rolls the
   board to the next month at 8pm on the last day of a month.
-- **Pushing to `main` does not deploy**, and the connection pool has a sizing trap that
-  deadlocks renders. Both live in [docs/OPERATIONS.md](docs/OPERATIONS.md).
+- Pushing to `main` deploys, **but Vercel blocks a build whose commit author it does not
+  recognise** — check `git config user.email` first if a deployment comes back `BLOCKED`.
+  That and the connection-pool sizing trap are in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

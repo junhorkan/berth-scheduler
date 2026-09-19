@@ -10,20 +10,29 @@ Supabase project `rtovlwkwakiqrconbacm`.
 
 ## Deploying
 
-**Pushing to `main` does not deploy.** The Vercel project has no Git connection, so
-GitHub receives the commit and nothing downstream reacts. Two commits sat unbuilt before
-this was noticed; the site was serving an older build while the repo looked current.
+**Pushing to `main` deploys.** The Vercel project is connected to
+`junhorkan/berth-scheduler`, so a push fires a webhook and production rebuilds on its own.
 
-Until that is fixed, a deploy is an explicit step: trigger a production deployment from
-the repo's `main` ref through the Vercel API or dashboard, then **verify against the live
-URL**, not against the deployment list.
+### The commit author has to be someone Vercel recognises
 
-To fix it permanently: Vercel → project → **Settings → Git → Connect Git Repository** →
-`junhorkan/berth-scheduler`. After that, pushes build on their own.
+Vercel **blocks** a git deployment whose commit author matches no account with access to
+the project. It fires the webhook, creates the deployment, and stops it at `BLOCKED` —
+so the repo looks current, a deployment exists, and the site is still serving old code.
+
+This happened here. Git had no `user.email` configured, so commits were authored as
+`junhorkan@Juns-MacBook-Pro-4.local`, a placeholder derived from the hostname. The fix
+was to set the repo's identity to the email on the Vercel account:
+
+```bash
+git config user.email "junhorkan@gmail.com"
+```
+
+If deployments start coming back `BLOCKED`, check the commit author before anything else.
 
 ### Verifying a deploy actually landed
 
-Check a *behaviour* that changed, not the build status:
+The deployment list is not proof, and neither is the Git settings page — "connected" was
+true here while nothing was building. Check a *behaviour* that changed:
 
 ```bash
 curl -s https://berth-scheduler.vercel.app/ | grep -c 'class="find"'      # search box
