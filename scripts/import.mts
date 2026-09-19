@@ -199,24 +199,14 @@ try {
     }
   }
 
-  // Vessels with no recorded length, ranked by how many bookings they block.
-  const bookingsPerVessel = new Map<string, number>();
-  for (const p of prepared) {
-    if (p.normalizedVesselName) {
-      bookingsPerVessel.set(p.normalizedVesselName, (bookingsPerVessel.get(p.normalizedVesselName) ?? 0) + 1);
-    }
-  }
-  let missing = 0;
-  for (const [norm, count] of [...bookingsPerVessel.entries()].sort((a, b) => b[1] - a[1])) {
-    if (registryByName.get(norm)?.nameLengthFt != null) continue;
-    missing++;
-    items.push(reviewRow({
-      type: 'missing_length',
-      vessel_id: vesselId.get(norm)!,
-      raw_text: vesselMap.get(norm)!.display,
-      detail: `${count} booking${count === 1 ? '' : 's'} cannot be fit-checked without a length`,
-    }));
-  }
+  // Vessels with no recorded length are NOT written as review items. There were 398 of
+  // them — 93% of the queue, all saying the same thing, burying the items that need a
+  // decision — and a stored count goes stale the moment a booking is cancelled or a
+  // length is cleared. getMissingLengthSummary() derives it instead. The Vessels tab,
+  // ordered by bookings blocked, is where that work actually happens.
+  const missing = [...new Set(
+    prepared.map((p) => p.normalizedVesselName).filter((n): n is string => Boolean(n)),
+  )].filter((norm) => registryByName.get(norm)?.nameLengthFt == null).length;
 
   // Cells the importer could not classify, plus cells orphaned on damaged grid rows.
   for (const u of unclassified) {

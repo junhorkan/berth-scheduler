@@ -47,6 +47,11 @@ is the central design decision. See `DECISIONS.md`.
 - **Review** — the coordinator's queue: unresolved conflicts, size violations, missing
   lengths, and cells the importer would not guess at. Every row traces back to its
   original spreadsheet cell.
+- **Sample data is optional.** The app starts with an empty schedule and its seven
+  berths. The 23-year workbook loads and clears from the Review tab, so the conflict and
+  size checks can be tried against real, messy data without that data being installed as
+  the facility's own. Booking a vessel the register does not know **adds it**, which is
+  how the register fills from an empty start.
 - **Find** — one box, searching every vessel name, event label and closure note across
   all 276 months at once. Results group by identity, so a vessel with 267 bookings is one
   block and not 267 rows, and each result jumps straight to its own month on the board.

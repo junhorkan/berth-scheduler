@@ -95,7 +95,8 @@ export const getSummary = cache(async function getSummary(): Promise<SystemSumma
       (select count(*)::int from vessels where length_ft is not null) as vessels_with_length,
       (select count(*)::int from bookings where status <> 'cancelled') as bookings,
       (select count(*)::int from bookings where status = 'conflict_unresolved') as unresolved,
-      (select count(*)::int from review_items where resolved_at is null) as open_review,
+      (select count(*)::int from review_items
+        where resolved_at is null and type <> 'missing_length') as open_review,
       (select extract(year from min(start_date))::int from bookings) as first_year,
       (select extract(year from max(start_date))::int from bookings) as last_year`;
   return {
@@ -169,6 +170,31 @@ export async function getVesselOptions(): Promise<VesselOption[]> {
     name: r.canonical_name as string,
     lengthFt: r.length_ft as number | null,
   }));
+}
+
+export type MissingLengthSummary = { vessels: number; bookings: number };
+
+/**
+ * How much of the schedule cannot be fit-checked, computed now rather than remembered.
+ *
+ * This used to be one stored review item per vessel — 398 of them, 93% of the queue,
+ * all saying the same thing and burying the items that need a decision. Worse, the
+ * count inside each was frozen at import: cancelling a vessel's last booking left an
+ * item insisting its bookings could not be checked, and clearing a length produced no
+ * item at all, because nothing outside the importer ever created one.
+ *
+ * Deriving it fixes both, because there is no stored state to go stale. The Vessels
+ * tab is where the work happens; this is the pointer to it.
+ */
+export async function getMissingLengthSummary(): Promise<MissingLengthSummary> {
+  const sql = db();
+  const [r] = await sql`
+    select count(distinct v.id)::int as vessels, count(b.id)::int as bookings
+      from vessels v
+      join bookings b
+        on b.vessel_id = v.id and b.status <> 'cancelled' and b.kind = 'vessel'
+     where v.length_ft is null`;
+  return { vessels: r.vessels as number, bookings: r.bookings as number };
 }
 
 export type ReviewRow = {

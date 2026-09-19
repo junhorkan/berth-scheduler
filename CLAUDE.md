@@ -37,10 +37,13 @@ Breaking any of these looks like an improvement and is not:
 
 1. **`src/domain` imports nothing from `db` or `app`.** It is pure and unit-tested
    without infrastructure. The importer and the UI call the same functions.
-2. **Never invent a vessel length.** 398 vessels have none. The system says so rather
-   than guessing. Do not seed plausible values to make the board look better.
-3. **Nothing vanishes silently.** Anything the importer cannot place becomes a review
-   item carrying its source sheet/row/column — never a dropped row or a log line.
+2. **Never invent a vessel length**, and never gate a booking on picking a known vessel.
+   Booking registers the vessel with a null length; that is how the register fills from
+   an empty start. Gating on "pick an existing vessel" once made bookings impossible.
+3. **Nothing vanishes silently.** Whatever the importer cannot place becomes a review
+   item carrying its sheet/row/column — never a dropped row or a log line. Missing
+   lengths are the one exception: **derived, not stored** (one row per vessel was 93% of
+   the queue and went stale). The Vessels tab is where that work happens.
 4. **`Small craft slips` is pooled** (many boats at once) and exempt from conflict
    detection. Every other berth is exclusive.
 5. **Imported rows that violate the constraint load as `conflict_unresolved`**, which the
@@ -49,17 +52,19 @@ Breaking any of these looks like an improvement and is not:
 6. **Bar height is `vessel length ÷ berth length`.** The misfit is geometry, not a badge.
    A violation states its measurement at *any* width — six of the nine violations are
    single-day.
-7. **The board opens on today and runs three years ahead.** The imported sample ends in
-   December 2019; that is a fact about the sample, **never a bound on the app**. Pinning
-   the range to the data once made future bookings saveable but unreachable. An empty
-   month must still render the full grid — replacing it with a line of text is what made
-   "empty" read as "broken". The navigation ceiling and the booking form's `max` both
-   come from `lib/nav`; **never hard-code a second one**, which is how the form came to
-   accept dates the board could not reach.
-8. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review. This is
-   a coordinator's tool, not a portfolio piece. Rationale belongs in `DECISIONS.md`.
-   `/search` is a destination reached from the masthead box, **not a fourth tab** — do
-   not add it to the nav, and do not remove it for violating the three-tab rule.
+7. **The sample workbook is NOT loaded by default.** The app ships with an empty
+   schedule and seven berths — the sample is a demonstration, not this facility's
+   history. It loads and clears from Review, reversibly, via the `*_seed` tables. An
+   empty schedule is the normal case, not a degraded one, and must stay fully usable.
+8. **The board opens on today and runs three years ahead.** The sample ending in 2019 is
+   a fact about the sample, **never a bound on the app** — pinning the range to it once
+   made future bookings saveable but unreachable. An empty month still renders the full
+   grid. The navigation ceiling and the form's `max` both come from `lib/nav`; **never
+   hard-code a second one**.
+9. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review — a
+   coordinator's tool, not a portfolio piece. Rationale belongs in `DECISIONS.md`.
+   `/search` is a destination reached from the masthead, **not a fourth tab**: do not add
+   it to the nav, and do not delete it for breaking the three-tab rule.
 
 ## Structure
 
@@ -79,7 +84,7 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 ```bash
 npm run dev       # local dev server
 npm test          # 214 unit tests, no database needed
-npm run e2e       # 29 Playwright specs against a real server
+npm run e2e       # 33 Playwright specs; loads the sample, then clears it again
 npm run import    # reload the workbook into the database
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build
@@ -98,6 +103,16 @@ Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERAT
   board to the next month at 8pm on the last day of a month.
 - **Pushing to `main` does not deploy**, and the connection pool has a sizing trap that
   deadlocks renders. Both live in [docs/OPERATIONS.md](docs/OPERATIONS.md).
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+
+<!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
 

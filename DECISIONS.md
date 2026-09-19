@@ -241,3 +241,46 @@ by searching is a destination, not a section of the app, and the nav does not gr
 **One detail worth stating.** A typed `%` or `_` is escaped before it reaches SQL.
 Unescaped, searching `100%` matches all 2,031 bookings — the user typed text, not a
 pattern. There is a unit test and an end-to-end test for exactly that.
+
+---
+
+## 14. The sample schedule is not loaded by default
+
+**Decision.** The deployed app starts with an empty schedule and seven berths. The
+23-year sample loads and clears on demand from the Review tab.
+
+**Why.** The brief attached a sample workbook; it did not ask for it to be installed as
+the facility's data. It is synthetic, it ends in 2019, and someone making a reservation
+does not need fictional bookings in the way. A reservation system's normal state is the
+schedule its users have made.
+
+**What that forced us to fix.** Starting empty exposed two things that had been hidden
+by always having 418 vessels on the register:
+
+- The booking form refused to save a vessel it did not already know, advising the user to
+  "add it on the Vessels tab first" — which that tab cannot do. From an empty register,
+  **no vessel booking could be created at all**. Booking now registers the vessel.
+- An empty month replaced the board with a line of text, so "empty" read as "broken".
+  The grid now always renders.
+
+**Why it is still available.** It is the evidence: 398 of 418 vessels with no recorded
+length, nine physically impossible bookings, one real double-booking preserved from
+history. One click loads it, one click clears it, and the `*_seed` tables make both
+directions safe.
+
+---
+
+## 15. Missing lengths are derived, not queued
+
+**Decision.** The Review queue no longer stores one item per vessel with no length. A
+single derived row states the count and points at the Vessels tab.
+
+**Why.** There were 398 of them — 93% of a 427-item queue — all saying the same thing and
+burying the 29 items that need a decision. The stored form was also wrong twice over:
+cancelling a vessel's last booking left an item insisting its bookings could not be
+checked, and clearing a length produced no item at all, because nothing outside the
+importer ever created one. A derived count cannot go stale.
+
+**What it costs.** Per-vessel dismissal is gone — there is no row to mark done. That is
+the right trade: the fix for a missing length is recording it, not dismissing it.
+

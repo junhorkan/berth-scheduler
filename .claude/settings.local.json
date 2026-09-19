@@ -9,7 +9,8 @@
       "Bash(mkdir -p data)",
       "Bash(cp \"/Users/junhorkan/Downloads/drive-download-20260918T174336Z-1-001/Dock Schedule - Synthetic Sample.xlsx\" data/)",
       "Bash(curl -s https://nodejs.org/dist/index.json)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(node --env-file=.env.local -e ' *)"
     ]
   }
 }

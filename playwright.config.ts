@@ -9,6 +9,10 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
+  // The sample workbook is optional in the deployed app, so the suite loads it and
+  // clears it again, leaving the database in the state the app ships in.
+  globalSetup: './e2e/global-setup.ts',
+  globalTeardown: './e2e/global-teardown.ts',
   fullyParallel: false,
   workers: 1,
   timeout: 45_000,

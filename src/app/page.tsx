@@ -2,6 +2,7 @@ import Board from '../components/Board';
 import Nav from '../components/Nav';
 import BookingPanel from '../components/BookingPanel';
 import BookingDetail from '../components/BookingDetail';
+import { LoadSampleButton } from '../components/SampleData';
 import { getBerths, getBookingsInRange, getSummary, getVesselOptions, getBookingById } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import {
@@ -37,6 +38,7 @@ export default async function BoardPage({
   const next = step(year, month, 1);
   const years = Array.from({ length: lastYear() - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
   const onToday = isCurrentMonth(year, month);
+  const scheduleIsEmpty = summary.bookings === 0;
   // A new booking defaults to today when you are on this month, and to the 1st otherwise.
   const newBookingDate = onToday ? todayISO() : bounds.start;
 
@@ -78,15 +80,28 @@ export default async function BoardPage({
       {bookings.length === 0 && (
         <div className="panel">
           <p style={{ margin: 0 }}>
-            <b>Nothing booked in {MONTH_NAMES[month - 1]} {year}.</b> The berths below are free
-            {year > SAMPLE_LAST_YEAR && <> &mdash; use <b>+ New booking</b> to reserve one</>}.
+            <b>Nothing booked in {MONTH_NAMES[month - 1]} {year}.</b> Every berth below is free
+            &mdash; use <b>+ New booking</b> to reserve one.
           </p>
-          <p className="note" style={{ marginTop: 6 }}>
-            The imported sample schedule runs August {FIRST_YEAR} to December {SAMPLE_LAST_YEAR}.{' '}
-            <a href={monthHref(BUSIEST_MONTH.year, BUSIEST_MONTH.month)}>
-              See {MONTH_NAMES[BUSIEST_MONTH.month - 1]} {BUSIEST_MONTH.year}
-            </a>, its busiest month.
-          </p>
+          {scheduleIsEmpty ? (
+            // The sample is a demonstration, not this facility's history, so it is not
+            // loaded by default. Offer it here, where someone evaluating the system
+            // is certain to be looking.
+            <p className="note" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <LoadSampleButton label="↻ Load the sample schedule" />
+              <span>
+                23 years of real bookings ({FIRST_YEAR}&ndash;{SAMPLE_LAST_YEAR}) to try the
+                conflict and size checks against. Removable at any time from Review.
+              </span>
+            </p>
+          ) : (
+            <p className="note" style={{ marginTop: 6 }}>
+              The loaded sample schedule runs August {FIRST_YEAR} to December {SAMPLE_LAST_YEAR}.{' '}
+              <a href={monthHref(BUSIEST_MONTH.year, BUSIEST_MONTH.month)}>
+                See {MONTH_NAMES[BUSIEST_MONTH.month - 1]} {BUSIEST_MONTH.year}
+              </a>, its busiest month.
+            </p>
+          )}
         </div>
       )}
 
@@ -96,10 +111,12 @@ export default async function BoardPage({
         <BookingDetail booking={selected} berths={berths} closeHref={monthHref(year, month)} />
       )}
 
+      {summary.vessels > 0 && (
       <p className="note">
         {summary.vessels - summary.vesselsWithLength} of {summary.vessels} vessels have no recorded
         length, so their bookings cannot be checked against berth length. Hatched bars mark those.
       </p>
+      )}
     </main>
   );
 }

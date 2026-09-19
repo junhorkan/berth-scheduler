@@ -9,6 +9,7 @@
 import { db } from './client';
 import { findConflicts, isValidRange } from '../domain/conflicts';
 import { checkFit, type FitResult } from '../domain/fit';
+import { canonicalVesselName } from '../domain/normalize';
 import type { Booking, BookingKind } from '../domain/types';
 
 export type CheckResult = {
@@ -116,6 +117,37 @@ export async function checkBooking(input: {
   };
 }
 
+/**
+ * Find a vessel by name, or register it.
+ *
+ * The registry has to fill itself through ordinary use. Starting from an empty
+ * schedule, every vessel is new, and a booking that stored `vessel_id = null` would
+ * leave the Vessels tab permanently empty — so no length could ever be recorded and
+ * the fit check could never do anything. Booking a vessel is what puts it on the
+ * register; recording its length is then a separate, optional step.
+ *
+ * Matching is on the same normalized name the importer uses, so 'os/v amber reef'
+ * and 'OSV AMBER REEF' are one vessel rather than two.
+ */
+async function findOrCreateVessel(
+  tx: { <T>(s: TemplateStringsArray, ...v: unknown[]): Promise<T> } | ReturnType<typeof db>,
+  rawName: string,
+): Promise<string | null> {
+  const { display, normalized } = canonicalVesselName(rawName);
+  if (normalized === '') return null;
+
+  const existing = await (tx as ReturnType<typeof db>)`
+    select id from vessels where normalized_name = ${normalized}`;
+  if (existing.length > 0) return existing[0].id as string;
+
+  const [created] = await (tx as ReturnType<typeof db>)`
+    insert into vessels (canonical_name, normalized_name, length_ft, length_source)
+    values (${display}, ${normalized}, null, null)
+    on conflict (normalized_name) do update set canonical_name = vessels.canonical_name
+    returning id`;
+  return created.id as string;
+}
+
 export async function createBooking(input: {
   berthId: string;
   vesselId: string | null;
@@ -127,9 +159,16 @@ export async function createBooking(input: {
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const sql = db();
   try {
+    // A vessel booking always resolves to a vessel row; only events and closures
+    // legitimately have none.
+    const vesselId =
+      input.kind === 'vessel' && input.vesselId == null
+        ? await findOrCreateVessel(sql, input.label)
+        : input.vesselId;
+
     const [row] = await sql`
       insert into bookings (berth_id, vessel_id, kind, status, label, start_date, end_date, notes, source)
-      values (${input.berthId}, ${input.vesselId}, ${input.kind}, 'active', ${input.label},
+      values (${input.berthId}, ${vesselId}, ${input.kind}, 'active', ${input.label},
               ${input.start}, ${input.end}, ${input.notes ?? null}, 'manual')
       returning id`;
     return { ok: true, id: row.id as string };
@@ -220,14 +259,9 @@ export async function setVesselLength(
          set length_ft = ${lengthFt},
              length_source = ${lengthFt == null ? null : 'manual'}
        where id = ${vesselId}`;
-    // A recorded length resolves that vessel's missing-length item...
-    if (lengthFt != null) {
-      await sql`
-        update review_items set resolved_at = now()
-         where type = 'missing_length' and vessel_id = ${vesselId} and resolved_at is null`;
-    }
-    // ...and answers a question that was previously unanswerable, which may reveal
-    // violations that were always there but could not be seen.
+    // Recording a length answers a question that was previously unanswerable, which
+    // may reveal violations that were always there but could not be seen. The
+    // missing-length count needs no update: it is derived, not stored.
     await refreshTooLongItems(sql, vesselId);
     return { ok: true };
   } catch (e) {
@@ -252,6 +286,31 @@ export async function resolveReviewItem(id: string): Promise<{ ok: boolean; erro
  * what makes that safe to offer. Restoring from a snapshot taken at import time is
  * faster and more reliable than re-parsing the workbook inside a serverless function.
  */
+/**
+ * Empty the schedule, keeping the berths.
+ *
+ * The sample workbook is a demonstration, not this facility's real history, so the
+ * app's normal state is an empty schedule the coordinator fills themselves. Berths
+ * survive because they are the facility itself — without them there are no lanes to
+ * book into and the board would have nothing to draw.
+ *
+ * The `*_seed` tables are untouched, so this is reversible: loadSampleSchedule()
+ * puts the whole workbook back.
+ */
+export async function clearSchedule(): Promise<{ ok: boolean; error?: string }> {
+  const sql = db();
+  try {
+    await sql.begin(async (tx) => {
+      await tx`delete from review_items`;
+      await tx`delete from bookings`;
+      await tx`delete from vessels`;
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: describeDbError(e) };
+  }
+}
+
 export async function resetToImported(): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {

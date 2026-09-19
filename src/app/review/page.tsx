@@ -1,6 +1,7 @@
 import Nav from '../../components/Nav';
-import { ResolveButton, ResetButton } from '../../components/ResolveButton';
-import { getReviewItems, getReviewCounts } from '../../db/queries';
+import { ResolveButton } from '../../components/ResolveButton';
+import { LoadSampleButton, ClearScheduleButton } from '../../components/SampleData';
+import { getReviewItems, getReviewCounts, getMissingLengthSummary } from '../../db/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,16 +28,13 @@ const LABEL: Record<string, { title: string; blurb: string; tone: string }> = {
     blurb: 'A cell the importer would not guess at.',
     tone: 'warn',
   },
-  missing_length: {
-    title: 'No recorded length',
-    blurb: 'Fit cannot be verified until a length is recorded on the Vessels tab.',
-    tone: 'muted',
-  },
 };
 
 export default async function ReviewPage() {
-  const [items, counts] = await Promise.all([getReviewItems(), getReviewCounts()]);
-  const order = ['conflict', 'too_long', 'unclassified', 'missing_length'];
+  const [items, counts, missing] = await Promise.all([
+    getReviewItems(), getReviewCounts(), getMissingLengthSummary(),
+  ]);
+  const order = ['conflict', 'too_long', 'unclassified'];
 
   return (
     <main className="shell">
@@ -49,14 +47,42 @@ export default async function ReviewPage() {
             <b>{counts[t] ?? 0}</b>
           </span>
         ))}
+        {missing.vessels > 0 && (
+          <span className="pill muted">
+            No recorded length<b>{missing.vessels}</b>
+          </span>
+        )}
         <span className="spacer" />
-        <ResetButton />
+        <LoadSampleButton />
+        <ClearScheduleButton />
       </div>
 
       <div className="board">
-        {items.length === 0 ? (
+        {missing.vessels > 0 && (
+          <ul className="queue">
+            <li className="muted">
+              <div className="qmain">
+                <span className="qtitle">No recorded length</span>
+                <span className="qtext">
+                  {missing.vessels.toLocaleString()} vessel{missing.vessels === 1 ? '' : 's'}
+                </span>
+                <span className="qdetail">
+                  {missing.bookings.toLocaleString()} booking
+                  {missing.bookings === 1 ? '' : 's'} cannot be checked against berth length
+                  until a length is recorded.
+                </span>
+                <span className="qmeta">Ordered by bookings blocked on the Vessels tab.</span>
+              </div>
+              <div className="qact">
+                <a className="btn" href="/vessels">Add lengths</a>
+              </div>
+            </li>
+          </ul>
+        )}
+
+        {items.length === 0 && missing.vessels === 0 ? (
           <p className="empty">Nothing needs attention.</p>
-        ) : (
+        ) : items.length === 0 ? null : (
           <ul className="queue">
             {items.map((r) => (
               <li key={r.id} className={LABEL[r.type].tone}>
@@ -73,9 +99,7 @@ export default async function ReviewPage() {
                   </span>
                 </div>
                 <div className="qact">
-                  {r.type === 'missing_length' ? (
-                    <a className="btn" href="/vessels">Add length</a>
-                  ) : r.bookingStart ? (
+                  {r.bookingStart ? (
                     <a className="btn" href={`/?y=${r.bookingStart.slice(0, 4)}&m=${Number(r.bookingStart.slice(5, 7))}`}>
                       Show on board
                     </a>

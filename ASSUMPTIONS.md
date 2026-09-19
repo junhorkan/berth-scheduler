@@ -100,3 +100,26 @@ silently**.
 
 20. **The `Tours` sheet is out of scope.** Its own first row says tours are now tracked
     in a separate system.
+
+---
+
+## Who is using this
+
+**The brief does not say whether waterfront staff manage bookings or visitors request
+them.** This assumes **staff-managed**: one dock coordinator, or a few, entering and
+changing bookings directly. Nothing is requested, queued, or approved.
+
+That assumption shapes more of the interface than any other choice here:
+
+- **No accounts, and no per-user anything.** Everyone who opens it has the same powers.
+- **A booking is committed the moment it is saved.** There is no pending state, because
+  there is nobody to approve it.
+- **The Review tab exists at all.** It is a coordinator's work queue. A visitor-facing
+  system would never show source-data defects.
+- **The board is the landing page.** A self-service system would open on "find me a free
+  berth", not on a grid of everything.
+
+If it turned out visitors book directly, the conflict and fit rules would survive intact —
+they are properties of the berth, not of who is asking — but the interface around them
+would be a different product: a request flow, an approval queue, and accounts.
+

@@ -72,18 +72,24 @@ export default function BookingPanel({
     return () => clearTimeout(t);
   }, [open, berthId, vesselId, kind, start, end]);
 
-  const needsVessel = kind === 'vessel' && !vessel;
+  /**
+   * A name that matches nothing on the register is a NEW vessel, not an error.
+   *
+   * This used to block the save and tell the user to "add it on the Vessels tab
+   * first" — which was impossible, because that tab only edits lengths of vessels
+   * that already exist. Starting from an empty schedule every vessel is new, so the
+   * gate made vessel bookings unreachable. Saving registers it instead.
+   */
+  const isNewVessel = kind === 'vessel' && !vessel && vesselName.trim() !== '';
   const missingLabel = effectiveLabel === '';
   const blocked = check ? !check.bookable : false;
-  const canSave = !blocked && !missingLabel && !needsVessel && !pending;
+  const canSave = !blocked && !missingLabel && !pending;
 
   const disabledReason = blocked
     ? check?.blockedBecause ?? 'This berth is already occupied.'
-    : needsVessel
-      ? 'Pick a vessel from the list, or add it on the Vessels tab first.'
-      : missingLabel
-        ? 'Give this booking a name.'
-        : null;
+    : missingLabel
+      ? kind === 'vessel' ? 'Name the vessel.' : 'Give this booking a name.'
+      : null;
 
   function save() {
     setSaveError(null);
@@ -148,6 +154,11 @@ export default function BookingPanel({
                   {vessel.lengthFt != null
                     ? `${vessel.lengthFt}ft on record`
                     : 'No length on record for this vessel'}
+                </div>
+              )}
+              {isNewVessel && (
+                <div className="sub-hint">
+                  New vessel &mdash; saving adds it to the register, with no length yet.
                 </div>
               )}
             </div>

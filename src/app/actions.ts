@@ -56,6 +56,14 @@ export async function resolveReviewItemAction(id: string) {
   return res;
 }
 
+export async function clearScheduleAction() {
+  const res = await m.clearSchedule();
+  revalidatePath('/');
+  revalidatePath('/vessels');
+  revalidatePath('/review');
+  return res;
+}
+
 export async function resetToImportedAction() {
   const res = await m.resetToImported();
   revalidatePath('/');
