@@ -240,6 +240,16 @@ try {
     await sql`insert into review_items ${sql(items.slice(i, i + 250))}`;
   }
 
+  // ------------------------------------------------- snapshot for Reset
+  // The deployed app is public and unauthenticated by design, so anyone can edit it.
+  // A snapshot taken here is what makes that safe: "Reset to imported state" restores
+  // from these tables, which is faster and far more reliable than re-parsing a
+  // spreadsheet inside a serverless function.
+  for (const t of ['berths', 'vessels', 'bookings', 'review_items']) {
+    await sql.unsafe(`drop table if exists ${t}_seed`);
+    await sql.unsafe(`create table ${t}_seed as select * from ${t}`);
+  }
+
   // ------------------------------------------------------------- report
   const [counts] = await sql`
     select

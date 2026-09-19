@@ -1,4 +1,5 @@
 import Board from '../components/Board';
+import Nav from '../components/Nav';
 import { getBerths, getBookingsInRange, getSummary } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import { clampMonth, monthHref, MONTH_NAMES, step, DEFAULT_MONTH, DEFAULT_YEAR, FIRST_YEAR, LAST_YEAR } from '../lib/nav';
@@ -30,18 +31,7 @@ export default async function BoardPage({
 
   return (
     <main className="shell">
-      <header className="masthead">
-        <h1>Harborview Marine Research Center</h1>
-        <span className="sub">Dock Schedule</span>
-        <nav className="tabs">
-          <a href="/" aria-current="page">Board</a>
-          <a href="/vessels">Vessels</a>
-          <a href="/review">
-            Review
-            {summary.openReviewItems > 0 && <span className="count">{summary.openReviewItems}</span>}
-          </a>
-        </nav>
-      </header>
+      <Nav current="board" />
 
       <div className="toolbar">
         <a className="navbtn" href={monthHref(prev.year, prev.month)} aria-label="Previous month">&lsaquo;</a>

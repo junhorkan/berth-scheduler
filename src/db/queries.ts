@@ -1,6 +1,7 @@
 /**
  * Every database read the app performs. Types are declared here, at the SQL boundary.
  */
+import { cache } from 'react';
 import { db } from './client';
 import type { BookingKind, BookingStatus, BerthCapacityMode } from '../domain/types';
 
@@ -78,7 +79,11 @@ export type SystemSummary = {
   lastYear: number;
 };
 
-export async function getSummary(): Promise<SystemSummary> {
+/**
+ * Wrapped in React's per-request cache: the nav and the page body both want these
+ * counts, and without this every page would run the query twice on one render.
+ */
+export const getSummary = cache(async function getSummary(): Promise<SystemSummary> {
   const sql = db();
   const [r] = await sql`
     select
@@ -100,4 +105,101 @@ export async function getSummary(): Promise<SystemSummary> {
     firstYear: r.first_year as number,
     lastYear: r.last_year as number,
   };
+});
+
+export type VesselRow = {
+  id: string;
+  canonicalName: string;
+  lengthFt: number | null;
+  loaFt: number | null;
+  lengthSource: string | null;
+  operator: string | null;
+  bookingCount: number;
+  lastSeen: string | null;
+};
+
+/**
+ * The registry, ordered so the biggest data gaps surface first.
+ *
+ * Vessels with NO recorded length come first, ranked by how many bookings they make
+ * unverifiable. That ordering is the most valuable thing on this page: 398 vessels
+ * lack a length, which sounds hopeless, but the concentration is extreme — recording
+ * the top ten alone makes roughly half of all bookings checkable.
+ */
+export async function getVessels(): Promise<VesselRow[]> {
+  const sql = db();
+  const rows = await sql`
+    select v.id, v.canonical_name, v.length_ft, v.loa_ft, v.length_source, v.operator,
+           count(b.id)::int as booking_count,
+           max(b.end_date) as last_seen
+      from vessels v
+      left join bookings b on b.vessel_id = v.id and b.status <> 'cancelled'
+     group by v.id
+     order by (v.length_ft is not null), count(b.id) desc, v.canonical_name`;
+  return rows.map((r) => ({
+    id: r.id as string,
+    canonicalName: r.canonical_name as string,
+    lengthFt: r.length_ft as number | null,
+    loaFt: r.loa_ft as number | null,
+    lengthSource: r.length_source as string | null,
+    operator: r.operator as string | null,
+    bookingCount: r.booking_count as number,
+    lastSeen: r.last_seen ? (r.last_seen as Date).toISOString().slice(0, 10) : null,
+  }));
+}
+
+export type ReviewRow = {
+  id: string;
+  type: 'conflict' | 'too_long' | 'missing_length' | 'unclassified';
+  rawText: string | null;
+  detail: string | null;
+  vesselId: string | null;
+  bookingId: string | null;
+  bookingStart: string | null;
+  berthName: string | null;
+  importSheet: string | null;
+  importRow: number | null;
+  importCol: number | null;
+};
+
+/** The coordinator's attention queue: open items, worst class first. */
+export async function getReviewItems(limit = 200): Promise<ReviewRow[]> {
+  const sql = db();
+  const rows = await sql`
+    select r.id, r.type, r.raw_text, r.detail, r.vessel_id, r.booking_id,
+           b.start_date as booking_start, be.name as berth_name,
+           r.import_sheet, r.import_row, r.import_col
+      from review_items r
+      left join bookings b on b.id = r.booking_id
+      left join berths be on be.id = coalesce(r.berth_id, b.berth_id)
+     where r.resolved_at is null
+     order by case r.type
+                when 'conflict' then 0
+                when 'too_long' then 1
+                when 'unclassified' then 2
+                else 3
+              end,
+              r.created_at
+     limit ${limit}`;
+  return rows.map((r) => ({
+    id: r.id as string,
+    type: r.type as ReviewRow['type'],
+    rawText: r.raw_text as string | null,
+    detail: r.detail as string | null,
+    vesselId: r.vessel_id as string | null,
+    bookingId: r.booking_id as string | null,
+    bookingStart: r.booking_start ? (r.booking_start as Date).toISOString().slice(0, 10) : null,
+    berthName: r.berth_name as string | null,
+    importSheet: r.import_sheet as string | null,
+    importRow: r.import_row as number | null,
+    importCol: r.import_col as number | null,
+  }));
+}
+
+export async function getReviewCounts(): Promise<Record<string, number>> {
+  const sql = db();
+  const rows = await sql`
+    select type, count(*)::int as n from review_items
+     where resolved_at is null group by type`;
+  return Object.fromEntries(rows.map((r) => [r.type as string, r.n as number]));
 }

@@ -32,9 +32,17 @@ function create(): Sql {
     // statements. Serverless functions must also keep the pool small.
     prepare: false,
     ssl: 'require',
-    max: 4,
-    idle_timeout: 20,
+    max: 3,
+    // Recycle aggressively. A connection abandoned by a killed process sits on the
+    // server waiting on a socket that will never speak again, and without these the
+    // pool will happily wait on it forever.
+    idle_timeout: 15,
+    max_lifetime: 60 * 10,
     connect_timeout: 10,
+    connection: {
+      // Fail a stuck query fast instead of hanging a page render indefinitely.
+      statement_timeout: 15_000,
+    },
   });
 }
 
