@@ -1,7 +1,7 @@
 /**
  * Every database read the app performs. Types are declared here, at the SQL boundary.
  */
-import { sql } from './client';
+import { db } from './client';
 import type { BookingKind, BookingStatus, BerthCapacityMode } from '../domain/types';
 
 export type BerthRow = {
@@ -26,6 +26,7 @@ export type BookingRow = {
 };
 
 export async function getBerths(): Promise<BerthRow[]> {
+  const sql = db();
   const rows = await sql`
     select id, name, length_ft, capacity_mode, display_order
       from berths
@@ -42,6 +43,7 @@ export async function getBerths(): Promise<BerthRow[]> {
 
 /** Bookings overlapping the given inclusive date window, with vessel length joined. */
 export async function getBookingsInRange(start: string, end: string): Promise<BookingRow[]> {
+  const sql = db();
   const rows = await sql`
     select b.id, b.berth_id, b.vessel_id, b.kind, b.status, b.label,
            b.start_date, b.end_date, b.notes, v.length_ft as vessel_length_ft
@@ -77,6 +79,7 @@ export type SystemSummary = {
 };
 
 export async function getSummary(): Promise<SystemSummary> {
+  const sql = db();
   const [r] = await sql`
     select
       (select count(*)::int from berths)  as berths,

@@ -1,56 +1,92 @@
-import { getSummary } from '../db/queries';
+import Board from '../components/Board';
+import { getBerths, getBookingsInRange, getSummary } from '../db/queries';
+import { monthBounds } from '../lib/layout';
+import { clampMonth, monthHref, MONTH_NAMES, step, DEFAULT_MONTH, DEFAULT_YEAR, FIRST_YEAR, LAST_YEAR } from '../lib/nav';
 
-// Always read live data; a cached schedule is a wrong schedule.
+// A cached schedule is a wrong schedule.
 export const dynamic = 'force-dynamic';
 
-export default async function Home() {
-  const s = await getSummary();
-  return (
-    <main style={{ maxWidth: 720, margin: '0 auto', padding: 24 }}>
-      <h1 style={{ fontSize: 20, margin: '0 0 4px' }}>Harborview Marine Research Center</h1>
-      <p style={{ color: 'var(--text-muted)', margin: '0 0 24px' }}>Dock Schedule</p>
+export default async function BoardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ y?: string; m?: string }>;
+}) {
+  const sp = await searchParams;
+  const { year, month } = clampMonth(
+    sp.y ? Number(sp.y) : DEFAULT_YEAR,
+    sp.m ? Number(sp.m) : DEFAULT_MONTH,
+  );
 
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 8,
-          padding: 16,
-        }}
-      >
-        <p style={{ margin: '0 0 12px', color: 'var(--text-muted)' }}>
-          Imported from the legacy workbook, {s.firstYear}&ndash;{s.lastYear}.
-        </p>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-          <tbody>
-            {[
-              ['Berths', s.berths.toLocaleString()],
-              ['Bookings', s.bookings.toLocaleString()],
-              ['Vessels', s.vessels.toLocaleString()],
-              ['Vessels with a recorded length', `${s.vesselsWithLength} of ${s.vessels}`],
-              ['Unresolved historical conflicts', s.unresolvedConflicts.toLocaleString()],
-              ['Items needing review', s.openReviewItems.toLocaleString()],
-            ].map(([k, v]) => (
-              <tr key={k}>
-                <td style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>{k}</td>
-                <td
-                  style={{
-                    padding: '6px 0',
-                    borderBottom: '1px solid var(--border)',
-                    textAlign: 'right',
-                    fontFamily: 'var(--mono)',
-                  }}
-                >
-                  {v}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+  const bounds = monthBounds(year, month);
+  const [berths, bookings, summary] = await Promise.all([
+    getBerths(),
+    getBookingsInRange(bounds.start, bounds.end),
+    getSummary(),
+  ]);
+
+  const prev = step(year, month, -1);
+  const next = step(year, month, 1);
+  const years = Array.from({ length: LAST_YEAR - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
+
+  return (
+    <main className="shell">
+      <header className="masthead">
+        <h1>Harborview Marine Research Center</h1>
+        <span className="sub">Dock Schedule</span>
+        <nav className="tabs">
+          <a href="/" aria-current="page">Board</a>
+          <a href="/vessels">Vessels</a>
+          <a href="/review">
+            Review
+            {summary.openReviewItems > 0 && <span className="count">{summary.openReviewItems}</span>}
+          </a>
+        </nav>
+      </header>
+
+      <div className="toolbar">
+        <a className="navbtn" href={monthHref(prev.year, prev.month)} aria-label="Previous month">&lsaquo;</a>
+        <span className="month">{MONTH_NAMES[month - 1]} {year}</span>
+        <a className="navbtn" href={monthHref(next.year, next.month)} aria-label="Next month">&rsaquo;</a>
+
+        <form method="get" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <label htmlFor="y" style={{ fontSize: 12, color: 'var(--ink-muted)' }}>Jump to</label>
+          <select id="y" name="y" defaultValue={year} style={selectStyle}>
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select name="m" defaultValue={month} style={selectStyle}>
+            {MONTH_NAMES.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
+          </select>
+          <button type="submit" style={buttonStyle}>Go</button>
+        </form>
+
+        <span className="spacer" />
+        <span style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
+          {bookings.length} booking{bookings.length === 1 ? '' : 's'} this month
+        </span>
       </div>
-      <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 16 }}>
-        Board, Vessels and Review are being built.
+
+      {bookings.length === 0 ? (
+        <div className="board"><p className="empty">No bookings in {MONTH_NAMES[month - 1]} {year}.</p></div>
+      ) : (
+        <Board berths={berths} bookings={bookings} year={year} month={month} />
+      )}
+
+      <p className="note">
+        {summary.vessels - summary.vesselsWithLength} of {summary.vessels} vessels have no recorded
+        length, so their bookings cannot be checked against berth length. Hatched bars mark those.
       </p>
     </main>
   );
 }
+
+const selectStyle: React.CSSProperties = {
+  font: 'inherit', fontSize: 12, padding: '3px 6px',
+  border: '1px solid var(--axis)', borderRadius: 6,
+  background: 'var(--surface)', color: 'var(--ink)',
+};
+
+const buttonStyle: React.CSSProperties = {
+  font: 'inherit', fontSize: 12, padding: '3px 10px',
+  border: '1px solid var(--axis)', borderRadius: 6,
+  background: 'var(--surface)', color: 'var(--ink)', cursor: 'pointer',
+};
