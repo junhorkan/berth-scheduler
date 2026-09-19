@@ -45,3 +45,7 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# The sample workbook is the club's material, not ours to redistribute.
+# Place it here to run `npm run import`.
+data/*.xlsx

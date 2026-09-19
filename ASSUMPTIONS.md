@@ -28,9 +28,9 @@ different product: a request flow, an approval queue, and accounts.
 ## The berths
 
 **The seven berths are taken from the sample schedule's row labels**, which embed their
-lengths: `North Pier West - 410'`, `Inner Channel - 55'`, and so on. That is the only
-place the attached sample influenced the running system, and the berths are defined in a
-migration rather than imported, so they are configuration a real facility would edit.
+lengths: `North Pier West - 410'`, `Inner Channel - 55'`, and so on. They are also defined
+in a migration, so a database built from scratch has them without importing anything —
+they are the facility, not schedule data.
 
 - **`Small craft slips` is pooled.** It held several institution boats at once in the
   source, so it is exempt from conflict detection. Treating it as exclusive would report

@@ -136,7 +136,41 @@ export async function seedFixture(): Promise<void> {
   }
 }
 
-/** Back to the state the app ships in: an empty schedule, berths intact. */
+/**
+ * Put the imported sample back, from the same `*_seed` snapshot the app's own
+ * "Load the sample schedule" uses.
+ *
+ * The suite replaces the schedule with its own fixture, so without this it would
+ * leave the deployed database empty — the sample is what the live site serves.
+ */
+export async function restoreSample(): Promise<void> {
+  const db = connect();
+  try {
+    await db.begin(async (tx) => {
+      await tx`delete from review_items`;
+      await tx`delete from bookings`;
+      await tx`delete from vessels`;
+      await tx`delete from berths`;
+      await tx`insert into berths  select * from berths_seed`;
+      await tx`insert into vessels select * from vessels_seed`;
+      await tx`
+        insert into bookings (
+          id, berth_id, vessel_id, kind, status, label, start_date, end_date,
+          exclusive, notes, source, import_year, import_sheet, import_row, import_col,
+          created_at)
+        select
+          id, berth_id, vessel_id, kind, status, label, start_date, end_date,
+          exclusive, notes, source, import_year, import_sheet, import_row, import_col,
+          created_at
+        from bookings_seed`;
+      await tx`insert into review_items select * from review_items_seed`;
+    });
+  } finally {
+    await db.end();
+  }
+}
+
+/** An empty schedule with the berths intact — what a fresh facility would see. */
 export async function clearSchedule(): Promise<void> {
   const sql = connect();
   try {

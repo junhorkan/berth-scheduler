@@ -71,10 +71,10 @@ about itself.
 
 ## Things worth saying because they show judgment
 
-- **I did not load the sample data.** The brief attached a schedule; it never asked for it
-  to be installed as the facility's data. Comparing the three options makes that clear —
-  one attached nothing, one attached a blank reporting form, and nobody would preload an
-  app with the contents of a form. The only thing I took from it is the berths.
+- **The sample data is loaded, but removable.** The brief never asked for it to be
+  installed, so loading is an action rather than a fixture — and I built the empty path
+  first, which is how I found two bugs that hundreds of preloaded vessels had been
+  hiding. Keeping both states working is the point.
 - **What I chose not to build.** No auth, no request-and-approve flow, no notifications,
   no drag-and-drop, no rafting. Each is in `DECISIONS.md` with a reason.
 - **What the data cannot support.** Draft/depth checking is impossible. Inventing depths
@@ -117,10 +117,10 @@ than pointing at data that was already there.
 ## If you are asked how it was built
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
-> `src/domain` and `src/lib`, which import nothing from the database or the UI — 111 unit
-> tests run in under a second with no infrastructure. 33 Playwright specs build their own
-> fixture against a real server and clear it afterwards, so the app is left in the state
-> it ships in.
+> `src/domain` and `src/lib`, which import nothing from the database or the UI — 219 unit
+> tests run in under a second with no infrastructure. 34 Playwright specs build their own
+> fixture against a real server and restore the sample afterwards, so the app is left in
+> the state it ships in.
 >
 > I used Claude to write it. The work that mattered was deciding what it should do, and
 > catching the places where what it produced was confidently wrong.

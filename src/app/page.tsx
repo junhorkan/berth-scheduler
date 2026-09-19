@@ -2,6 +2,7 @@ import Board from '../components/Board';
 import Nav from '../components/Nav';
 import BookingPanel from '../components/BookingPanel';
 import BookingDetail from '../components/BookingDetail';
+import { LoadSampleButton } from '../components/SampleData';
 import { getBerths, getBookingsInRange, getSummary, getVesselOptions, getBookingById } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import {
@@ -19,9 +20,14 @@ export default async function BoardPage({
 }) {
   const sp = await searchParams;
   const today = currentMonth();
+  // The schedule's own earliest booking widens the window, so anything stored is
+  // always reachable. Queried first because every bound below depends on it.
+  const { firstYear: earliest } = await getSummary();
   const { year, month } = clampMonth(
     sp.y ? Number(sp.y) : today.year,
     sp.m ? Number(sp.m) : today.month,
+    undefined,
+    earliest,
   );
 
   const bounds = monthBounds(year, month);
@@ -33,9 +39,10 @@ export default async function BoardPage({
   ]);
 
   const selected = sp.sel ? await getBookingById(sp.sel) : null;
-  const prev = step(year, month, -1);
-  const next = step(year, month, 1);
-  const years = Array.from({ length: lastYear() - firstYear() + 1 }, (_, i) => firstYear() + i);
+  const prev = step(year, month, -1, undefined, earliest);
+  const next = step(year, month, 1, undefined, earliest);
+  const navFirst = firstYear(undefined, earliest);
+  const years = Array.from({ length: lastYear() - navFirst + 1 }, (_, i) => navFirst + i);
   const onToday = isCurrentMonth(year, month);
   // A new booking defaults to today when you are on this month, and to the 1st otherwise.
   const newBookingDate = onToday ? todayISO() : bounds.start;
@@ -98,6 +105,15 @@ export default async function BoardPage({
             <b>Nothing booked in {MONTH_NAMES[month - 1]} {year}.</b> Every berth below is free
             &mdash; use <b>+ New booking</b> to reserve one.
           </p>
+          {summary.bookings === 0 && (
+            <p className="note" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <LoadSampleButton label="\u21bb Load the sample schedule" />
+              <span>
+                23 years of legacy bookings to try the conflict and size checks against.
+                Removable at any time from Review.
+              </span>
+            </p>
+          )}
         </div>
       )}
 

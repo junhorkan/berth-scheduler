@@ -1,6 +1,6 @@
 import Nav from '../../components/Nav';
 import { ResolveButton } from '../../components/ResolveButton';
-import { ClearScheduleButton } from '../../components/SampleData';
+import { LoadSampleButton, ClearScheduleButton } from '../../components/SampleData';
 import { getReviewItems, getReviewCounts, getMissingLengthSummary } from '../../db/queries';
 
 export const dynamic = 'force-dynamic';
@@ -54,6 +54,7 @@ export default async function ReviewPage() {
           </span>
         )}
         <span className="spacer" />
+        <LoadSampleButton />
         <ClearScheduleButton />
       </div>
 

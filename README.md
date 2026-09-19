@@ -37,9 +37,10 @@ is the central design decision. See `DECISIONS.md`.
 
 ## What it does
 
-- **Board** — berths down, days across, one month at a time, **opening on today**. The
-  schedule runs three years forward and a year back: you can review what was booked, but
-  not book a date that has passed. A bar's **height is
+- **Board** — berths down, days across, one month at a time, **opening on today**. It
+  runs three years forward, and back far enough to cover whatever is on the schedule, so
+  the 1997 imports are reachable. You can review what was booked, but not book a date
+  that has passed. A bar's **height is
   `vessel length ÷ berth length`**, so a vessel that does not fit visibly breaks out of
   its lane. Create, cancel and reassign bookings, for vessels, non-vessel events and
   berth closures alike.
@@ -48,12 +49,31 @@ is the central design decision. See `DECISIONS.md`.
 - **Review** — the coordinator's queue: size violations, and a single derived row saying
   how much of the schedule cannot be fit-checked yet. Clearing the schedule back to the
   shipped state lives here too.
-- **It starts empty.** The app ships with an empty schedule and its seven berths — the
-  normal state of a reservation system is the schedule its users have made. The sample
-  workbook attached to the brief is not loaded; see `DECISIONS.md` #14.
+- **The legacy schedule is imported, and removable.** 23 years of bookings are loaded so
+  the conflict and size checks can be tried against real, messy data. **Clear the
+  schedule** empties it and **Load the sample schedule** puts it back, both on Review —
+  an empty schedule is a supported state, not a broken one.
 - **Find** — one box, searching every vessel name, event label and closure note across
   all 276 months at once. Results group by identity, so a vessel with 267 bookings is one
   block and not 267 rows, and each result jumps straight to its own month on the board.
+
+## Importing the legacy workbook
+
+`npm run import` parses all 23 sheets and reconciles exactly:
+
+```
+2,212 source cells → 2,031 stays     (145 cells merged, 49 across a month boundary)
+        7 berths · 418 vessels · 29 review items
+   272 / 272 month blocks resolved
+```
+
+Only **20 of 418 vessels** have a length recorded anywhere in the source, which is the
+evidence behind warning rather than blocking on fit. Among the bookings that *can* be
+checked, **9 are physically impossible** — the worst a 170′ vessel in a 90′ berth.
+
+The workbook itself is not in this repo; place it at `data/` to re-run the import. Three
+source defects had to be handled, each documented in `ASSUMPTIONS.md` and
+`docs/DATA-NOTES.md`.
 
 ## Running it locally
 
@@ -74,13 +94,15 @@ Requires Node 24.
 
 ```
 src/domain/   PURE business rules. No database, no React. Unit tested.
+src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
 src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
-navigation and search rules are provably correct without a database — 111 unit tests run
-in well under a second with no infrastructure at all.
+navigation and search rules are provably correct without a database — 219 unit tests run
+in well under a second with no infrastructure at all. The importer and the UI call the
+same functions, so the rule the board shows you is the rule the import applied.
 
 ## Stack
 

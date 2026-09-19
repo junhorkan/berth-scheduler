@@ -42,9 +42,20 @@ export function currentMonth(now?: Date): { year: number; month: number } {
   return { year: Number(iso.slice(0, 4)), month: Number(iso.slice(5, 7)) };
 }
 
-/** The earliest year that can be navigated to or booked. */
-export function firstYear(now?: Date): number {
-  return currentMonth(now).year - YEARS_BACK;
+/**
+ * The earliest navigable year.
+ *
+ * Normally a year back — enough to review what was recently booked without an endless
+ * year list. But it also stretches to cover whatever is actually ON the schedule:
+ * loading the legacy workbook puts bookings in 1997, and a window that stopped at last
+ * year would leave every one of them stored, searchable, and impossible to look at.
+ *
+ * That failure has happened twice in this project in the other direction, with a fixed
+ * ceiling hiding future bookings. Deriving the bound from the data ends the whole class.
+ */
+export function firstYear(now?: Date, earliestBookingYear?: number | null): number {
+  const idle = currentMonth(now).year - YEARS_BACK;
+  return earliestBookingYear == null ? idle : Math.min(idle, earliestBookingYear);
 }
 
 /** The furthest year that can be navigated to or booked. */
@@ -67,7 +78,7 @@ export function lastBookableISO(now?: Date): string {
 }
 
 export function clampMonth(
-  year: number, month: number, now?: Date,
+  year: number, month: number, now?: Date, earliestBookingYear?: number | null,
 ): { year: number; month: number } {
   const fallback = currentMonth(now);
   let y = Number.isFinite(year) ? Math.trunc(year) : fallback.year;
@@ -75,15 +86,17 @@ export function clampMonth(
   if (!Number.isFinite(year) && !Number.isFinite(month)) return fallback;
   if (m < 1) { m = 12; y -= 1; }
   if (m > 12) { m = 1; y += 1; }
-  const min = firstYear(now);
+  const min = firstYear(now, earliestBookingYear);
   if (y < min) return { year: min, month: 1 };
   const max = lastYear(now);
   if (y > max) return { year: max, month: 12 };
   return { year: y, month: m };
 }
 
-export function step(year: number, month: number, delta: number, now?: Date) {
-  return clampMonth(year, month + delta, now);
+export function step(
+  year: number, month: number, delta: number, now?: Date, earliestBookingYear?: number | null,
+) {
+  return clampMonth(year, month + delta, now, earliestBookingYear);
 }
 
 export function monthHref(year: number, month: number): string {

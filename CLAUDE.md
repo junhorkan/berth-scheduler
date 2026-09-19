@@ -11,6 +11,7 @@ Live at https://berth-scheduler.vercel.app
 | [DECISIONS.md](DECISIONS.md) | Why something is the way it is — **read before changing a design choice** |
 | [ASSUMPTIONS.md](ASSUMPTIONS.md) | What was assumed where the brief was silent |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Deploying, keep-warm, DB access posture — **read before deploying or touching the database** |
+| [docs/DATA-NOTES.md](docs/DATA-NOTES.md) | Workbook quirks and verified counts — **only for `src/import/` work** |
 | [WALKTHROUGH.md](WALKTHROUGH.md) | Plain-language explanation for the project owner |
 
 ---
@@ -39,9 +40,11 @@ Breaking any of these looks like an improvement and is not:
 2. **Never invent a vessel length**, and never gate a booking on picking a known vessel.
    Booking registers the vessel with a null length; that is how the register fills. A
    gate requiring an existing vessel once made vessel bookings impossible entirely.
-3. **Unknown is a first-class answer.** A vessel with no recorded length is drawn hatched
-   and says so; it is never assumed to fit. Missing lengths are **derived, not queued** —
-   one review row per vessel was 93% of the queue and its count went stale.
+3. **Nothing vanishes silently.** Whatever the importer cannot place becomes a review
+   item carrying its sheet/row/column — never a dropped row or a log line. Missing
+   lengths are the one exception: **derived, not stored** (one row per vessel was 93% of
+   the queue and went stale). Unknown is a first-class answer — a vessel with no recorded
+   length is drawn hatched and never assumed to fit.
 4. **`Small craft slips` is pooled** (many boats at once) and exempt from conflict
    detection. Every other berth is exclusive.
 5. **The berths are defined in a migration**, not created by application code. They are
@@ -66,8 +69,9 @@ Breaking any of these looks like an improvement and is not:
 ## Structure
 
 ```
-src/domain/   pure rules: conflicts, fit, vessel identity. No DB, no React.
+src/domain/   pure rules: conflicts, fit, classification. No DB, no React.
 src/lib/      pure view helpers: month nav, bar geometry, search grouping.
+src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
 src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.
 ```
@@ -79,8 +83,9 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev       # local dev server
-npm test          # 111 unit tests, no database needed
-npm run e2e       # 33 Playwright specs; builds its own fixture, then clears it
+npm test          # 219 unit tests, no database needed
+npm run e2e       # 34 Playwright specs; builds a fixture, then restores the sample
+npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build
 ```

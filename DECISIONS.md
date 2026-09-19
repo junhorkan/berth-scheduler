@@ -172,6 +172,12 @@ booking recorded last month unreachable the instant the year turned — the same
 as the fixed upper bound, in the other direction. Looking back is a record; booking back
 is a mistake.
 
+**The floor is derived from the data, not fixed.** `firstYear()` takes the earliest
+booking on the schedule, so importing the workbook widens the window to 1997 on its own.
+A fixed floor would have left every imported booking stored, searchable and impossible to
+open — which is the third time this project would have shipped a booking nobody could
+navigate to. Deriving the bound ends the class of bug rather than the instance.
+
 **Detail:** "today" is resolved in `America/New_York`, the facility's timezone. The
 server runs in UTC, where 10pm on the 30th is already the 1st — the board would have
 rolled a month ahead of the one on the coordinator's wall.
@@ -261,34 +267,41 @@ not a pattern. There is a unit test and an end-to-end test for exactly that.
 
 ---
 
-## 14. The sample schedule is not used at all
+## 14. The legacy schedule is imported, and removable
 
-**Decision.** The attached workbook is not loaded, and the importer that read it has been
-removed. The app ships with an empty schedule and seven berths. The only thing taken from
-the sample is the berths themselves, now defined in a migration.
+**Decision.** The app ships with the 23-year workbook imported. **Clear the schedule**
+empties it; **Load the sample schedule** puts it back. Both live on the Review tab, and
+the empty board offers the load directly.
 
-**Why.** The brief attached a sample schedule; it never asked for it to be installed as
-the facility's data. Comparing the three options offered makes that clear: one attached
-nothing, one attached a blank reporting form, and nobody would preload an application
-with the contents of a form. The schedule is a specification artefact — it shows that
-berths have lengths, bookings are date ranges, and events occupy berths too.
+**Why import it at all.** The brief attached a schedule and described problems that exist
+*inside* it — double-bookings caught by eye, vessels that do not fit. Those are the two
+things this system is for, and without the data neither can be shown: an evaluator would
+have to construct a conflict and an oversized vessel by hand before seeing either check
+do anything. The facility is also explicitly replacing a spreadsheet, and any replacement
+has to answer what happens to what is already in it.
 
-A reservation system's normal state is the schedule its users have made. Shipping with
-23 years of fictional bookings in the way is not that.
+**Why it is removable rather than baked in.** A reservation system's normal state is the
+schedule its users made, not 23 years of someone else's records. Making the import an
+action rather than a fixture means the empty case is a real, supported state instead of
+a theoretical one.
 
-**What it cost.** The two problems the brief names can no longer be demonstrated against
-real data; anyone evaluating the system has to create a conflict and an oversized vessel
-themselves. That is a real loss, accepted because an application preloaded with invented
-records is a worse thing to hand over.
+**This was argued both ways.** An earlier version removed the workbook entirely, on the
+grounds that the brief never asked for it to be installed — the other two project options
+attached nothing and a blank form respectively, and nobody would preload an app with the
+contents of a form. That reasoning still holds for the *default*, which is why loading is
+explicit. What it got wrong was the cost: a scheduling tool with nothing in it shows a
+reviewer nothing, and the strongest evidence in the project is the data itself.
 
-**What it forced us to fix.** Starting empty exposed two failures hidden by always having
-hundreds of vessels on the register:
+**What the empty path exposed while it was the default**, and what is now fixed:
 
 - The booking form refused to save a vessel it did not already know, advising the user to
   "add it on the Vessels tab first" — which that tab cannot do. From an empty register,
   **no vessel booking could be created at all.**
 - `createBooking` stored `vessel_id = null` for an unknown name, so even past that gate
   the register could never have filled and no length could ever have been recorded.
+
+Both were invisible while hundreds of vessels sat in the database. Keeping the empty case
+working is why they stay fixed.
 
 ---
 

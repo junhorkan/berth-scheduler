@@ -3,21 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "db:check": "node scripts/db-check.mjs",
+    "dev": "next dev",
+    "e2e": "playwright test",
+    "import": "tsx scripts/import.mts",
     "lint": "eslint",
+    "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "db:check": "node scripts/db-check.mjs",
-    "e2e": "playwright test"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "16.3.5",
     "postgres": "^3.4.9",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
