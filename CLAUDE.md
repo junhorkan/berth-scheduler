@@ -84,7 +84,7 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 ```bash
 npm run dev       # local dev server
 npm test          # 214 unit tests, no database needed
-npm run e2e       # 33 Playwright specs; loads the sample, then clears it again
+npm run e2e       # 34 Playwright specs; loads the sample, then clears it again
 npm run import    # reload the workbook into the database
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build

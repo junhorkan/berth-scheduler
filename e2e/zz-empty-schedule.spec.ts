@@ -70,3 +70,45 @@ test.describe('an empty schedule', () => {
     await expect(page.getByLabel(/R\/V Test Cutter/)).toHaveCount(0);
   });
 });
+
+test.describe('loading and clearing the sample through the UI', () => {
+  test.beforeAll(async () => {
+    await clearSchedule();
+  });
+  test.afterAll(async () => {
+    await clearSchedule();
+  });
+
+  test('loads the sample from the board, then clears it from Review', async ({ page }) => {
+    // The buttons are the whole feature. Exercising the SQL directly, as the rest of
+    // the suite does, would not catch a broken server action or a wired-up-wrong button.
+    page.on('dialog', (d) => d.accept());
+
+    await page.goto('/');
+    await expect(page.locator('.bar')).toHaveCount(0);
+    await page.getByRole('button', { name: /Load the sample schedule/ }).click();
+
+    // July 2010 is the sample's busiest month; bars there prove the load landed.
+    await expect
+      .poll(async () => {
+        await page.goto('/?y=2010&m=7');
+        return page.locator('.bar').count();
+      }, { timeout: 30_000 })
+      .toBeGreaterThan(0);
+
+    // The queue now holds the items that need a decision, and no missing-length noise.
+    await page.goto('/review');
+    await expect(page.getByText('Unresolved conflict').first()).toBeVisible();
+
+    await page.getByRole('button', { name: /Clear the schedule/ }).click();
+    await expect
+      .poll(async () => {
+        await page.goto('/?y=2010&m=7');
+        return page.locator('.bar').count();
+      }, { timeout: 30_000 })
+      .toBe(0);
+
+    // Berths are the facility, not sample data, so they survive a clear.
+    await expect(page.locator('.rail')).toHaveCount(7);
+  });
+});
