@@ -29,24 +29,48 @@ describe('currentMonth', () => {
 describe('the bookable window', () => {
   // Both bounds move with the current date. A fixed bound once made future bookings
   // saveable but unreachable, because the board could not navigate to them.
-  it('reaches back far enough to record a season already past', () => {
+  it('reaches back far enough to review what was already booked', () => {
     expect(firstYear(NOW)).toBe(2026 - YEARS_BACK);
   });
   it('reaches forward far enough to plan the next ones', () => {
     expect(lastYear(NOW)).toBe(2026 + YEARS_AHEAD);
   });
-  it('gives the date inputs the same bounds as the navigation', () => {
-    expect(firstBookableISO(NOW)).toBe(`${firstYear(NOW)}-01-01`);
+  // Viewing and booking are different: you can look at last month, not book into it.
+  it('refuses to let a booking start in the past', () => {
+    expect(firstBookableISO(NOW)).toBe(todayISO(NOW));
+  });
+
+  it('still lets the board reach further back than a booking can be made', () => {
+    expect(firstYear(NOW)).toBeLessThan(Number(firstBookableISO(NOW).slice(0, 4)) + 1);
+    expect(firstYear(NOW)).toBeLessThan(2026);
+  });
+
+  it('gives the date inputs the same ceiling as the navigation', () => {
     expect(lastBookableISO(NOW)).toBe(`${lastYear(NOW)}-12-31`);
+  });
+});
+
+describe('the window follows the calendar', () => {
+  // The board is not pinned to a date anywhere: every bound is derived per request.
+  it('opens on October once October arrives, and January once the year turns', () => {
+    expect(currentMonth(new Date('2026-10-01T15:00:00Z'))).toEqual({ year: 2026, month: 10 });
+    expect(currentMonth(new Date('2026-12-25T15:00:00Z'))).toEqual({ year: 2026, month: 12 });
+    expect(currentMonth(new Date('2027-01-02T15:00:00Z'))).toEqual({ year: 2027, month: 1 });
+  });
+
+  it('slides the whole bookable window with it', () => {
+    const later = new Date('2029-04-01T15:00:00Z');
+    expect(firstYear(later)).toBe(2029 - YEARS_BACK);
+    expect(lastYear(later)).toBe(2029 + YEARS_AHEAD);
   });
 });
 
 describe('clampMonth', () => {
   it('rolls month 0 back into the previous December', () => {
-    expect(clampMonth(2025, 0, NOW)).toEqual({ year: 2024, month: 12 });
+    expect(clampMonth(2027, 0, NOW)).toEqual({ year: 2026, month: 12 });
   });
   it('rolls month 13 forward into the next January', () => {
-    expect(clampMonth(2025, 13, NOW)).toEqual({ year: 2026, month: 1 });
+    expect(clampMonth(2027, 13, NOW)).toEqual({ year: 2028, month: 1 });
   });
   it('refuses a year before the window opens', () => {
     expect(clampMonth(1997, 1, NOW)).toEqual({ year: firstYear(NOW), month: 1 });
@@ -69,10 +93,10 @@ describe('clampMonth', () => {
 
 describe('step', () => {
   it('walks forward across a year boundary', () => {
-    expect(step(2025, 12, 1, NOW)).toEqual({ year: 2026, month: 1 });
+    expect(step(2027, 12, 1, NOW)).toEqual({ year: 2028, month: 1 });
   });
   it('walks backward across a year boundary', () => {
-    expect(step(2026, 1, -1, NOW)).toEqual({ year: 2025, month: 12 });
+    expect(step(2028, 1, -1, NOW)).toEqual({ year: 2027, month: 12 });
   });
   it('stops at the far end of the bookable window', () => {
     expect(step(lastYear(NOW), 12, 1, NOW)).toEqual({ year: lastYear(NOW), month: 12 });

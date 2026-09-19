@@ -37,8 +37,9 @@ is the central design decision. See `DECISIONS.md`.
 
 ## What it does
 
-- **Board** — berths down, days across, one month at a time, **opening on today**, with
-  the schedule reaching three years either side. A bar's **height is
+- **Board** — berths down, days across, one month at a time, **opening on today**. The
+  schedule runs three years forward and a year back: you can review what was booked, but
+  not book a date that has passed. A bar's **height is
   `vessel length ÷ berth length`**, so a vessel that does not fit visibly breaks out of
   its lane. Create, cancel and reassign bookings, for vessels, non-vessel events and
   berth closures alike.
@@ -78,7 +79,7 @@ src/app/      Next.js routes and components. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
-navigation and search rules are provably correct without a database — 107 unit tests run
+navigation and search rules are provably correct without a database — 111 unit tests run
 in well under a second with no infrastructure at all.
 
 ## Stack

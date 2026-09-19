@@ -21,14 +21,31 @@ function todayAtFacility(): { year: number; month: number } {
   return { year: Number(iso.slice(0, 4)), month: Number(iso.slice(5, 7)) };
 }
 
-/** June of the current year: always inside the bookable window, never "today". */
-export const FIXTURE_YEAR = todayAtFacility().year;
-export const FIXTURE_MONTH = 6;
-export const FIXTURE_HREF = `/?y=${FIXTURE_YEAR}&m=${FIXTURE_MONTH}`;
-export const NEXT_MONTH_HREF = `/?y=${FIXTURE_YEAR}&m=${FIXTURE_MONTH + 1}`;
+/**
+ * A month three ahead of today, and the one after it.
+ *
+ * In the future on purpose: a booking cannot be made for a date that has passed, so a
+ * fixture in the past could be seeded by SQL but never reproduced through the form —
+ * and the specs that create bookings would be exercising a path the app forbids.
+ */
+function monthsAhead(n: number): { year: number; month: number } {
+  const { year, month } = todayAtFacility();
+  const zero = (year * 12 + (month - 1)) + n;
+  return { year: Math.floor(zero / 12), month: (zero % 12) + 1 };
+}
 
-const d = (day: number, month = FIXTURE_MONTH) =>
-  `${FIXTURE_YEAR}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+const FIXTURE = monthsAhead(3);
+const FOLLOWING = monthsAhead(4);
+
+export const FIXTURE_YEAR = FIXTURE.year;
+export const FIXTURE_MONTH = FIXTURE.month;
+export const FIXTURE_HREF = `/?y=${FIXTURE.year}&m=${FIXTURE.month}`;
+export const NEXT_MONTH_HREF = `/?y=${FOLLOWING.year}&m=${FOLLOWING.month}`;
+/** A month with nothing in it, for asserting the empty board still draws. */
+export const EMPTY_MONTH_HREF = `/?y=${monthsAhead(8).year}&m=${monthsAhead(8).month}`;
+
+const d = (day: number, which = FIXTURE) =>
+  `${which.year}-${String(which.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
 /** Vessels the fixture books, with the lengths that make the fit check say something. */
 const VESSELS = [
@@ -66,7 +83,7 @@ const BOOKINGS: Row[] = [
     label: 'Dock maintenance - restricted access', start: d(16), end: d(18) },
   // Runs off the end of the month, so both months must show a clipped edge.
   { vessel: 'M/V Test Crosser', berth: 'South Float West', kind: 'vessel',
-    label: 'M/V Test Crosser', start: d(27), end: d(4, FIXTURE_MONTH + 1) },
+    label: 'M/V Test Crosser', start: d(27), end: d(4, FOLLOWING) },
   { vessel: 'OSV Test Osprey', berth: 'North Pier East', kind: 'vessel',
     label: 'OSV Test Osprey', start: d(20), end: d(23) },
   // Small craft slips is pooled, so these coexist without tripping the conflict check.

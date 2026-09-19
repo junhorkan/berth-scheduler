@@ -1,13 +1,17 @@
 /** Month navigation helpers shared by the board chrome. */
 
 /**
- * How far the schedule reaches either side of today.
+ * How far the schedule reaches either side of today, computed from the current date
+ * so the window moves with the facility.
  *
- * Both bounds are computed from the current date rather than fixed, so the window
- * moves with the facility. Far enough back to record a season that has already
- * happened, far enough forward to plan the next ones, without an absurd year list.
+ * Booking and viewing are deliberately different. You cannot book in the past — the
+ * form's earliest date is today — but you must still be able to LOOK at what was
+ * booked, or a booking made last month becomes unreachable the moment the year turns.
+ * That is the same failure as a fixed upper bound, which once made future bookings
+ * saveable but invisible; one year back keeps recent records reachable without an
+ * endless year list.
  */
-export const YEARS_BACK = 3;
+export const YEARS_BACK = 1;
 export const YEARS_AHEAD = 3;
 
 /**
@@ -48,10 +52,16 @@ export function lastYear(now?: Date): number {
   return currentMonth(now).year + YEARS_AHEAD;
 }
 
-/** The bookable window, for the date inputs' `min` and `max`. */
+/**
+ * The earliest date a booking can be made for: today.
+ *
+ * A berth cannot be reserved for a day that has already passed, so the form refuses
+ * it outright rather than accepting it and looking odd on the board.
+ */
 export function firstBookableISO(now?: Date): string {
-  return `${firstYear(now)}-01-01`;
+  return todayISO(now);
 }
+
 export function lastBookableISO(now?: Date): string {
   return `${lastYear(now)}-12-31`;
 }

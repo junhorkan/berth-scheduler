@@ -85,13 +85,21 @@ export default function BookingPanel({
   const isNewVessel = kind === 'vessel' && !vessel && vesselName.trim() !== '';
   const missingLabel = effectiveLabel === '';
   const blocked = check ? !check.bookable : false;
-  const canSave = !blocked && !missingLabel && !pending;
+  /**
+   * `min` on a date input only constrains the picker. Saving happens through a click
+   * handler rather than native form submission, so a date typed or pasted straight in
+   * would otherwise sail past it.
+   */
+  const startsInPast = start < minDate;
+  const canSave = !blocked && !missingLabel && !startsInPast && !pending;
 
   const disabledReason = blocked
     ? check?.blockedBecause ?? 'This berth is already occupied.'
-    : missingLabel
-      ? kind === 'vessel' ? 'Name the vessel.' : 'Give this booking a name.'
-      : null;
+    : startsInPast
+      ? 'A berth cannot be reserved for a day that has already passed.'
+      : missingLabel
+        ? kind === 'vessel' ? 'Name the vessel.' : 'Give this booking a name.'
+        : null;
 
   function save() {
     setSaveError(null);

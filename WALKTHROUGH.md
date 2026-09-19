@@ -117,8 +117,8 @@ than pointing at data that was already there.
 ## If you are asked how it was built
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
-> `src/domain` and `src/lib`, which import nothing from the database or the UI — 107 unit
-> tests run in under a second with no infrastructure. 32 Playwright specs build their own
+> `src/domain` and `src/lib`, which import nothing from the database or the UI — 111 unit
+> tests run in under a second with no infrastructure. 33 Playwright specs build their own
 > fixture against a real server and clear it afterwards, so the app is left in the state
 > it ships in.
 >

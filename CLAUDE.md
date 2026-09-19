@@ -48,10 +48,13 @@ Breaking any of these looks like an improvement and is not:
    the facility; without them there is nothing to book into.
 6. **Bar height is `vessel length ÷ berth length`.** The misfit is geometry, not a badge.
    A violation states its measurement at *any* width, including a single day.
-7. **The board opens on today**, and the window runs three years either side, computed
-   per request. The navigation bounds and the booking form's `min`/`max` both come from
-   `lib/nav`; **never hard-code a second one** — that is how the form once accepted dates
-   the board could not reach, making saved bookings invisible.
+7. **The board opens on today**, with every bound computed per request so the window
+   slides with the calendar. **Booking and viewing are deliberately different**: the form
+   refuses a start date before today, while the board still reaches a year back, or a
+   booking made last month becomes unreachable when the year turns. All of it comes from
+   `lib/nav`; **never hard-code a second bound** — that is how the form once accepted
+   dates the board could not reach, making saved bookings invisible. A date input's `min`
+   constrains only the picker, so the save path checks it too.
 8. **An empty schedule is the normal case, not a degraded one.** It ships empty. An empty
    month still renders the full grid; replacing it with a line of text made "empty" read
    as "broken".
@@ -76,8 +79,8 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev       # local dev server
-npm test          # 107 unit tests, no database needed
-npm run e2e       # 32 Playwright specs; builds its own fixture, then clears it
+npm test          # 111 unit tests, no database needed
+npm run e2e       # 33 Playwright specs; builds its own fixture, then clears it
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build
 ```

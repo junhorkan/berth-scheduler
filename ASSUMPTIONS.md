@@ -49,8 +49,12 @@ migration rather than imported, so they are configuration a real facility would 
   One vessel leaving as another arrives is real, but treating it as clear would let the
   system approve a double-booking. Refusing is the safe default, and it is stated here
   rather than hidden.
-- **The bookable window is three years either side of today**, computed per request. A
-  fixed window once made future bookings saveable but unreachable.
+- **A booking cannot start in the past.** A berth is not reserved for a day that has
+  already gone; the form refuses it.
+- **The board still reaches a year back**, so bookings already recorded stay visible.
+  Viewing history and creating history are different operations. Forward, the window runs
+  three years, and every bound is computed per request — a fixed window once made future
+  bookings saveable but unreachable.
 
 ## Vessels
 

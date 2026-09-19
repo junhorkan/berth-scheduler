@@ -145,10 +145,11 @@ geometrically.
 
 ---
 
-## 8. The board opens on the current month, and runs three years ahead
+## 8. The board opens on today; you can look back, but not book back
 
-**Decision.** The board opens on today. The navigable range starts in August 1997 and
-ends three years from now, computed at request time rather than fixed.
+**Decision.** The board opens on the current month. Every bound is computed at request
+time: the form refuses a start date earlier than today, while the board itself reaches
+one year back and three years forward.
 
 **Why.** This is a scheduling tool for a facility that exists now, so next month has to
 be reachable. An earlier version opened on a month from the attached sample and bounded
@@ -165,9 +166,18 @@ to replace the grid with a line of text, which reads as a failure. It now render
 full grid — seven labelled berth lanes across the month, ready to be booked into. An
 empty schedule looks like an empty schedule.
 
+**Why viewing reaches further back than booking.** A berth cannot be reserved for a day
+that has passed, so the form refuses it. But a window that began at today would make a
+booking recorded last month unreachable the instant the year turned — the same failure
+as the fixed upper bound, in the other direction. Looking back is a record; booking back
+is a mistake.
+
 **Detail:** "today" is resolved in `America/New_York`, the facility's timezone. The
 server runs in UTC, where 10pm on the 30th is already the 1st — the board would have
 rolled a month ahead of the one on the coordinator's wall.
+
+**Detail:** a date input's `min` constrains the picker, not a save that happens through a
+click handler, so the past-date check lives in the save path as well as the markup.
 
 ---
 

@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { FIXTURE_YEAR, FIXTURE_MONTH, FIXTURE_HREF, NEXT_MONTH_HREF } from './helpers/schedule';
+import {
+  FIXTURE_YEAR, FIXTURE_MONTH, FIXTURE_HREF, NEXT_MONTH_HREF, EMPTY_MONTH_HREF,
+} from './helpers/schedule';
 
 /**
  * The board is the product. These assert the two things it exists to do:
  * make a misfit visible, and make a conflict impossible to commit.
  */
-
-const EMPTY_MONTH_HREF = `/?y=${FIXTURE_YEAR}&m=${FIXTURE_MONTH - 2}`;
 
 test.describe('the board', () => {
   test('opens on the current month, like a tool that is actually in use', async ({ page }) => {
@@ -33,8 +33,8 @@ test.describe('the board', () => {
   test('navigates across the whole bookable window', async ({ page }) => {
     await page.goto(`/?y=${FIXTURE_YEAR + 2}&m=6`);
     await expect(page.locator('.month')).toHaveText(`June ${FIXTURE_YEAR + 2}`);
-    await page.goto(`/?y=${FIXTURE_YEAR - 2}&m=10`);
-    await expect(page.locator('.month')).toHaveText(`October ${FIXTURE_YEAR - 2}`);
+    await page.goto(`/?y=${FIXTURE_YEAR - 1}&m=10`);
+    await expect(page.locator('.month')).toHaveText(`October ${FIXTURE_YEAR - 1}`);
   });
 
   test('marks today on the board, and only in the current month', async ({ page }) => {
@@ -42,7 +42,7 @@ test.describe('the board', () => {
     await expect(page.locator('.todaycol')).toHaveCount(7); // one per berth lane
     await expect(page.locator('.dayhead .d[aria-current="date"]')).toHaveCount(1);
 
-    await page.goto(`/?y=${FIXTURE_YEAR - 2}&m=10`);
+    await page.goto(FIXTURE_HREF);
     await expect(page.locator('.todaycol')).toHaveCount(0);
   });
 
@@ -117,8 +117,8 @@ test.describe('creating a booking', () => {
 
     // R/V Test Harbor already holds South Float West on these days.
     const dates = page.locator('input[type="date"]');
-    await dates.first().fill(`${FIXTURE_YEAR}-06-05`);
-    await dates.nth(1).fill(`${FIXTURE_YEAR}-06-07`);
+    await dates.first().fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-05`);
+    await dates.nth(1).fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-07`);
 
     await expect(page.getByText(/R\/V Test Harbor already holds this berth/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save booking' })).toBeDisabled();
@@ -131,11 +131,25 @@ test.describe('creating a booking', () => {
     await page.getByLabel('Berth', { exact: true }).selectOption({ label: 'North Pier East — 240ft' });
 
     const dates = page.locator('input[type="date"]');
-    await dates.first().fill(`${FIXTURE_YEAR}-06-22`);
-    await dates.nth(1).fill(`${FIXTURE_YEAR}-06-24`);
+    await dates.first().fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-22`);
+    await dates.nth(1).fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-24`);
 
     // The asymmetry, rendered: amber advises, red blocks. This one must stay saveable.
     await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
+  });
+
+  test('refuses a booking that starts in the past', async ({ page }) => {
+    // A berth cannot be reserved for a day that has gone. The date input's `min`
+    // only constrains the picker, so the save path has to check it too.
+    await page.goto('/');
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByLabel('Vessel', { exact: true }).fill('R/V Backdate Probe');
+
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    await page.locator('input[type="date"]').first().fill(yesterday);
+
+    await expect(page.getByText(/already passed/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save booking' })).toBeDisabled();
   });
 
   test('creates a booking, shows it on the board, then cancels it again', async ({ page }) => {
@@ -147,8 +161,8 @@ test.describe('creating a booking', () => {
     await page.getByLabel('Description').fill('E2E test event');
     await page.getByLabel('Berth', { exact: true }).selectOption({ label: 'Inner Channel — 55ft' });
     const dates = page.locator('input[type="date"]');
-    await dates.first().fill(`${FIXTURE_YEAR}-06-22`);
-    await dates.nth(1).fill(`${FIXTURE_YEAR}-06-24`);
+    await dates.first().fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-22`);
+    await dates.nth(1).fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-24`);
 
     await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
     await page.getByRole('button', { name: 'Save booking' }).click();
