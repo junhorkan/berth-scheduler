@@ -92,25 +92,30 @@ about itself.
 
 ## A five-minute demo script
 
-Because the app ships empty, you build the demonstration live — which is more convincing
-than pointing at data that was already there.
+Show the history first, then create the failure live. Pointing at a violation proves the
+board renders one; watching the system refuse a booking proves the rule is real.
 
-1. **Open the board.** It lands on today, empty, with all seven berths and a line marking
-   today. *"This is the normal state of a reservation system: the schedule its users have
-   made. It starts empty."*
-2. **Book a vessel.** `+ New booking`, type a name nothing knows, pick a berth, set dates.
-   *"The name matches nothing, so it is a new vessel — saving registers it. That is how
-   the register fills."*
-3. **Book a second vessel over the same berth and dates.** *"Red. Save is disabled, and it
-   names the booking in the way. There is no override — the database itself will refuse
-   this write, so no code path, race or concurrent request can get around it."*
-4. **Move the dates clear.** *"Save enables. But the warning about the length is still
-   there and does not block — we cannot verify the fit, and saying so is honest."*
-5. **Go to Vessels, record a length bigger than the berth.** Back on the board: *"The bar
-   is now taller than its lane, because the height is vessel length over berth length.
-   The misfit is the arithmetic, not a badge you have to learn."*
-6. **Go to Review.** *"One row per thing that needs a decision, plus a single line saying
-   how much of the schedule cannot be fit-checked yet — derived, so it cannot go stale."*
+1. **Open the board.** It lands on today. *"It opens on the current month, because this is
+   a live schedule — the line down the board is today. The counts across the top are the
+   whole system at a glance."*
+2. **Jump to July 2010.** *"This is the facility's legacy spreadsheet, imported: 23 years,
+   two thousand bookings. Almost every bar is hatched, which means we don't know the
+   vessel's length. That is the real state of their data, not a gap in mine."*
+3. **Point at the red bar on North Pier Face.** *"That one breaks out of its row because
+   the bar's height is vessel length over berth length. A 120-foot vessel in a 75-foot
+   berth. The misfit is the arithmetic, not a badge you have to learn — and nothing in
+   the spreadsheet could have told you it was there."*
+4. **`+ New booking`, over a berth that is already taken.** *"Red. Save is disabled and it
+   names the booking in the way. There is no override, because the database itself
+   refuses the write — no code path, race or concurrent request gets around it."*
+5. **Move the dates clear.** *"Save enables. The length warning is still there and still
+   doesn't block. One rule is a wall, the other is advice — that asymmetry is the whole
+   design."*
+6. **Type a vessel name nothing knows.** *"New vessel — saving registers it. The register
+   fills through normal use rather than a data-entry project."*
+7. **Go to Review.** *"Everything the import couldn't resolve, each row traceable to its
+   sheet, row and column — including one genuine double-booking from 2017 I kept rather
+   than deleted. Plus a single derived line for missing lengths, so it can't go stale."*
 
 ---
 
