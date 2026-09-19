@@ -11,6 +11,7 @@ Live at https://berth-scheduler.vercel.app
 | [DECISIONS.md](DECISIONS.md) | Why something is the way it is — **read before changing a design choice** |
 | [ASSUMPTIONS.md](ASSUMPTIONS.md) | How ambiguous source data was interpreted |
 | [docs/DATA-NOTES.md](docs/DATA-NOTES.md) | Workbook quirks and verified counts — **only for `src/import/` work** |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Deploying, keep-warm, DB access posture — **read before deploying or touching the database** |
 | [WALKTHROUGH.md](WALKTHROUGH.md) | Plain-language explanation for the project owner |
 
 ---
@@ -52,7 +53,9 @@ Breaking any of these looks like an improvement and is not:
    December 2019; that is a fact about the sample, **never a bound on the app**. Pinning
    the range to the data once made future bookings saveable but unreachable. An empty
    month must still render the full grid — replacing it with a line of text is what made
-   "empty" read as "broken".
+   "empty" read as "broken". The navigation ceiling and the booking form's `max` both
+   come from `lib/nav`; **never hard-code a second one**, which is how the form came to
+   accept dates the board could not reach.
 8. **No in-app page explaining the project.** Three tabs: Board, Vessels, Review. This is
    a coordinator's tool, not a portfolio piece. Rationale belongs in `DECISIONS.md`.
    `/search` is a destination reached from the masthead box, **not a fourth tab** — do
@@ -75,29 +78,26 @@ drift. No scheduler library — none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev       # local dev server
-npm test          # 207 unit tests, no database needed
-npm run e2e       # 24 Playwright specs against a real server
+npm test          # 214 unit tests, no database needed
+npm run e2e       # 29 Playwright specs against a real server
 npm run import    # reload the workbook into the database
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build
 ```
 
-Node 24. `DATABASE_URL` in `.env.local` (Supabase transaction pooler, port 6543).
+Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 **Do not run `npm run build` while `npm run dev` is running** — they contend over
 `.next` and both hang.
 
 ## Gotchas that cost time before
 
-- The connection pool must be **larger than the number of parallel queries per render**,
-  or requests deadlock for minutes. It is created lazily; never at module scope.
-- A dev server killed mid-query leaves a backend waiting on a dead socket. `npm run
-  db:check` shows it; connections recycle and carry a statement timeout to survive it.
 - `bookings.during` is a **generated** column. `insert ... select *` into `bookings`
   fails; list columns explicitly.
-- Supabase free tier pauses after ~7 days idle. A Vercel cron hits `/api/keep-warm` daily.
-
-<!-- BEGIN:nextjs-agent-rules -->
+- `todayISO()` resolves in `America/New_York`, not the server's UTC. Using UTC rolls the
+  board to the next month at 8pm on the last day of a month.
+- **Pushing to `main` does not deploy**, and the connection pool has a sizing trap that
+  deadlocks renders. Both live in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 # This is NOT the Next.js you know
 

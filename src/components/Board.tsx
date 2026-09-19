@@ -12,6 +12,7 @@
  */
 import type { BerthRow, BookingRow } from '../db/queries';
 import { barGeometry, clipToMonth, daysInMonth, packLanes } from '../lib/layout';
+import { todayISO } from '../lib/nav';
 import { barHeightRatio, checkFit } from '../domain/fit';
 
 const WEEKDAY = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -55,6 +56,14 @@ export default function Board({
   const dayNums = Array.from({ length: days }, (_, i) => i + 1);
   const dow = dayNums.map((d) => new Date(Date.UTC(year, month - 1, d)).getUTCDay());
 
+  // The board opens on the current month, so say which day that is. Without it an
+  // empty future month gives no anchor for "where am I now".
+  const iso = todayISO();
+  const todayDay =
+    Number(iso.slice(0, 4)) === year && Number(iso.slice(5, 7)) === month
+      ? Number(iso.slice(8, 10))
+      : null;
+
   const byBerth = new Map<string, Placed[]>();
   for (const b of bookings) {
     const c = clipToMonth({ start: b.startDate, end: b.endDate }, year, month);
@@ -71,7 +80,11 @@ export default function Board({
         <div />
         <div className="dayhead">
           {dayNums.map((d, i) => (
-            <span key={d} className={`d${dow[i] === 0 || dow[i] === 6 ? ' wknd' : ''}`}>
+            <span
+              key={d}
+              className={`d${dow[i] === 0 || dow[i] === 6 ? ' wknd' : ''}${d === todayDay ? ' today' : ''}`}
+              aria-current={d === todayDay ? 'date' : undefined}
+            >
               {d}
               <span className="dow">{WEEKDAY[dow[i]]}</span>
             </span>
@@ -93,6 +106,7 @@ export default function Board({
               rowHeight={rowHeight}
               days={days}
               dow={dow}
+              todayDay={todayDay}
               year={year}
               month={month}
               selectedId={selectedId}
@@ -113,6 +127,7 @@ function BerthLane({
   rowHeight,
   days,
   dow,
+  todayDay,
   year,
   month,
   selectedId,
@@ -123,6 +138,7 @@ function BerthLane({
   rowHeight: number;
   days: number;
   dow: number[];
+  todayDay: number | null;
   year: number;
   month: number;
   selectedId?: string;
@@ -148,6 +164,13 @@ function BerthLane({
               style={{ left: `${(i / days) * 100}%`, width: `${(1 / days) * 100}%` }}
             />
           ) : null,
+        )}
+
+        {todayDay !== null && (
+          <span
+            className="todaycol"
+            style={{ left: `${((todayDay - 1) / days) * 100}%`, width: `${(1 / days) * 100}%` }}
+          />
         )}
 
         {packed.map(({ item, lane }) => (

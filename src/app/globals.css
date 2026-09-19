@@ -373,3 +373,11 @@ a { color: var(--vessel); }
   width: auto; padding: 0 10px; font-size: 12px; font-weight: 600;
   color: var(--vessel); border-color: var(--vessel);
 }
+
+/* Today, on the board. Only drawn when the month on screen is the current one. */
+.dayhead .d.today { color: var(--vessel); font-weight: 700; }
+.dayhead .d.today .dow { opacity: 1; }
+.lane .todaycol {
+  position: absolute; top: 0; bottom: 0; z-index: 1;
+  border-left: 2px solid var(--vessel); opacity: 0.5;
+}

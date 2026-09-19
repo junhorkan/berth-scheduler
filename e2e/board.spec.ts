@@ -41,6 +41,17 @@ test.describe('the board', () => {
     await expect(page.locator('.month')).toHaveText('October 2026');
   });
 
+  test('marks today on the board, and only in the current month', async ({ page }) => {
+    // An empty future month has no bars, so without this there is no anchor for
+    // "where am I now" on a board that opens on the present.
+    await page.goto('/');
+    await expect(page.locator('.todaycol')).toHaveCount(7); // one per berth lane
+    await expect(page.locator('.dayhead .d[aria-current="date"]')).toHaveCount(1);
+
+    await page.goto(JULY_2010);
+    await expect(page.locator('.todaycol')).toHaveCount(0);
+  });
+
   test('offers a way back to today from a historical month', async ({ page }) => {
     await page.goto(JULY_2010);
     await expect(page.locator('.bar')).not.toHaveCount(0);
