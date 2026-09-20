@@ -9,6 +9,14 @@ import { relativeTime } from '../../lib/cancelled';
 import { RestoreButton } from '../../components/RestoreButton';
 
 export const dynamic = 'force-dynamic';
+/**
+ * Server Actions inherit this route's function limit, and the sample controls live here.
+ * Restoring the workbook deletes and re-inserts 2,031 bookings, 418 vessels and their
+ * review items in one transaction, which measured at roughly 12 seconds — past Vercel's
+ * 10-second default, where the function is killed mid-transaction and the button simply
+ * appears to do nothing.
+ */
+export const maxDuration = 60;
 
 /**
  * The coordinator's attention queue — deliberately NOT an importer log.

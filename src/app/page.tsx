@@ -16,6 +16,14 @@ import {
 
 // A cached schedule is a wrong schedule.
 export const dynamic = 'force-dynamic';
+/**
+ * Server Actions inherit this route's function limit, and the sample controls live here.
+ * Restoring the workbook deletes and re-inserts 2,031 bookings, 418 vessels and their
+ * review items in one transaction, which measured at roughly 12 seconds — past Vercel's
+ * 10-second default, where the function is killed mid-transaction and the button simply
+ * appears to do nothing.
+ */
+export const maxDuration = 60;
 
 export default async function BoardPage({
   searchParams,
