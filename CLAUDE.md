@@ -11,6 +11,7 @@ Live at https://berth-scheduler.vercel.app
 | [DECISIONS.md](DECISIONS.md) | Why something is the way it is — **read before changing a design choice** |
 | [ASSUMPTIONS.md](ASSUMPTIONS.md) | What was assumed where the brief was silent |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Deploying, keep-warm, DB access posture — **read before deploying or touching the database** |
+| [docs/DESIGN.md](docs/DESIGN.md) | The presentation invariants in full — **read before changing anything visual** |
 | [docs/DATA-NOTES.md](docs/DATA-NOTES.md) | Workbook quirks and verified counts — **only for `src/import/` work** |
 | [WALKTHROUGH.md](WALKTHROUGH.md) | Plain-language explanation for the project owner |
 
@@ -31,8 +32,10 @@ unusable) or softening the overlap guarantee (the strongest claim here).
 
 ## Invariants
 
-Breaking any of these looks like an improvement and is not. Full argument for each:
-[DECISIONS.md](DECISIONS.md).
+Breaking any of these looks like an improvement and is not. Why, for each:
+[DECISIONS.md](DECISIONS.md). **6 and 8–11 are stated in full in
+[docs/DESIGN.md](docs/DESIGN.md)** — the line here is the whole rule, not a summary of
+one, but the detail that makes it obeyable is there.
 
 1. **`src/domain` and `src/lib` import nothing from `db` or `app`.** Pure, and unit-tested
    without infrastructure.
@@ -40,43 +43,32 @@ Breaking any of these looks like an improvement and is not. Full argument for ea
    Booking registers the vessel; a gate once made vessel bookings impossible entirely.
    The berth suggester **proposes and explains, never assigns**: with no length it ranks
    on availability and says the fit was not checked.
-3. **Nothing vanishes silently, but repetition is not information.** Whatever the
-   importer cannot place becomes a review item with its sheet/row/column. Missing
-   lengths are derived, not stored. Identical problems fold into one row with a count
-   (`lib/review.ts`); conflicts never fold.
+3. **Nothing vanishes silently, but repetition is not information.** What the importer
+   cannot place becomes a review item with its sheet/row/column; missing lengths are
+   derived, not stored; identical problems fold with a count (`lib/review.ts`) and
+   conflicts never fold.
 4. **`Small craft slips` is pooled** and exempt from conflict detection. Every other berth
    is exclusive.
 5. **The berths live in a migration**, not in application code. They are the facility.
-6. **Bar height is `vessel length ÷ berth length`**, stated at any width including a
-   single day. Say it in words — `170ft in 90ft berth`, never `170′ > 90′`. Every bar
-   carries a plain-language `data-tip` shown instantly; **never the native `title`**,
-   which took a second and left the board looking unexplained. Tip and badge hang off
-   the side the bar sits on, or the card clips the one thing that must not be clipped.
+6. **Bar height is `vessel length ÷ berth length`**, stated in words at any width, with
+   an instant `data-tip` and never the native `title`. → [DESIGN](docs/DESIGN.md#6-bar-height-is-the-fit-check)
 7. **Every date bound comes from `lib/nav`; none is hard-coded.** The floor stretches to
    the earliest booking so imported history stays reachable; the form refuses a start
    before today, in the save path as well, since `min` only guards the picker. A fixed
    bound has hidden real bookings three times.
-8. **Empty is a supported state, not a degraded one — and never a silent one.** An
-   empty month still draws the full grid, and says in one line where the bookings
-   actually are: a blank grid cannot be told apart from a broken page. Building the
-   empty path is what exposed the two bugs in invariant 2.
-9. **Explain the tool, never the project.** Three tabs: Board, Vessels, Review — no
-   About page, no architecture in the product. Orientation is allowed in one place, the
-   empty board, because every other explanation hangs off something on screen and none
-   render there; it must vanish once a bar exists. Facts stay visible, rules collapse
-   behind a summary that **names them** — never `Info`, which gives nobody a reason to
-   open it. `/search` is a destination, **not a fourth tab**.
-10. **Light only, and one obvious action.** Do not reinstate a dark theme — the mark hues
-    are validated against the light surface, and the custom 404 exists because Next's
-    default carries its own. `+ New booking` is the only filled button, and **no control
-    may exist only to confirm another**.
-11. **Body text outside the grid never drops below 13px** (uppercase micro-labels may be
-    11). When something will not fit, change its shape, not its point size — shrinking
-    is how a readable page becomes an unreadable one, one commit at a time.
-12. **Nothing destructive is irreversible.** There are no accounts, and reversibility is
-    the answer to that rather than a gate. Cancelling is a soft delete restored from
-    Review; restoring re-runs the constraint, so it can be refused, and must be.
-    **Never use WHOI's name or marks** — the data is synthetic and the site is public.
+8. **Empty is supported, and never silent.** The full grid still draws, and one line
+   says where the bookings are. → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent)
+9. **Explain the tool, never the project.** Three tabs; no About page; `/search` is a
+   destination, **not a fourth tab**. Orientation only on the empty board.
+   → [DESIGN](docs/DESIGN.md#9-explain-the-tool-never-the-project)
+10. **Light only; one filled button; no control that only confirms another.**
+    → [DESIGN](docs/DESIGN.md#10-light-only-and-one-obvious-action)
+11. **Nothing outside the grid below 13px.** When something will not fit, change its
+    shape, not its point size. → [DESIGN](docs/DESIGN.md#11-nothing-outside-the-grid-below-13px)
+12. **Nothing destructive is irreversible.** No accounts, so reversibility is the answer
+    rather than a gate: cancelling is a soft delete restored from Review, and restoring
+    re-runs the constraint, so it can be refused. **Never use WHOI's name or marks** —
+    synthetic data, public site.
 
 ## Structure
 
@@ -88,8 +80,8 @@ src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.
 ```
 
-No ORM — the `EXCLUDE` constraint cannot be expressed in one, and a second schema would
-drift. No scheduler library — none can draw a bar that overhangs its lane.
+No ORM: `EXCLUDE` cannot be expressed in one and a second schema would drift. No
+scheduler library: none can draw a bar that overhangs its lane.
 
 ## Commands
 
@@ -112,8 +104,13 @@ Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERAT
 - `todayISO()` resolves in `America/New_York`, not the server's UTC. Using UTC rolls the
   board to the next month at 8pm on the last day of a month.
 - Pushing to `main` deploys, **but Vercel blocks a build whose commit author it does not
-  recognise** — check `git config user.email` first if a deployment comes back `BLOCKED`.
-  That and the connection-pool sizing trap are in [docs/OPERATIONS.md](docs/OPERATIONS.md).
+  recognise** — check `git config user.email` if a deployment comes back `BLOCKED`.
+- **Server Actions inherit their route's `maxDuration`**; the 10s default killed the
+  ~12s workbook restore mid-transaction, and the button discarded its `{ok, error}`, so
+  it failed in total silence. Never throw a mutation's result away.
+- **Compute test dates in `America/New_York`, not UTC.** `Date.now() - 86_400_000` is the
+  facility's *today* after 8pm Eastern, so a spec silently stops testing anything.
+- The pool-sizing trap and the keep-warm ping: [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
