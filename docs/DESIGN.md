@@ -60,20 +60,27 @@ save, the queue off a problem — and on an empty month none of them render, inc
 - **Facts stay visible; rules collapse** behind a `<summary>` that names them. Never
   `Info`: the person who needs those rules is the one who does not know there is anything
   to learn, and would never press a button labelled `Info`.
-- A one-line tagline in the masthead is not a page.
+- **Each page's masthead is its own name and one line** — the board's, being the site's,
+  adds the primary action. Vessels and Review put their lede under their name; the site's
+  name becomes a small link back in the top row, with the search box and the tabs. A
+  one-line tagline is not a page, and neither is a title. See DECISIONS 24.
 
 ## 10. Light only, and one obvious action
 
 - **Do not reinstate a dark theme.** The three mark hues were validated against the light
   surface with the data-viz validator, not chosen by eye, and the custom 404 exists
   precisely because Next's default page carries its own dark mode.
-- **`+ New booking` is the only filled button.** Everything else is an outline.
+- **`+ New booking` is the only filled button on the board**, and each page has at most
+  one. Everything else is an outline. The title and the filled button share the vessel
+  blue: one accent, one job.
 - **No control may exist only to confirm another.**
 
 ## 11. Nothing outside the grid below 13px
 
-Body text outside the board grid never drops below **13px**; uppercase micro-labels may be
-11. **When something will not fit, change its shape, not its point size.**
+Body text outside the board grid never drops below **13px**; uppercase micro-labels and
+monospace metadata may be 11–12. **When something will not fit, change its shape, not its
+point size.** The chrome is set in Poppins, self-hosted by `next/font`; the grid keeps the
+system face.
 
 The grid itself keeps its own scale — day numbers and bar labels at 10px — because 31
 columns and seven lanes have to fit one screen at once. That is a shape constraint, not a
@@ -93,3 +100,6 @@ commit at a time.
 - **A long list shows its head.** Vessels renders 25 of 418 with a filter that searches
   the whole register. Rendering all of them made the page 21,713px tall and buried the
   page's own argument.
+- **A count strip is repetition too.** The board once carried *7 berths · 0 in September ·
+  418 vessels · 29 to review* beside the month; three of the four were already on screen
+  as seven lanes, the empty-month line, and the Review badge. It is gone (DECISIONS 24).

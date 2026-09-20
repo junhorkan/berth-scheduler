@@ -6,11 +6,19 @@
  * ever disagree, the constraint wins and the insert throws, which is the correct
  * failure: a refused booking, never a silent double-booking.
  */
+import type postgres from 'postgres';
 import { db } from './client';
 import { findConflicts, isValidRange } from '../domain/conflicts';
 import { checkFit, type FitResult } from '../domain/fit';
 import { canonicalVesselName } from '../domain/normalize';
 import type { Booking, BookingKind } from '../domain/types';
+
+/**
+ * A connection or a transaction. The helpers below run inside either, and are cast to
+ * the connection type internally because the two are called identically but do not
+ * share a declared call signature.
+ */
+type Queryable = ReturnType<typeof db> | postgres.TransactionSql;
 
 export type CheckResult = {
   bookable: boolean;
@@ -129,10 +137,7 @@ export async function checkBooking(input: {
  * Matching is on the same normalized name the importer uses, so 'os/v amber reef'
  * and 'OSV AMBER REEF' are one vessel rather than two.
  */
-async function findOrCreateVessel(
-  tx: { <T>(s: TemplateStringsArray, ...v: unknown[]): Promise<T> } | ReturnType<typeof db>,
-  rawName: string,
-): Promise<string | null> {
+async function findOrCreateVessel(tx: Queryable, rawName: string): Promise<string | null> {
   const { display, normalized } = canonicalVesselName(rawName);
   if (normalized === '') return null;
 
@@ -159,19 +164,27 @@ export async function createBooking(input: {
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const sql = db();
   try {
-    // A vessel booking always resolves to a vessel row; only events and closures
-    // legitimately have none.
-    const vesselId =
-      input.kind === 'vessel' && input.vesselId == null
-        ? await findOrCreateVessel(sql, input.label)
-        : input.vesselId;
+    let id = '';
+    await sql.begin(async (tx) => {
+      // A vessel booking always resolves to a vessel row; only events and closures
+      // legitimately have none.
+      const vesselId =
+        input.kind === 'vessel' && input.vesselId == null
+          ? await findOrCreateVessel(tx, input.label)
+          : input.vesselId;
 
-    const [row] = await sql`
-      insert into bookings (berth_id, vessel_id, kind, status, label, start_date, end_date, notes, source)
-      values (${input.berthId}, ${vesselId}, ${input.kind}, 'active', ${input.label},
-              ${input.start}, ${input.end}, ${input.notes ?? null}, 'manual')
-      returning id`;
-    return { ok: true, id: row.id as string };
+      const [row] = await tx`
+        insert into bookings (berth_id, vessel_id, kind, status, label, start_date, end_date, notes, source)
+        values (${input.berthId}, ${vesselId}, ${input.kind}, 'active', ${input.label},
+                ${input.start}, ${input.end}, ${input.notes ?? null}, 'manual')
+        returning id`;
+      id = row.id as string;
+
+      // A booking that does not fit is a review item from the moment it exists, so the
+      // queue agrees with the board without waiting for a length to be re-recorded.
+      if (input.kind === 'vessel' && vesselId) await refreshTooLongItems(tx, { bookingId: id });
+    });
+    return { ok: true, id };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };
   }
@@ -244,25 +257,33 @@ export async function restoreBooking(id: string): Promise<{ ok: boolean; error?:
 }
 
 /**
- * Recompute the too-long review items for one vessel.
+ * Recompute the too-long review items for one vessel, or for one booking.
  *
  * Fit is evaluated live on the board but stored in the queue, so the two drift apart
- * unless the queue is refreshed whenever a length changes. Recording a length is the
- * single most common action on the Vessels tab, so this is the likeliest way for Review
- * to start under-reporting.
+ * unless the queue is refreshed whenever the answer can change. Three things change
+ * it: a length is recorded, which touches every booking of that vessel; a booking is
+ * moved to another berth; and a booking is created. Each caller passes the narrowest
+ * scope it can, so moving one booking does not re-open items a coordinator has
+ * already closed on the vessel's other bookings.
  */
 async function refreshTooLongItems(
-  tx: { <T>(strings: TemplateStringsArray, ...args: unknown[]): Promise<T> } | ReturnType<typeof db>,
-  vesselId: string,
+  tx: Queryable,
+  scope: { vesselId: string } | { bookingId: string },
 ) {
   const sql = tx as ReturnType<typeof db>;
+  const items = 'vesselId' in scope
+    ? sql`vessel_id = ${scope.vesselId}`
+    : sql`booking_id = ${scope.bookingId}`;
+  const bookings = 'vesselId' in scope
+    ? sql`v.id = ${scope.vesselId}`
+    : sql`b.id = ${scope.bookingId}`;
 
-  // Clear the vessel's existing open too-long items; they are about to be rebuilt.
+  // Clear the open too-long items in scope; they are about to be rebuilt.
   await sql`
     update review_items set resolved_at = now()
-     where type = 'too_long' and vessel_id = ${vesselId} and resolved_at is null`;
+     where type = 'too_long' and ${items} and resolved_at is null`;
 
-  // Re-flag every live booking this vessel still has that exceeds its berth.
+  // Re-flag every live booking in scope that exceeds its berth.
   await sql`
     insert into review_items (type, booking_id, vessel_id, berth_id, raw_text, detail)
     select 'too_long', b.id, v.id, be.id, v.canonical_name,
@@ -273,7 +294,7 @@ async function refreshTooLongItems(
       from bookings b
       join vessels v on v.id = b.vessel_id
       join berths  be on be.id = b.berth_id
-     where v.id = ${vesselId}
+     where ${bookings}
        and b.kind = 'vessel'
        and b.status <> 'cancelled'
        and v.length_ft is not null
@@ -281,14 +302,24 @@ async function refreshTooLongItems(
        and v.length_ft > be.length_ft`;
 }
 
-/** Move a booking to a different berth. Both checks re-run against the NEW berth. */
+/**
+ * Move a booking to a different berth.
+ *
+ * The conflict check is the constraint, re-run by the update itself. The fit check is
+ * re-run here for the queue: the stored too-long item named the old berth, and left
+ * alone it would keep reporting a problem the board no longer shows — or miss the one
+ * the move just created.
+ */
 export async function reassignBooking(
   id: string,
   berthId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {
-    await sql`update bookings set berth_id = ${berthId} where id = ${id}`;
+    await sql.begin(async (tx) => {
+      await tx`update bookings set berth_id = ${berthId} where id = ${id}`;
+      await refreshTooLongItems(tx, { bookingId: id });
+    });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };
@@ -310,7 +341,7 @@ export async function setVesselLength(
     // Recording a length answers a question that was previously unanswerable, which
     // may reveal violations that were always there but could not be seen. The
     // missing-length count needs no update: it is derived, not stored.
-    await refreshTooLongItems(sql, vesselId);
+    await refreshTooLongItems(sql, { vesselId });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };
@@ -344,20 +375,13 @@ export async function resolveReviewItems(
 }
 
 /**
- * Restore the exact imported state.
+ * Restore the exact imported state, from the `*_seed` snapshot taken at import time.
  *
  * The app is public and unauthenticated by design, so anyone can edit it — this is
- * what makes that safe to offer. Restoring from a snapshot taken at import time is
- * faster and more reliable than re-parsing the workbook inside a serverless function.
- */
-/**
- * Empty the schedule, keeping the berths.
- *
- * The app is public and unauthenticated, so this is the safety net: whatever a
- * visitor does, one action restores the state the app ships in. Berths survive
- * because they are the facility itself — without them there are no lanes to book
- * into and the board has nothing to draw. They are defined in a migration, not
- * created here.
+ * what makes that safe to offer: whatever a visitor does, one action puts the sample
+ * back. Restoring from a snapshot is faster and more reliable than re-parsing the
+ * workbook inside a serverless function, and at roughly 12 seconds it is why the
+ * routes that host it raise `maxDuration`.
  */
 export async function resetToImported(): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
@@ -389,6 +413,15 @@ export async function resetToImported(): Promise<{ ok: boolean; error?: string }
   }
 }
 
+/**
+ * Empty the schedule, keeping the berths.
+ *
+ * This is the one irreversible action in the app, and its dialog says so: a booking
+ * made here is deleted outright, not soft-deleted like a cancellation. Berths survive
+ * because they are the facility itself — without them there are no lanes to book
+ * into and the board has nothing to draw. They are defined in a migration, not
+ * created here.
+ */
 export async function clearSchedule(): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {

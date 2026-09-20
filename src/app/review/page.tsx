@@ -70,22 +70,23 @@ export default async function ReviewPage() {
 
   return (
     <main className="shell">
-      <Nav current="review" />
-
       {/*
-        The pills are gone: each one named a category and gave its count, and every
-        section heading below now does the same thing a few pixels lower. Clearing goes
-        to the foot of the page — a destructive action does not belong in a header,
-        one slip away from the button that loads data.
+        The count is the page's one line, under its name. The pills that used to sit
+        here each named a category and gave its count, which every section heading
+        below now does a few pixels lower. Clearing goes to the foot of the page — a
+        destructive action does not belong in a header, one slip away from the button
+        that loads data.
       */}
-      <p className="pagelede">
-        {open === 0
+      <Nav
+        current="review"
+        title="Review"
+        tagline={open === 0
           ? 'Nothing needs a decision.'
           : <>
               <b>{open} item{open === 1 ? '' : 's'} need a decision.</b>{' '}
               Anything the import could not place is here rather than in a log file.
             </>}
-      </p>
+      />
 
       <div className="board">
         {missing.vessels > 0 && (
@@ -214,8 +215,9 @@ export default async function ReviewPage() {
         <LoadSampleButton />
         <ClearScheduleButton />
         <span className="sub-hint">
-          The sample is 23 years of legacy bookings. Clearing leaves the seven berths,
-          which are the facility rather than schedule data.
+          The sample is 23 years of legacy bookings. Clearing cannot be undone: it
+          leaves only the seven berths, which are the facility rather than schedule
+          data, and the sample can always be loaded again.
         </span>
       </div>
     </main>

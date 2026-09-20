@@ -453,3 +453,91 @@ test.describe('a wrong turn', () => {
     await expect(page.locator('.month')).toBeVisible();
   });
 });
+
+/**
+ * The queue is stored and the board is computed, so the two can drift. These hold
+ * them together across the two writes that change a fit without changing a length.
+ */
+test.describe('the queue agrees with the board', () => {
+  const day = (d: number) =>
+    `${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+  // Open items only: the Recently cancelled card uses the same list styling.
+  const openRow = (page: import('@playwright/test').Page, label: string) =>
+    page.locator('.qsection .queue li', { hasText: label });
+
+  // The Tern booked on the 5th–8th, by its dates rather than by position: once it has
+  // moved berths it is no longer the first Tern bar in the grid.
+  const earlyTern = (page: import('@playwright/test').Page) =>
+    page.getByLabel(/R\/V Test Tern\D+5 \w{3}\D+8 \w{3}/);
+
+  async function moveEarlyTern(page: import('@playwright/test').Page, toIndex: number) {
+    await page.goto(FIXTURE_HREF);
+    await earlyTern(page).click();
+    // Options follow berth display order: North Pier West, Face, East, ...
+    await page.getByLabel('Move to').selectOption({ index: toIndex });
+    await page.getByRole('button', { name: 'Move booking' }).click();
+    await expect(page.getByRole('dialog', { name: 'Booking', exact: true })).toHaveCount(0);
+  }
+
+  test('moving a booking to a berth it fits retires its item, and moving it back restores it', async ({ page }) => {
+    // R/V Test Tern is 120ft and booked twice in the 75ft North Pier Face, so the
+    // queue folds the two into one row marked 2×.
+    await page.goto('/review');
+    await expect(openRow(page, 'R/V Test Tern')).toHaveCount(1);
+    await expect(openRow(page, 'R/V Test Tern').locator('.qcount')).toHaveText('2×');
+
+    // Into North Pier East, 240ft and free on those days (the 410ft pier holds
+    // M/V Test Drifter all month): that booking's problem is gone, the other one's
+    // is not.
+    await moveEarlyTern(page, 2);
+    await page.goto('/review');
+    await expect(openRow(page, 'R/V Test Tern')).toHaveCount(1);
+    await expect(openRow(page, 'R/V Test Tern').locator('.qcount')).toHaveCount(0);
+
+    // Back into the 75ft berth: the problem is real again, so the item comes back,
+    // which also leaves the fixture as the later specs expect it.
+    await moveEarlyTern(page, 1);
+    await page.goto('/review');
+    await expect(openRow(page, 'R/V Test Tern').locator('.qcount')).toHaveText('2×');
+  });
+
+  test('a new booking that does not fit is on the queue the moment it is saved', async ({ page }) => {
+    // S/Y Test Beacon is 170ft. The queue already holds its South Float East misfit;
+    // booking it into the 55ft Inner Channel is a second, distinct problem.
+    await page.goto('/review');
+    await expect(openRow(page, 'S/Y Test Beacon')).toHaveCount(1);
+
+    await page.goto(FIXTURE_HREF);
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByLabel('Vessel', { exact: true }).fill('S/Y Test Beacon');
+    const berth = page.getByLabel('Berth', { exact: true });
+    await berth.selectOption(
+      (await berth.locator('option', { hasText: 'Inner Channel' }).getAttribute('value')) ?? '',
+    );
+    const dates = page.locator('input[type="date"]');
+    await dates.first().fill(day(24));
+    await dates.nth(1).fill(day(25));
+
+    // Amber: it does not fit, and it still saves.
+    await expect(page.getByText(/does not fit/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
+    await page.getByRole('button', { name: 'Save booking' }).click();
+    await expect(page.getByLabel(/S\/Y Test Beacon/)).toHaveCount(2);
+
+    await page.goto('/review');
+    await expect(openRow(page, 'S/Y Test Beacon')).toHaveCount(2);
+
+    // Cancelling closes its item and puts the fixture back. Lanes follow berth order,
+    // so the Inner Channel bar comes before the South Float East one.
+    await page.goto(FIXTURE_HREF);
+    page.once('dialog', (d) => d.accept());
+    await page.getByLabel(/S\/Y Test Beacon/).first().click();
+    await expect(page.getByText(`${day(24)} to ${day(25)}`)).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel booking' }).click();
+    await expect(page.getByLabel(/S\/Y Test Beacon/)).toHaveCount(1);
+
+    await page.goto('/review');
+    await expect(openRow(page, 'S/Y Test Beacon')).toHaveCount(1);
+  });
+});

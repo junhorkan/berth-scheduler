@@ -87,7 +87,9 @@ npm run dev
 
 ```bash
 npm test          # 246 unit tests, no database required
-npm run e2e       # 45 Playwright specs against a real server
+npm run e2e       # 47 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
+npm run lint      # clean
+npm run typecheck # clean
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify connection and that the constraint exists
 ```
@@ -108,6 +110,10 @@ navigation and search rules are provably correct without a database — 246 unit
 in well under a second with no infrastructure at all. The importer and the UI call the
 same functions, so the rule the board shows you is the rule the import applied.
 
+The look is borrowed, not invented: the scale, the centred title and the one filled button
+come from a site the project owner finds easy to use, and `DECISIONS.md` entries 19 and 24
+record what was taken, what was measured, and what was left.
+
 ## Stack
 
 Next.js (App Router) · TypeScript · Postgres on Supabase · Vercel · Vitest · SheetJS.
@@ -123,5 +129,7 @@ booking fills its lane, and none can draw a bar that **overhangs** its row.
   ping keeps it awake. If the site ever errors after a long quiet period, opening the
   Supabase dashboard restores it.
 - **The app is public and unauthenticated by design**, so a reviewer can exercise the
-  conflict check without credentials. **Clear the schedule** on the Review tab restores
-  the state the app ships in, so experimenting is safe.
+  conflict check without credentials. **Load the sample schedule** on the Review tab
+  puts back the state the app ships in. **Clear the schedule** is the one action that
+  cannot be undone: it removes every booking and vessel, including anything created
+  through the app, and leaves the seven berths.

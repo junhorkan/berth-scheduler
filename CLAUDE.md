@@ -59,15 +59,18 @@ one, but the detail that makes it obeyable is there.
 8. **Empty is supported, and never silent.** The full grid still draws, and one line
    says where the bookings are. → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent)
 9. **Explain the tool, never the project.** Three tabs; no About page; `/search` is a
-   destination, **not a fourth tab**. Orientation only on the empty board.
+   destination, **not a fourth tab**. Each page's masthead is its own name and one line;
+   orientation only on the empty board.
    → [DESIGN](docs/DESIGN.md#9-explain-the-tool-never-the-project)
-10. **Light only; one filled button; no control that only confirms another.**
+10. **Light only; one filled button per page; no control that only confirms another.**
     → [DESIGN](docs/DESIGN.md#10-light-only-and-one-obvious-action)
 11. **Nothing outside the grid below 13px.** When something will not fit, change its
     shape, not its point size. → [DESIGN](docs/DESIGN.md#11-nothing-outside-the-grid-below-13px)
-12. **Nothing destructive is irreversible.** No accounts, so reversibility is the answer
-    rather than a gate: cancelling is a soft delete restored from Review, and restoring
-    re-runs the constraint, so it can be refused. **Never use WHOI's name or marks** —
+12. **Nothing destructive is irreversible, except the one thing that says so.** No
+    accounts, so reversibility is the answer rather than a gate: cancelling is a soft
+    delete restored from Review, and restoring re-runs the constraint, so it can be
+    refused. **Clear the schedule** is the exception: a hard delete, and its dialog says
+    that bookings made here are not recoverable. **Never use WHOI's name or marks** —
     synthetic data, public site.
 
 ## Structure
@@ -88,7 +91,7 @@ scheduler library: none can draw a bar that overhangs its lane.
 ```bash
 npm run dev       # local dev server
 npm test          # 246 unit tests, no database needed
-npm run e2e       # 45 specs. HITS THE LIVE DB: swaps in a fixture, restores after
+npm run e2e       # 47 specs. HITS THE LIVE DB: swaps in a fixture, restores after
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build
@@ -110,6 +113,9 @@ Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERAT
   it failed in total silence. Never throw a mutation's result away.
 - **Compute test dates in `America/New_York`, not UTC.** `Date.now() - 86_400_000` is the
   facility's *today* after 8pm Eastern, so a spec silently stops testing anything.
+- **An ignore rule never untracks a file already committed.** The sample workbook sat in
+  the repo for 16 commits after `data/*.xlsx` was ignored; history was rewritten on
+  2026-09-19 to remove it. `git ls-files data` must print nothing.
 - The pool-sizing trap and the keep-warm ping: [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 <!-- BEGIN:nextjs-agent-rules -->

@@ -66,8 +66,11 @@ export default function BookingPanel({
   useEffect(() => {
     if (!open || !berthId || !start || !end) return;
     const mine = ++generation.current;
-    setChecking(true);
     const t = setTimeout(async () => {
+      // Set inside the timer, not the effect body: a synchronous setState in an effect
+      // cascades a render, and the "Checking…" line is only read before the first
+      // verdict lands anyway, so the 280ms delay costs nothing visible.
+      setChecking(true);
       try {
         // Both in one round trip: the verdict for the chosen berth, and what every
         // other berth is doing, so the dropdown can say so without a second wait.
@@ -147,13 +150,20 @@ export default function BookingPanel({
     });
   }
 
-  if (!open) {
-    return <button className="btn primary" onClick={() => setOpen(true)}>+ New booking</button>;
-  }
-
+  // The button stays what it is while the sheet is open. It used to turn into a filled
+  // "Close", which sat in the hero at title size and read as the page's main action;
+  // the sheet has its own Cancel, and the overlay already covers this one.
   return (
     <>
-      <button className="btn primary" onClick={() => setOpen(false)}>Close</button>
+      <button
+        className="btn primary"
+        onClick={() => setOpen(true)}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+      >
+        + New booking
+      </button>
+      {open && <>
       <div className="overlay" onClick={() => setOpen(false)} />
       <aside className="panel-sheet" role="dialog" aria-label="New booking">
         <h2>New booking</h2>
@@ -265,6 +275,7 @@ export default function BookingPanel({
           {disabledReason && <span className="why">{disabledReason}</span>}
         </div>
       </aside>
+      </>}
     </>
   );
 }

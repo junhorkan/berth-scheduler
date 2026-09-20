@@ -1,16 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * End-to-end tests run against a real dev server and the real database.
- *
- * Tests are written to be non-destructive: the read-only ones assert against imported
- * data, and the one test that writes cleans up after itself, so the deployed demo data
- * stays exactly as imported.
+ * End-to-end tests run against a real dev server and the real database — the one the
+ * live site serves. The suite replaces the schedule with its own fixture in
+ * `global-setup` and puts the sample back in `global-teardown`, so while it runs the
+ * public URL shows the fixture. Do not run it once a link has been handed to anyone.
+ * See docs/OPERATIONS.md.
  */
 export default defineConfig({
   testDir: './e2e',
-  // The sample workbook is optional in the deployed app, so the suite loads it and
-  // clears it again, leaving the database in the state the app ships in.
+  // Seeds the fixture, and restores the sample afterwards.
   globalSetup: './e2e/global-setup.ts',
   globalTeardown: './e2e/global-teardown.ts',
   fullyParallel: false,

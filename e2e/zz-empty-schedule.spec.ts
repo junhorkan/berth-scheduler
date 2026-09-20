@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { clearSchedule } from './helpers/schedule';
 
 /**
- * How the app actually ships: an empty schedule with the berths in place.
+ * The empty schedule: what a fresh facility sees, and what Clear leaves behind.
  *
  * Named to sort last, because it clears the fixture every other spec depends on.
  */
@@ -63,9 +63,9 @@ test.describe('an empty schedule', () => {
     await expect(page.getByText('R/V Test Cutter')).toBeVisible();
   });
 
-  test('clears back to the shipped state from Review', async ({ page }) => {
-    // The app is public and unauthenticated, so this is the safety net: whatever a
-    // visitor does, one button restores the state the app ships in.
+  test('clears the schedule from Review, leaving only the berths', async ({ page }) => {
+    // The one irreversible action in the app. Everything goes but the berths, which
+    // are the facility rather than schedule data.
     page.on('dialog', (d) => d.accept());
 
     await page.goto('/review');

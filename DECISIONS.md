@@ -30,6 +30,7 @@ built is usually more informative than the thing that was.
 | 21 | [The facility is not WHOI](#21-the-facility-is-not-whoi) |
 | 22 | [The system suggests a berth; it never assigns one](#22-the-system-suggests-a-berth-it-never-assigns-one) |
 | 23 | [A long list shows its head, and names its categories once](#23-a-long-list-shows-its-head-and-names-its-categories-once) |
+| 24 | [The masthead is the page's name, in the reference site's shape](#24-the-masthead-is-the-pages-name-in-the-reference-sites-shape) |
 
 ---
 
@@ -250,16 +251,23 @@ virtualising 23 years is a large amount of work for a small gain.
 
 ## 11. Public, unauthenticated, with a reset
 
-**Decision.** No login. Anyone can add, edit and cancel. A visible **Clear the schedule**
-restores the state the app ships in: an empty schedule with the berths intact.
+**Decision.** No login. Anyone can add, edit and cancel. A visible **Load the sample
+schedule** puts back the state the app ships in, so nothing a visitor does can spoil the
+demonstration for the next one.
 
 **Why.** The most important thing to demonstrate is the conflict check refusing a
-booking, and a login wall prevents anyone from trying it. Clearing makes that safe:
-experimenting cannot cause lasting damage, because the shipped state is reachable in one
-action. Auth was out of scope for the brief anyway.
+booking, and a login wall prevents anyone from trying it. The reload is what makes that
+safe: the shipped state is reachable in one action. Auth was out of scope for the brief
+anyway.
 
 The berths survive a clear deliberately — they are the facility, defined in a migration,
 not schedule data.
+
+**Corrected.** This entry used to say that *Clear the schedule* restored the shipped
+state, from the time when the app shipped empty. It ships with the sample loaded
+([14](#14-the-legacy-schedule-is-imported-and-removable)), so the reload is the way back,
+and Clear is the one irreversible action in the app: a hard delete, whose dialog says that
+bookings made here are not recoverable. Invariant 12 names it as the exception.
 
 **Amended.** Open access left one real hole: anyone could cancel anyone's booking. The
 answer is [20](#20-cancelling-is-reversible-not-restricted) — make it undoable rather
@@ -376,7 +384,9 @@ only because the form was plain HTML, not because anyone needed to confirm. Remo
 also removed the question of what happens if you change a dropdown and forget to press it.
 
 The same reasoning trimmed the masthead: the title said *Harborview Marine Research
-Center* and a label beside it said *Dock Schedule*, which is the same sentence twice.
+Center* and a label beside it said *Dock Schedule*, which is the same sentence twice. It
+now says *Harborview Dock Schedule* once, at a size you can read from across the room
+([24](#24-the-masthead-is-the-pages-name-in-the-reference-sites-shape)).
 
 **Light only** for the same reason — one theme is one thing to keep correct, and it is
 read in a daylit setting. Next's default 404 carries its own `prefers-color-scheme` rule,
@@ -507,10 +517,13 @@ Three things were taken and one was left:
   rules out — and it happens to state the one guarantee the database actually enforces.
 - **Room in a row.** Queue rows went from 9px of vertical padding to 13, table cells from
   5 to 9. Density was never the constraint; there was space to spare.
-- **Not taken: the centred, playful masthead.** Swipe Market is a consumer marketplace and
-  can open with a large centred title and an emoji. This is a tool someone has open all
-  day beside other work, and a full-width hero would cost a lane of the board on every
-  load.
+- **Not taken at first: the centred masthead.** Swipe Market is a consumer marketplace and
+  can open with a large centred title and an emoji; this is a tool someone has open all
+  day beside other work, and the worry was that a hero would cost a lane of the board on
+  every load. That was measured and overturned in
+  [24](#24-the-masthead-is-the-pages-name-in-the-reference-sites-shape): the owner chose
+  the hero after seeing both, it costs about a lane and a half, and every lane still fits
+  a laptop.
 
 **The grid keeps its own scale.** Day numbers stay at 10px and bar labels at 10px, because
 they are data, not chrome: 31 columns and seven lanes have to fit a screen at once, and
@@ -569,8 +582,9 @@ is a staff tool that would sit behind institutional SSO in a real deployment.
 
 ## 21. The facility is not WHOI
 
-**Decision.** The app is branded `Harborview Marine Research Center`, the name carried in
-the sample workbook. WHOI's name, logo and marks appear nowhere.
+**Decision.** The app is titled `Harborview Dock Schedule`, and the facility is
+`Harborview Marine Research Center`, the name carried in the sample workbook. WHOI's name,
+logo and marks appear nowhere.
 
 **Why.** The brief opens *"A WHOI marine research facility needs to manage berths of
 varying lengths."* WHOI — the Woods Hole Oceanographic Institution — is a real, operating
@@ -685,3 +699,55 @@ kept, but only on *Could not be read* items, which are the ones you resolve by g
 looking at the cell. On a conflict or a misfit the booking is on the board, where the
 sheet coordinates tell you nothing you can act on. It is the evidence that nothing was
 silently dropped, so it stays where it is evidence and goes where it was noise.
+
+---
+
+## 24. The masthead is the page's name, in the reference site's shape
+
+**Decision.** Every page opens with a centred title in the brand blue, one line under it,
+and — on the board — the one filled button. The month navigation moved inside the board
+card as its header; the count strip beside it is gone; the chrome is set in Poppins,
+self-hosted; cards float on a shadow instead of sitting inside a hairline. The board's
+title is the tool's name, *Harborview Dock Schedule*, not the institution's.
+
+**Why.** [19](#19-the-type-scale-was-borrowed-not-invented) took the reference site's scale
+and declined its centred masthead, on the grounds that a hero costs board space on every
+load. The project owner looked at both and chose the hero. This entry records what that
+cost and what it bought, measured on the same month at the same width:
+
+| | Before | After |
+|---|---|---|
+| Title | 21px, top left | 36px, centred, brand blue |
+| Words on screen before the grid starts | 35 | 24 |
+| Controls in the row above the grid | 9 | 5, with the filled button standing alone |
+| Grid begins at | 207px | 310px |
+| Seven lanes and the legend end at | ≈700px | 838px |
+
+**What it cost.** About a lane and a half of vertical space. The whole board — all seven
+lanes and the legend — still ends inside 840px, so a laptop shows every lane at once,
+which was the line [19](#19-the-type-scale-was-borrowed-not-invented) drew.
+
+**What it bought.** A first-time visitor reads three things in order — what this is, what
+it does, what to press — before anything competes for the eye. Before, the title was the
+smallest text on the page after the day numbers, and the primary action was the last of
+nine controls in a toolbar.
+
+**What went.** The count strip: *7 berths · 0 in September · 418 vessels · 29 to review*
+said four things, three of which the screen already said — seven lanes are visible, the
+empty-month line names the month, and the Review tab carries the badge. That is
+[17](#17-repetition-is-not-information) applied to the toolbar. The month navigation kept
+every control and lost its box.
+
+**What did not change.** The grid. Day numbers and bar labels keep the system face at
+10px, because 31 columns and seven lanes are a shape constraint (invariant 11), and a
+display face at that size costs label width for nothing.
+
+**Each page names itself.** Vessels and Review put their own name in the title and their
+one-line lede under it, and the site's name becomes a small link back in the top row. The
+board, being the site, takes the site's name. That is the reference site's pattern too:
+its posting page is titled *Post Listing*, with the site's name as the way back.
+
+**Rejected: the emoji, and the top row's contents.** The reference site opens with a
+shopping cart; a dock schedule with a boat in its title would be charming once and
+tiresome by Tuesday. Its top row holds sign-in and feedback, which this app has neither
+of; ours holds the tabs and the search box, which it does.

@@ -60,7 +60,7 @@ export function ClearScheduleButton() {
         className="btn danger"
         disabled={pending}
         onClick={() => {
-          if (!confirm('Clear the whole schedule? Every booking and vessel is removed. The berths stay, and the sample can be loaded again.')) return;
+          if (!confirm('Clear the whole schedule? Every booking and vessel is removed, and bookings made here cannot be recovered. The berths stay, and the sample can be loaded again.')) return;
           go();
         }}
       >

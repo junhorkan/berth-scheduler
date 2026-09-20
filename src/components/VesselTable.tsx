@@ -33,6 +33,16 @@ export default function VesselTable({ vessels }: { vessels: VesselRow[] }) {
   const shown = all || searching ? filtered : filtered.slice(0, HEAD);
   const hidden = filtered.length - shown.length;
 
+  // An empty register is a state, not a failed search, so it does not say
+  // "No vessel matches" against a filter nobody typed.
+  if (vessels.length === 0) {
+    return (
+      <div className="board">
+        <p className="empty">Nothing on the register yet.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="board">
       <div className="vfilter">

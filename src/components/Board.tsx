@@ -60,6 +60,7 @@ export default function Board({
   month,
   selectedId,
   emptyNote,
+  head,
 }: {
   berths: BerthRow[];
   bookings: BookingRow[];
@@ -68,6 +69,8 @@ export default function Board({
   selectedId?: string;
   /** Shown above the grid when this month holds nothing. The grid still draws. */
   emptyNote?: ReactNode;
+  /** The month navigation, drawn inside the card as its header. */
+  head?: ReactNode;
 }) {
   const days = daysInMonth(year, month);
   const dayNums = Array.from({ length: days }, (_, i) => i + 1);
@@ -92,6 +95,7 @@ export default function Board({
 
   return (
     <div className="board">
+      {head}
       {bookings.length === 0 && emptyNote}
       <div className="gridrow" style={{ ['--days' as string]: days }}>
         {/* day header */}

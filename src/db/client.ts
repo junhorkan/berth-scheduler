@@ -20,7 +20,6 @@ type Sql = ReturnType<typeof postgres>;
 declare global {
   // Reuse the pool across dev hot reloads and warm serverless invocations, so we do
   // not leak a connection per reload.
-  // eslint-disable-next-line no-var
   var __berthSql: Sql | undefined;
 }
 

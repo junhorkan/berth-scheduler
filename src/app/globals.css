@@ -40,7 +40,14 @@
   --unknown-fill: #e9e8e3;
   --unknown-hatch: #c3c2b7;
 
+  /* The title and the one filled button share the vessel blue: one accent, one job. */
+  --brand: #2a78d6;
+  /* Cards float on a soft shadow rather than sit inside a hairline. */
+  --shadow: 0 1px 2px rgba(23, 23, 26, 0.04), 0 6px 22px rgba(23, 23, 26, 0.06);
+
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Poppins, self-hosted by next/font in layout.tsx; the system face until it lands. */
+  --sans: var(--font-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -49,42 +56,53 @@ body {
   margin: 0;
   background: var(--plane);
   color: var(--ink);
-  font: 15px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font: 15px/1.55 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
 
 a { color: var(--vessel); }
 
 /* ---------------------------------------------------------------- chrome */
-.shell { max-width: 1320px; margin: 0 auto; padding: 26px 24px 48px; }
+.shell { max-width: 1320px; margin: 0 auto; padding: 14px 24px 56px; }
 
-.masthead {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--axis);
+/* ---- Masthead: a small top row, then the page says what it is -------------------
+ *
+ * The shape is the reference site's (DECISIONS 19 and 24): a big centred title in the
+ * brand colour, one line under it, and the primary action beneath both. The top row
+ * carries the small things. None of it is a page about the project — invariant 9
+ * still holds — it is the sentence a first-time visitor needs, at a size they can
+ * read from across the room.
+ */
+.masthead { margin-bottom: 14px; }
+.topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 34px; }
+.topbar .home { font-size: 14px; color: var(--ink-2); text-decoration: none; }
+.topbar .home:hover { color: var(--ink); }
+
+.hero { text-align: center; padding: 16px 0 20px; }
+.hero h1 {
+  margin: 0; font-size: 36px; line-height: 1.15; font-weight: 700;
+  letter-spacing: -0.025em; color: var(--brand);
 }
-.masthead h1 { font-size: 21px; margin: 0; font-weight: 680; letter-spacing: -0.02em; }
-/* One line, under the title, saying what you can do here. Not a page about the
-   project — invariant 9 still holds — just the sentence a first-time visitor needs. */
-.masthead .brand { margin-right: 4px; }
-.masthead .tagline { margin: 3px 0 0; font-size: 13px; color: var(--ink-2); }
+.hero .tagline { margin: 8px auto 0; max-width: 66ch; font-size: 16px; color: var(--ink-2); }
+.hero .tagline b { color: var(--ink); font-weight: 600; }
+.heroactions { display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+/* The one thing this tool is for, at the size of the title's own promise. */
+.heroactions .btn.primary { font-size: 16px; padding: 12px 26px; border-radius: 11px; }
 
-.tabs { display: flex; gap: 2px; margin-left: auto; }
+.tabs { display: flex; gap: 2px; }
 .tabs a {
   font-size: 14px; padding: 6px 12px; border-radius: 8px;
   text-decoration: none; color: var(--ink-2);
 }
 .tabs a[aria-current='page'] { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ring); font-weight: 600; }
 .tabs .count {
-  font-family: var(--mono); font-size: 12px; margin-left: 6px;
+  font-family: var(--mono); font-size: 13px; margin-left: 6px;
   color: var(--critical);
 }
 
-.toolbar {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  background: var(--surface); border: 1px solid var(--grid);
-  border-radius: 12px; padding: 10px 12px; margin-bottom: 14px;
-}
-.toolbar .month { font-weight: 650; font-size: 15px; min-width: 138px; text-align: center; }
+/* The month navigation lives inside the board card, as its header (DECISIONS 24). */
+.boardhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.boardhead .month { font-weight: 700; font-size: 18px; min-width: 156px; text-align: center; }
 .navbtn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 32px; height: 32px; border-radius: 8px; text-decoration: none;
@@ -106,8 +124,8 @@ a { color: var(--vessel); }
 
 /* ----------------------------------------------------------------- board */
 .board {
-  background: var(--surface); border: 1px solid var(--grid);
-  border-radius: 12px; padding: 14px 14px 16px; overflow-x: auto;
+  background: var(--surface); border: 1px solid var(--ring); box-shadow: var(--shadow);
+  border-radius: 14px; padding: 16px 16px 18px; overflow-x: auto;
 }
 .gridrow { display: grid; grid-template-columns: 150px minmax(620px, 1fr); }
 
@@ -144,6 +162,8 @@ a { color: var(--vessel); }
   display: flex; align-items: center; gap: 4px;
   padding: 0 4px; overflow: hidden; white-space: nowrap;
   font-size: 10px; line-height: 1;
+  /* The grid keeps the system face: at 10px a display face costs label width. */
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 .bar .lbl { overflow: hidden; text-overflow: ellipsis; }
 .bar .ft { font-family: var(--mono); font-size: 9px; opacity: 0.85; flex: none; }
@@ -171,8 +191,8 @@ a { color: var(--vessel); }
 
 /* --------------------------------------------------------------- legend */
 .legend {
-  display: flex; flex-wrap: wrap; gap: 14px; margin-top: 13px;
-  font-size: 11px; color: var(--ink-muted); align-items: center;
+  display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px;
+  font-size: 12px; color: var(--ink-2); align-items: center;
 }
 .legend div { display: flex; align-items: center; gap: 5px; }
 .sw { width: 18px; height: 10px; border-radius: 2px; flex: none; }
@@ -182,23 +202,23 @@ a { color: var(--vessel); }
 .sw.toolong { background: var(--critical-fill); border: 1px solid var(--critical); border-top: 2px dashed var(--critical); }
 .sw.closure { background: repeating-linear-gradient(135deg, var(--unknown-fill) 0 5px, var(--unknown-hatch) 5px 6px); border: 1px solid var(--axis); }
 
-.note { font-size: 12px; color: var(--ink-muted); margin: 10px 0 0; }
+.note { font-size: 13px; color: var(--ink-muted); margin: 10px 0 0; }
 .empty { padding: 32px 0; text-align: center; color: var(--ink-muted); font-size: 14px; }
 
 /* --------------------------------------------------------- panels/tables */
 .panel {
-  background: var(--surface); border: 1px solid var(--grid);
-  border-radius: 12px; padding: 16px 18px; font-size: 14px;
+  background: var(--surface); border: 1px solid var(--ring); box-shadow: var(--shadow);
+  border-radius: 14px; padding: 16px 20px; font-size: 15px;
 }
 .panel b { font-weight: 650; }
 
-.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 15px; }
 .tbl th {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--ink-muted); font-weight: 600; padding: 0 10px 8px 0;
+  color: var(--ink-2); font-weight: 700; padding: 0 10px 10px 0;
   border-bottom: 1px solid var(--axis);
 }
-.tbl td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+.tbl td { padding: 11px 10px 11px 0; border-bottom: 1px solid var(--grid); vertical-align: middle; }
 .tbl tr.needs td:first-child { box-shadow: inset 2px 0 0 var(--event); padding-left: 8px; }
 
 .flag {
@@ -213,27 +233,19 @@ a { color: var(--vessel); }
   background: var(--surface); color: var(--ink);
 }
 .leninput:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
-.hint { font-size: 10px; color: var(--ink-muted); }
+.hint { font-size: 12px; color: var(--ink-muted); }
 .hint.ok { color: var(--vessel); }
 .hint.bad { color: var(--critical); }
 
 .btn {
-  font: inherit; font-size: 13px; padding: 6px 12px; cursor: pointer;
-  border: 1px solid var(--axis); border-radius: 8px;
+  font: inherit; font-size: 14px; font-weight: 600; padding: 8px 14px; cursor: pointer;
+  border: 1px solid var(--axis); border-radius: 9px;
   background: var(--surface); color: var(--ink); text-decoration: none;
   display: inline-flex; align-items: center;
 }
 .btn:hover { border-color: var(--ink-2); }
 .btn.danger { border-color: var(--critical); color: var(--critical); }
 .btn:disabled { opacity: 0.55; cursor: default; }
-
-.pill {
-  display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
-  border: 1px solid var(--grid); border-radius: 999px; padding: 2px 10px; color: var(--ink-2);
-}
-.pill b { font-family: var(--mono); font-size: 12px; }
-.pill.bad { border-color: var(--critical); color: var(--critical); }
-.pill.warn { border-color: var(--event); color: var(--event); }
 
 /* ----------------------------------------------------------- review queue */
 .queue { list-style: none; margin: 0; padding: 0; }
@@ -243,22 +255,19 @@ a { color: var(--vessel); }
 }
 .queue li:last-child { border-bottom: 0; }
 .qmain { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.qtitle { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); }
-.queue li.bad .qtitle { color: var(--critical); }
-.queue li.warn .qtitle { color: var(--event); }
 .qtext { font-size: 15px; font-weight: 600; }
 .qdetail { font-size: 13px; color: var(--ink-2); }
-.qmeta { font-size: 11px; color: var(--ink-muted); font-family: var(--mono); }
+.qmeta { font-size: 12px; color: var(--ink-muted); font-family: var(--mono); }
 .qact { display: flex; gap: 6px; flex: none; padding-top: 2px; }
 
 /* ------------------------------------------------------- booking panel */
 /* The one thing this tool is for, sized like it. */
 .btn.primary {
-  background: var(--vessel); border-color: var(--vessel);
-  color: #fff; font-weight: 650; font-size: 14px; padding: 8px 16px;
-  border-radius: 9px;
+  background: var(--brand); border-color: var(--brand);
+  color: #fff; font-weight: 600; font-size: 14px; padding: 9px 18px;
+  border-radius: 10px; box-shadow: 0 2px 10px rgba(42, 120, 214, 0.28);
 }
-.btn.primary:hover { filter: brightness(0.93); border-color: var(--vessel); }
+.btn.primary:hover { filter: brightness(0.93); border-color: var(--brand); }
 
 .overlay {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.28); z-index: 40;
@@ -279,11 +288,11 @@ a { color: var(--vessel); }
   background: var(--surface); color: var(--ink);
 }
 .field input:focus, .field select:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
-.sub-hint { font-size: 11px; color: var(--ink-muted); margin-top: 3px; }
+.sub-hint { font-size: 13px; color: var(--ink-muted); margin-top: 4px; }
 
 .segmented { display: flex; gap: 2px; flex: 1; }
 .segmented button {
-  flex: 1; font: inherit; font-size: 12px; padding: 4px 8px; cursor: pointer;
+  flex: 1; font: inherit; font-size: 13px; padding: 5px 8px; cursor: pointer;
   border: 1px solid var(--axis); border-radius: 6px;
   background: var(--surface); color: var(--ink-2);
 }
@@ -291,8 +300,8 @@ a { color: var(--vessel); }
 
 .verdictbox { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
 .verdict {
-  margin: 0; font-size: 12px; line-height: 1.45;
-  padding: 8px 10px; border-radius: 6px; border-left: 3px solid transparent;
+  margin: 0; font-size: 13px; line-height: 1.45;
+  padding: 9px 11px; border-radius: 7px; border-left: 3px solid transparent;
 }
 .verdict.idle { color: var(--ink-muted); }
 /* Red is a wall: the database will refuse the write. */
@@ -302,13 +311,13 @@ a { color: var(--vessel); }
 .verdict.clear { background: var(--vessel-fill); border-left-color: var(--vessel); color: var(--vessel); }
 
 .actions { display: flex; gap: 8px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
-.why { font-size: 11px; color: var(--ink-muted); flex-basis: 100%; }
+.why { font-size: 13px; color: var(--ink-muted); flex-basis: 100%; }
 
 .bar { text-decoration: none; cursor: pointer; }
 .bar:hover { filter: brightness(0.96); box-shadow: 0 0 0 1px var(--ink-muted); }
 .bar.selected { box-shadow: 0 0 0 2px var(--ink); z-index: 6; }
 
-.meta { display: grid; grid-template-columns: 78px 1fr; gap: 3px 10px; margin: 0 0 12px; font-size: 12px; }
+.meta { display: grid; grid-template-columns: 78px 1fr; gap: 4px 10px; margin: 0 0 12px; font-size: 13px; }
 .meta dt { color: var(--ink-muted); }
 .meta dd { margin: 0; }
 
@@ -327,26 +336,26 @@ a { color: var(--vessel); }
 
 .find { display: flex; gap: 6px; align-items: center; }
 .find input {
-  font: inherit; font-size: 13px; padding: 7px 11px; width: 230px;
+  font: inherit; font-size: 14px; padding: 8px 12px; width: 240px;
   border: 1px solid var(--axis); border-radius: 8px;
   background: var(--surface); color: var(--ink);
 }
 .find input::placeholder { color: var(--ink-muted); }
 .find input:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
 .find button {
-  font: inherit; font-size: 13px; padding: 7px 13px; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; padding: 8px 14px; cursor: pointer;
   border: 1px solid var(--axis); border-radius: 8px;
   background: var(--surface); color: var(--ink);
 }
 .find button:hover { border-color: var(--ink-2); }
 
 .sgroup {
-  background: var(--surface); border: 1px solid var(--ring);
-  border-radius: 12px; padding: 14px 16px; margin-top: 12px;
+  background: var(--surface); border: 1px solid var(--ring); box-shadow: var(--shadow);
+  border-radius: 14px; padding: 14px 18px; margin-top: 12px;
 }
 .shead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .shead b { font-size: 14px; font-weight: 650; }
-.smeta { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); }
+.smeta { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); }
 
 /* The kind is named in text, never by colour alone. */
 .skind {
@@ -357,26 +366,33 @@ a { color: var(--vessel); }
 .skind.vessel { color: var(--vessel); border-color: var(--vessel); }
 .skind.event { color: var(--event); border-color: var(--event); }
 
-.tbl.shits td { padding: 4px 8px 4px 0; font-size: 12px; }
+.tbl.shits td { padding: 6px 8px 6px 0; font-size: 13px; }
 .tbl.shits tr:last-child td { border-bottom: 0; }
-.smonth { font-family: var(--mono); font-size: 11px; color: var(--ink-2); width: 76px; }
+.smonth { font-family: var(--mono); font-size: 12px; color: var(--ink-2); width: 80px; }
 .sberth { width: 190px; }
-.sspan { font-family: var(--mono); font-size: 11px; width: 130px; }
-.sjump { font-size: 11px; color: var(--vessel); text-decoration: none; white-space: nowrap; }
+.sspan { font-family: var(--mono); font-size: 12px; width: 136px; }
+.sjump { font-size: 13px; color: var(--vessel); text-decoration: none; white-space: nowrap; }
 .sjump:hover { text-decoration: underline; }
 .smore {
-  display: inline-block; margin: 6px 12px 0 0;
-  font-size: 11px; color: var(--ink-2); text-decoration: none;
+  display: inline-block; margin: 8px 12px 0 0;
+  font-size: 13px; color: var(--ink-2); text-decoration: none;
 }
 .smore:hover { color: var(--ink); text-decoration: underline; }
 
 @media (max-width: 720px) {
-  .find { order: 3; width: 100%; }
+  .topbar { gap: 8px; }
+  .topbar .find { order: 3; width: 100%; }
   .find input { width: 100%; }
+  .hero { padding: 18px 0 20px; }
+  .hero h1 { font-size: 28px; }
+  .hero .tagline { font-size: 15px; }
+  /* The rail gives up a third of its width so more days fit beside it. */
+  .gridrow { grid-template-columns: 108px minmax(620px, 1fr); }
+  .boardhead .month { min-width: 0; flex: 1; }
 }
 
 .navbtn.today {
-  width: auto; padding: 0 10px; font-size: 12px; font-weight: 600;
+  width: auto; padding: 0 10px; font-size: 13px; font-weight: 600;
   color: var(--vessel); border-color: var(--vessel);
 }
 
@@ -388,14 +404,6 @@ a { color: var(--vessel); }
   border-left: 2px solid var(--vessel); opacity: 0.5;
 }
 
-
-/* ---- Counts, inline in the toolbar rather than a band of their own ---- */
-
-.facts { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-2); }
-.facts b { font-weight: 650; color: var(--ink); }
-.facts i { width: 1px; height: 11px; background: var(--axis); display: inline-block; }
-.facts .flagged { color: var(--critical); font-weight: 650; text-decoration: none; }
-.facts .flagged:hover { text-decoration: underline; }
 
 /* ---- Hover tooltip: the explanation the board already had, made instant ---- */
 
@@ -435,7 +443,7 @@ a { color: var(--vessel); }
 .qcount {
   margin-left: 6px; padding: 0 5px; border-radius: 7px;
   background: var(--plane); color: var(--ink-2);
-  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
 }
 
 .sub-note { margin-left: 8px; font-size: 11px; color: var(--ink-muted); }
@@ -453,13 +461,13 @@ a { color: var(--vessel); }
 
 .boardnote {
   margin: 2px 0 14px; padding: 0 2px; max-width: 78ch;
-  font-size: 13.5px; line-height: 1.55; color: var(--ink-2);
+  font-size: 14px; line-height: 1.55; color: var(--ink-2);
 }
 .boardnote p { margin: 0; }
 .boardnote b { color: var(--ink); font-weight: 650; }
 .boardnote .bn-list { margin: 6px 0 0; padding-left: 17px; }
 .boardnote .bn-list li { margin-bottom: 1px; }
-.boardnote .btn { font-size: 12.5px; padding: 3px 10px; vertical-align: baseline; }
+.boardnote .btn { font-size: 13px; padding: 4px 10px; vertical-align: baseline; }
 
 /* The rules sit one click away. The summary is labelled with what is inside, not
    "Info": whoever needs it has to be given a reason to open it, and the two facts
@@ -467,7 +475,7 @@ a { color: var(--vessel); }
 .boardnote details { margin-top: 7px; }
 .boardnote summary {
   display: inline-block; cursor: pointer; list-style: none;
-  font-size: 12.5px; color: var(--vessel);
+  font-size: 13px; color: var(--vessel);
 }
 .boardnote summary::-webkit-details-marker { display: none; }
 .boardnote summary::before { content: '\25b8\00a0'; }
@@ -483,19 +491,15 @@ a { color: var(--vessel); }
 }
 .restorewrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 /* The refusal is the interesting outcome, so it is stated, not swallowed. */
-.restoreerr { font-size: 12px; color: var(--critical); max-width: 230px; text-align: right; }
+.restoreerr { font-size: 13px; color: var(--critical); max-width: 230px; text-align: right; }
 
 /* ---- Suggest a berth: the system proposes and explains; the person confirms ---- */
 
 .suggestrow { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
-.suggestrow .btn { font-size: 12px; padding: 4px 10px; flex: none; }
+.suggestrow .btn { font-size: 13px; padding: 5px 12px; flex: none; }
 .suggestrow .sub-hint { margin-top: 0; flex: 1; min-width: 0; }
 
-/* ---- Vessels: a lede, a filter, and the head of a long list ---- */
-
-.pagelede { margin: 0 0 4px; font-size: 14px; line-height: 1.55; color: var(--ink-2); max-width: 82ch; }
-.pagelede b { color: var(--ink); font-weight: 650; }
-.pagemeta { margin: 0 0 12px; font-size: 12px; color: var(--ink-muted); }
+/* ---- Vessels: a filter, and the head of a long list ---- */
 
 .vfilter { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .vfilter input {
@@ -504,10 +508,10 @@ a { color: var(--vessel); }
   background: var(--surface); color: var(--ink);
 }
 .vfilter input:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
-.vcount { font-size: 12px; color: var(--ink-muted); font-family: var(--mono); }
+.vcount { font-size: 13px; color: var(--ink-muted); font-family: var(--mono); }
 
 .tbl .vnum { text-align: right; font-family: var(--mono); }
-.tbl .vyear { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--ink-muted); }
+.tbl .vyear { text-align: right; font-family: var(--mono); font-size: 13px; color: var(--ink-muted); }
 .vmore { margin-top: 12px; }
 
 /* ---- Review: the category named once, above its rows ---- */
@@ -534,4 +538,4 @@ a { color: var(--vessel); }
 .sampledata .sub-hint { margin-top: 0; flex: 1; min-width: 200px; }
 
 /* A destructive control that fails silently is worse than one that fails loudly. */
-.actionerr { font-size: 12px; color: var(--critical); max-width: 340px; }
+.actionerr { font-size: 13px; color: var(--critical); max-width: 340px; }

@@ -57,9 +57,11 @@ application reaches the database as the owning role, which RLS does not apply to
 deliberate — there is no client-side database access anywhere in the app, so a policy
 would open a door nothing needs.
 
-A set of `*_seed` tables once held the imported legacy workbook, and they had RLS
-*disabled* while the live tables were closed. They have since been dropped along with the
-importer. `get_advisors` is clean of ERROR-level findings.
+Four `*_seed` tables hold the imported workbook exactly as `npm run import` loaded it;
+**Load the sample schedule** and the test suite's teardown both copy from them. They have
+RLS enabled like everything else — it was found disabled on them twice and re-enabled by
+migration, most recently on 2026-09-19 — so check them first if `get_advisors` ever
+reports a table open. It is clean of ERROR-level findings.
 
 One WARN is accepted and not fixed: **`btree_gist` lives in the `public` schema.** Moving
 it risks the operator-class resolution that the `EXCLUDE` constraint depends on, which is
@@ -79,9 +81,10 @@ the single most important guarantee in the project. Not worth the trade.
 There is no DDL file in the repo; the schema lives in Supabase and is changed through
 migrations. Two are worth knowing about:
 
-- **The berths are defined in a migration**, idempotently. They used to be created as a
-  side effect of importing the legacy workbook, so removing that importer would have left
-  the facility itself defined nowhere.
+- **The berths are defined in a migration**, idempotently, so a database built from
+  nothing has the facility in it. The importer and the sample reload also write them —
+  from the workbook and from `berths_seed` respectively, with the same ids — so the three
+  never disagree.
 - **`review_items.type` is constrained** to the kinds the app can actually produce.
   Missing lengths are derived at read time, not stored, so that value is not accepted.
 
@@ -89,6 +92,17 @@ migrations. Two are worth knowing about:
 
 `DATABASE_URL` in `.env.local` (gitignored) and as a `sensitive` Vercel env var. The
 password contains characters that **must be percent-encoded** in the URI.
+
+## The workbook is not in the repository, and once was
+
+`data/*.xlsx` is ignored because the sample is the client's material. It was nonetheless
+committed in the very first commit, 23 commits before the ignore rule existed — **an
+ignore rule never untracks a file that is already tracked.** History was rewritten on
+2026-09-19 with `git filter-branch` to remove it from every commit and force-pushed, before
+the repository was made public. A stray test-output file, `.vitest/json/output.json`, went
+the same way and `/.vitest/` is now ignored.
+
+`git ls-files data` must print nothing. If it ever does, that is the bug.
 
 ## Advisory findings deliberately not acted on
 

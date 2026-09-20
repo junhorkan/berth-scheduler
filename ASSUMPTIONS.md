@@ -32,8 +32,9 @@ different product: a request flow, an approval queue, and accounts.
 
 ## The facility is not WHOI
 
-**The brief says "a WHOI marine research facility".** The name used here is
-`Harborview Marine Research Center`, which is the name carried in the sample workbook.
+**The brief says "a WHOI marine research facility".** The facility here is
+`Harborview Marine Research Center`, the name carried in the sample workbook; the app is
+titled `Harborview Dock Schedule`, the tool's name rather than the institution's.
 WHOI is a real institution; this deployment is public; and every row in it is synthetic —
 facility name, the seven berth labels and all 418 vessel names come from the supplied
 sample. Using a real organisation's name or logo would state a relationship that does not

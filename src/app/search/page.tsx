@@ -22,19 +22,23 @@ export default async function SearchPage({
   const expanded = sp.exp ?? null;
 
   // An empty or one-character query is not an error, so it does not read as one — the
-  // page says what it searches instead of showing zero results.
+  // page says what it searches instead of showing zero results. No year range is
+  // named: the window is whatever is on the schedule (invariant 7), so a sentence that
+  // quoted one would be wrong the day someone books outside it.
   if (!isSearchable(query)) {
     return (
       <main className="shell">
-        <Nav current="search" query={raw} />
+        <Nav
+          current="search"
+          query={raw}
+          title="Search"
+          tagline="Find anything that occupies a berth, across every year on the schedule."
+        />
         <div className="panel">
           <p style={{ margin: 0 }}>
-            <b>Find anything that occupies a berth, across all 23 years.</b>
-          </p>
-          <p className="note" style={{ marginTop: 6 }}>
             Vessels by name, non-vessel events such as <i>Community sail day</i>, and berth
             closures such as <i>Dock maintenance</i>. The board shows one month at a time;
-            this searches all of 1997&ndash;2019 at once.
+            this searches all of them at once.
             {query.length > 0 && (
               <> Enter at least {MIN_QUERY_LENGTH} characters &mdash; <b>{query}</b> is too short
               to narrow anything down.</>
@@ -48,35 +52,36 @@ export default async function SearchPage({
   const { hits, truncated } = await searchBookings(query);
   const groups = groupHits(hits, query);
 
+  const tagline = groups.length === 0 ? (
+    <>Nothing on the schedule matches <b>{query}</b>.</>
+  ) : (
+    <>
+      <b>{hits.length.toLocaleString()}</b> booking{hits.length === 1 ? '' : 's'} matching{' '}
+      <b>{query}</b>, across {groups.length}{' '}
+      {groups.length === 1 ? 'vessel or event' : 'vessels and events'}.
+    </>
+  );
+
   return (
     <main className="shell">
-      <Nav current="search" query={raw} />
+      <Nav current="search" query={raw} title="Search" tagline={tagline} />
 
-      <div className="panel">
-        {groups.length === 0 ? (
+      {groups.length === 0 && (
+        <div className="panel">
           <p style={{ margin: 0 }}>
-            Nothing on the schedule matches <b>{query}</b>.
-          </p>
-        ) : (
-          <p style={{ margin: 0 }}>
-            <b>{hits.length.toLocaleString()}</b> booking{hits.length === 1 ? '' : 's'} matching{' '}
-            <b>{query}</b>, across {groups.length}{' '}
-            {groups.length === 1 ? 'vessel or event' : 'vessels and events'}.
-          </p>
-        )}
-        {groups.length === 0 && (
-          <p className="note" style={{ marginTop: 6 }}>
             Searching vessel names, event labels, and closure notes. Cancelled bookings are
             not included.
           </p>
-        )}
-        {truncated && (
-          <p className="note" style={{ marginTop: 6 }}>
+        </div>
+      )}
+      {truncated && (
+        <div className="panel">
+          <p style={{ margin: 0 }}>
             Showing the {hits.length.toLocaleString()} most recent matches only. Narrow the
             search to see older ones.
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
       {groups.map((group) => (
         <Group

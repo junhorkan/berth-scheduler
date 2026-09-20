@@ -81,6 +81,9 @@ about itself.
   would produce confident wrong answers.
 - **Unknown is a first-class answer.** A vessel with no recorded length is drawn hatched
   and says so. It is never assumed to fit.
+- **The look was borrowed from a site I find easy, and then measured.** The scale, the
+  centred title, the one big button. What I did not take: its emoji, and its 10px mobile
+  table — that is the one thing it does wrong, and there is a rule here against it.
 - **Search treats typed input as text, not as a pattern.** A typed `%` is escaped before
   it reaches SQL; unescaped it would match the whole schedule. Same instinct as putting
   the conflict rule in the database.
@@ -98,8 +101,8 @@ Show the history first, then create the failure live. Pointing at a violation pr
 board renders one; watching the system refuse a booking proves the rule is real.
 
 1. **Open the board.** It lands on today. *"It opens on the current month, because this is
-   a live schedule — the line down the board is today. The counts across the top are the
-   whole system at a glance."*
+   a live schedule — the line down the board is today. Everything a first-time visitor
+   needs is the title, the sentence under it, and the one blue button."*
 2. **Jump to July 2010.** *"This is the facility's legacy spreadsheet, imported: 23 years,
    two thousand bookings. Almost every bar is hatched, which means we don't know the
    vessel's length. That is the real state of their data, not a gap in mine."*
@@ -115,9 +118,10 @@ board renders one; watching the system refuse a booking proves the rule is real.
    design."*
 6. **Type a vessel name nothing knows.** *"New vessel — saving registers it. The register
    fills through normal use rather than a data-entry project."*
-7. **Go to Review.** *"Everything the import couldn't resolve, each row traceable to its
-   sheet, row and column — including one genuine double-booking from 2017 I kept rather
-   than deleted. Plus a single derived line for missing lengths, so it can't go stale."*
+7. **Go to Review.** *"Everything the import couldn't resolve, one heading per kind of
+   problem, repeats folded into one row — including one genuine double-booking from 2017 I
+   kept rather than deleted. The cells it couldn't classify are traceable to their sheet,
+   row and column. Plus a single derived line for missing lengths, so it can't go stale."*
 
 ---
 
@@ -125,7 +129,7 @@ board renders one; watching the system refuse a booking proves the rule is real.
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
 > `src/domain` and `src/lib`, which import nothing from the database or the UI — 246 unit
-> tests run in under a second with no infrastructure. 45 Playwright specs build their own
+> tests run in under a second with no infrastructure. 47 Playwright specs build their own
 > fixture against a real server and restore the sample afterwards, so the app is left in
 > the state it ships in.
 >
@@ -143,3 +147,4 @@ board renders one; watching the system refuse a booking proves the rule is real.
 | `ASSUMPTIONS.md` | Where the brief was silent and a choice had to be made |
 | `CLAUDE.md` | The invariants — what must not be broken and why |
 | `docs/OPERATIONS.md` | Deploying, keep-warm, database posture |
+| `docs/DESIGN.md` | The presentation rules in full, and where each came from |

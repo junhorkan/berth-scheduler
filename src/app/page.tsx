@@ -34,7 +34,8 @@ export default async function BoardPage({
   const today = currentMonth();
   // The schedule's own earliest booking widens the window, so anything stored is
   // always reachable. Queried first because every bound below depends on it.
-  const { firstYear: earliest } = await getSummary();
+  const summary = await getSummary();
+  const earliest = summary.firstYear;
   const { year, month } = clampMonth(
     sp.y ? Number(sp.y) : today.year,
     sp.m ? Number(sp.m) : today.month,
@@ -43,10 +44,9 @@ export default async function BoardPage({
   );
 
   const bounds = monthBounds(year, month);
-  const [berths, bookings, summary, vessels] = await Promise.all([
+  const [berths, bookings, vessels] = await Promise.all([
     getBerths(),
     getBookingsInRange(bounds.start, bounds.end),
-    getSummary(),
     getVesselOptions(),
   ]);
 
@@ -64,42 +64,40 @@ export default async function BoardPage({
   // A new booking defaults to today when you are on this month, and to the 1st otherwise.
   const newBookingDate = onToday ? todayISO() : bounds.start;
 
+  /**
+   * The month navigation, drawn inside the board card as its header rather than in a
+   * bar of its own: it navigates the grid and nothing else, and one fewer box on
+   * screen is one fewer thing to parse. The count strip that used to sit beside it is
+   * gone — it said four things the screen already said (DECISIONS 24).
+   */
+  const head = (
+    <div className="boardhead">
+      <a className="navbtn" href={monthHref(prev.year, prev.month)} aria-label="Previous month">&lsaquo;</a>
+      <span className="month">{MONTH_NAMES[month - 1]} {year}</span>
+      <a className="navbtn" href={monthHref(next.year, next.month)} aria-label="Next month">&rsaquo;</a>
+      {!onToday && (
+        <a className="navbtn today" href={monthHref(today.year, today.month)}>Today</a>
+      )}
+      <span className="spacer" />
+      <MonthJump year={year} month={month} years={years} />
+    </div>
+  );
+
   return (
     <main className="shell">
-      <Nav current="board" />
-
-      <div className="toolbar">
-        <a className="navbtn" href={monthHref(prev.year, prev.month)} aria-label="Previous month">&lsaquo;</a>
-        <span className="month">{MONTH_NAMES[month - 1]} {year}</span>
-        <a className="navbtn" href={monthHref(next.year, next.month)} aria-label="Next month">&rsaquo;</a>
-        {!onToday && (
-          <a className="navbtn today" href={monthHref(today.year, today.month)}>Today</a>
-        )}
-
-        <MonthJump year={year} month={month} years={years} />
-
-        <span className="spacer" />
-        <span className="facts">
-          <b>{berths.length}</b> berths
-          <i />
-          <b>{bookings.length}</b> in {MONTH_NAMES[month - 1]}
-          <i />
-          <b>{summary.vessels.toLocaleString()}</b> vessels
-          {summary.openReviewItems > 0 && (
-            <>
-              <i />
-              <a href="/review" className="flagged">{summary.openReviewItems} to review</a>
-            </>
-          )}
-        </span>
-        <BookingPanel
-          berths={berths}
-          vessels={vessels}
-          defaultDate={newBookingDate}
-          minDate={firstBookableISO()}
-          maxDate={lastBookableISO()}
-        />
-      </div>
+      <Nav
+        current="board"
+        tagline="Book a berth, check any date, and never double-book one."
+        actions={
+          <BookingPanel
+            berths={berths}
+            vessels={vessels}
+            defaultDate={newBookingDate}
+            minDate={firstBookableISO()}
+            maxDate={lastBookableISO()}
+          />
+        }
+      />
 
       <Board
         berths={berths}
@@ -107,6 +105,7 @@ export default async function BoardPage({
         year={year}
         month={month}
         selectedId={sp.sel}
+        head={head}
         emptyNote={
           // The only screen that renders no explanation of its own, so this is where the
           // board says how to read itself. The two facts stay visible; the three rules
@@ -150,9 +149,6 @@ export default async function BoardPage({
       {selected && (
         <BookingDetail booking={selected} berths={berths} closeHref={monthHref(year, month)} />
       )}
-
     </main>
   );
 }
-
-

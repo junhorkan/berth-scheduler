@@ -19,7 +19,7 @@ import { checkFit } from '../src/domain/fit';
 const WORKBOOK = 'data/Dock Schedule - Synthetic Sample.xlsx';
 
 const { entries, report } = parseWorkbook(WORKBOOK);
-const { bookings, annotations, unclassified, stats } = stitch(entries);
+const { bookings, unclassified, stats } = stitch(entries);
 const { vessels: registry, disagreements } = parseRegistry(WORKBOOK);
 
 // ---------------------------------------------------------------- berths
@@ -107,7 +107,6 @@ try {
 
   // Insert bookings in batches; provenance keeps the first contributing cell.
   const BATCH = 250;
-  let inserted = 0;
   const bookingIdByKey = new Map<string, string>();
   for (let i = 0; i < prepared.length; i += BATCH) {
     const slice = prepared.slice(i, i + BATCH);
@@ -132,7 +131,6 @@ try {
           };
         }),
       )} returning id, berth_id, start_date, label`;
-    inserted += rows.length;
     for (const r of rows) {
       bookingIdByKey.set(`${r.berth_id}|${r.start_date.toISOString().slice(0, 10)}|${r.label}`, r.id as string);
     }
