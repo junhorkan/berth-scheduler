@@ -388,7 +388,9 @@ a { color: var(--vessel); }
   .hero .tagline { font-size: 15px; }
   /* The rail gives up a third of its width so more days fit beside it. */
   .gridrow { grid-template-columns: 108px minmax(620px, 1fr); }
-  .boardhead .month { min-width: 0; flex: 1; }
+  .boardhead .month { min-width: 0; flex: 1; font-size: 17px; }
+  /* The pickers take a row of their own, or they squeeze the month into the arrows. */
+  .boardhead .jump { flex-basis: 100%; }
 }
 
 .navbtn.today {
