@@ -29,6 +29,7 @@ built is usually more informative than the thing that was.
 | 20 | [Cancelling is reversible, not restricted](#20-cancelling-is-reversible-not-restricted) |
 | 21 | [The facility is not WHOI](#21-the-facility-is-not-whoi) |
 | 22 | [The system suggests a berth; it never assigns one](#22-the-system-suggests-a-berth-it-never-assigns-one) |
+| 23 | [A long list shows its head, and names its categories once](#23-a-long-list-shows-its-head-and-names-its-categories-once) |
 
 ---
 
@@ -636,3 +637,51 @@ that already holds the berth list and the vessel's length.
 **Rejected: two modes, "book a specific berth" or "book any berth".** A fork in the form
 costs a second path to build and test, and the "any" branch would hide the one thing
 worth showing — *why* that berth. One dropdown that explains itself does the same job.
+
+---
+
+## 23. A long list shows its head, and names its categories once
+
+**Decision.** Vessels renders the first 25 rows with a name filter and a
+*Show the remaining 393*; Review groups its queue under one heading per kind of problem
+and drops the toolbar pills that said the same thing.
+
+**Why, measured.** Both pages had the fault named in
+[17](#17-repetition-is-not-information), one level up from where it was fixed there:
+
+| | Before | After |
+|---|---|---|
+| Vessels page height | **21,713px** — 24 screens | 1,671px |
+| Vessel rows / length inputs | 418 / 418 | 25 / 25 |
+| Vessels lede | 61 words | 25 |
+| Review category labels drawn | **15**, for 2 categories | 4 headings, one each |
+| Review page height | 2,058px | 1,779px |
+
+**Vessels contradicted its own argument.** The page exists to say that bookings are
+concentrated — ten lengths cover half the schedule — and then rendered all 418 rows in
+booking order, burying that claim under 24 screens of scrolling. Showing the head and
+keeping the tail one click away is the page agreeing with itself.
+
+The filter searches the **whole** register, not the visible 25: cutting the list must not
+cut what you can find. A vessel you have the measurement for is exactly the one you came
+to type in, and it is usually in the tail.
+
+**What was cut from Vessels, and why each.**
+
+- *"That is why this list is ordered by bookings blocked, not alphabetically."* A page
+  explaining its own sort order is usually sorted wrong. The `Bookings` column, descending,
+  says it without a sentence.
+- The `Last booked` column keeps only the **year**. The question it answers is whether a
+  hull is still in use or is history that needs no measuring, and `2004` answers that as
+  well as `2004-01-03` in a third of the width.
+
+**What was cut from Review.** The pills — each named a category and gave its count, which
+is exactly what the section heading below it now does. And **Clear the schedule moved to
+the foot of the page**: a destructive action does not belong in a header, one slip from
+the button that loads data.
+
+**What survived a cut it nearly did not.** Provenance — `sheet 2008, row 12, col 2` — is
+kept, but only on *Could not be read* items, which are the ones you resolve by going and
+looking at the cell. On a conflict or a misfit the booking is on the board, where the
+sheet coordinates tell you nothing you can act on. It is the evidence that nothing was
+silently dropped, so it stays where it is evidence and goes where it was noise.

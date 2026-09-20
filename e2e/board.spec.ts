@@ -254,7 +254,15 @@ test.describe('creating a booking', () => {
     await page.getByRole('button', { name: '+ New booking' }).click();
     await page.getByLabel('Vessel', { exact: true }).fill('R/V Backdate Probe');
 
-    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    // Yesterday AT THE FACILITY, not in UTC. Subtracting a day from Date.now() is the
+    // trap lib/nav exists to avoid: after 20:00 Eastern, UTC has already rolled over,
+    // so UTC-minus-one-day IS the facility's today and this spec silently stops
+    // testing anything. It only fails in the evening, which is when it was found.
+    const facilityToday = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const yesterday = new Date(Date.parse(`${facilityToday}T00:00:00Z`) - 86_400_000)
+      .toISOString().slice(0, 10);
     await page.locator('input[type="date"]').first().fill(yesterday);
 
     await expect(page.getByText(/already passed/)).toBeVisible();
@@ -372,14 +380,37 @@ test.describe('undoing a cancellation', () => {
 test.describe('the other tabs', () => {
   test('Vessels lists the biggest data gaps first and states the leverage', async ({ page }) => {
     await page.goto('/vessels');
-    await expect(page.getByText(/vessels have no recorded length/)).toBeVisible();
+    await expect(page.getByText(/vessels have no length on record/)).toBeVisible();
     await expect(page.getByText('M/V Test Drifter')).toBeVisible();
+  });
+
+  test('Vessels shows the head of the list, and finds anything by name', async ({ page }) => {
+    // Rendering all 418 made the page 21,713px tall and contradicted its own argument,
+    // which is that the first handful carry most of the value.
+    await page.goto('/vessels');
+    const rows = page.locator('tbody tr');
+    const total = await page.locator('.vcount').innerText();
+
+    if (Number(total.split(' of ')[1]) > 25) {
+      await expect(rows).toHaveCount(25);
+      await page.getByRole('button', { name: /Show the remaining/ }).click();
+    }
+    const everything = await rows.count();
+
+    // Filtering is a search, so it looks past the cut rather than inside the first 25.
+    await page.getByLabel('Filter vessels by name').fill('Drifter');
+    await expect(rows).toHaveCount(1);
+    await expect(page.getByText('M/V Test Drifter')).toBeVisible();
+
+    await page.getByLabel('Filter vessels by name').fill('');
+    await expect(rows).toHaveCount(everything);
   });
 
   test('Review collapses missing lengths into one row instead of one per vessel', async ({ page }) => {
     // 398 of 427 items were this type, burying everything that needed a decision.
     await page.goto('/review');
-    await expect(page.getByText('No recorded length')).toHaveCount(2); // pill + row
+    // One section heading, not one row per vessel and no longer a pill saying it twice.
+    await expect(page.getByRole('heading', { name: /No recorded length/ })).toHaveCount(1);
     await expect(page.getByText(/cannot be checked against berth length/)).toBeVisible();
   });
 
