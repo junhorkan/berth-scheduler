@@ -4,8 +4,23 @@ Berth reservation management for a marine research facility.
 
 **Live:** https://berth-scheduler.vercel.app
 
+![The board: berths down, days across, and a 120ft vessel drawn breaking out of its 75ft lane](public/board.png)
+
 Replaces a spreadsheet in which double-bookings were caught by eye and vessel/berth size
 was not checked at all.
+
+## Try it in sixty seconds
+
+1. **Open the link.** The board opens on today with a live schedule. The red bar
+   breaking out of its lane is a vessel too long for its berth — the bar's height is
+   vessel length ÷ berth length, so a misfit is geometry, not a badge.
+2. **Press + New booking.** The berth it opens onto is already taken today, so the
+   verdict is red and Save is off: the database would refuse the write, and there is no
+   override. Press **Find me a berth**: it proposes a free berth and says why, and for a
+   vessel whose length is on record it picks the smallest one that fits.
+3. **Save it, then click it and cancel it.** Review lists it under *Recently cancelled*
+   and **Restore** puts it back — unless someone took the berth meanwhile, in which
+   case the same constraint refuses the restore and says so.
 
 ---
 
@@ -50,11 +65,12 @@ is the central design decision. See `DECISIONS.md`.
   how much of the schedule cannot be fit-checked yet. Clearing the schedule back to the
   shipped state lives here too.
 - **The legacy schedule is imported, and removable.** 23 years of bookings are loaded so
-  the conflict and size checks can be tried against real, messy data. **Clear the
-  schedule** empties it and **Load the sample schedule** puts it back, both on Review —
-  an empty schedule is a supported state, not a broken one. Because all of it is
-  historical, the board's own month is usually empty, so an empty month names the
-  nearest month that is not and links to it.
+  the conflict and size checks can be tried against real, messy data, and the sample
+  reaches into the coming weeks: seventeen bookings dated from the day it was loaded,
+  using the register's own vessels, so the board opens on a live month with a misfit
+  on it. **Clear the schedule** empties it and **Load the sample schedule** puts it
+  back, both on Review — an empty schedule is a supported state, not a broken one, and
+  an empty month names the nearest month that is not and links to it.
 - **Find** — one box, searching every vessel name, event label and closure note across
   all 276 months at once. Results group by identity, so a vessel with 267 bookings is one
   block and not 267 rows, and each result jumps straight to its own month on the board.
@@ -86,11 +102,12 @@ npm run dev
 ```
 
 ```bash
-npm test          # 246 unit tests, no database required
-npm run e2e       # 47 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
+npm test          # 252 unit tests, no database required
+npm run e2e       # 48 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
+npm run sample:load # put the sample back from the seed snapshot; same code as the Load button
 npm run db:check  # verify connection and that the constraint exists
 ```
 
@@ -106,7 +123,7 @@ src/app/      Next.js routes and components. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
-navigation and search rules are provably correct without a database — 246 unit tests run
+navigation and search rules are provably correct without a database — 252 unit tests run
 in well under a second with no infrastructure at all. The importer and the UI call the
 same functions, so the rule the board shows you is the rule the import applied.
 

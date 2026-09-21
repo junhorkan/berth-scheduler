@@ -12,6 +12,8 @@ import { findConflicts, isValidRange } from '../domain/conflicts';
 import { checkFit, type FitResult } from '../domain/fit';
 import { canonicalVesselName } from '../domain/normalize';
 import type { Booking, BookingKind } from '../domain/types';
+import { dateSampleBookings } from '../lib/sample';
+import { todayISO } from '../lib/nav';
 
 /**
  * A connection or a transaction. The helpers below run inside either, and are cast to
@@ -375,7 +377,37 @@ export async function resolveReviewItems(
 }
 
 /**
- * Restore the exact imported state, from the `*_seed` snapshot taken at import time.
+ * The sample's forward bookings, dated from today.
+ *
+ * Names resolve against the register the seed just restored, and a name that does not
+ * resolve is a bug in `lib/sample`, so it fails the reload loudly rather than skipping
+ * the row. The one that does not fit its berth gets its review item here, the same way
+ * a booking made through the form would.
+ */
+async function insertSampleBookings(tx: Queryable, today: string) {
+  const sql = tx as ReturnType<typeof db>;
+  for (const b of dateSampleBookings(today)) {
+    let vesselId: string | null = null;
+    if (b.kind === 'vessel') {
+      const [v] = await sql`
+        select id from vessels where normalized_name = ${canonicalVesselName(b.label).normalized}`;
+      if (!v) throw new Error(`The sample names a vessel that is not on the register: ${b.label}`);
+      vesselId = v.id as string;
+    }
+    const [row] = await sql`
+      insert into bookings (berth_id, vessel_id, kind, status, label, start_date, end_date, source)
+      select be.id, ${vesselId}, ${b.kind}, 'active', ${b.label},
+             ${b.start}::date, ${b.end}::date, 'sample'
+        from berths be where be.name = ${b.berth}
+      returning id`;
+    if (!row) throw new Error(`The sample names a berth that does not exist: ${b.berth}`);
+    if (vesselId) await refreshTooLongItems(sql, { bookingId: row.id as string });
+  }
+}
+
+/**
+ * Restore the sample: the `*_seed` snapshot taken at import time, plus the bookings
+ * in the coming weeks, dated from today (DECISIONS 25).
  *
  * The app is public and unauthenticated by design, so anyone can edit it — this is
  * what makes that safe to offer: whatever a visitor does, one action puts the sample
@@ -406,6 +438,7 @@ export async function resetToImported(): Promise<{ ok: boolean; error?: string }
           created_at
         from bookings_seed`;
       await tx`insert into review_items select * from review_items_seed`;
+      await insertSampleBookings(tx, todayISO());
     });
     return { ok: true };
   } catch (e) {

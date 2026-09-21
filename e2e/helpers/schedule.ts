@@ -7,6 +7,7 @@
  * spec needs a second fixture.
  */
 import postgres from 'postgres';
+import { resetToImported, clearSchedule as clearScheduleInApp } from '../../src/db/mutations';
 
 function connect() {
   if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
@@ -141,49 +142,24 @@ export async function seedFixture(): Promise<void> {
 }
 
 /**
- * Put the imported sample back, from the same `*_seed` snapshot the app's own
- * "Load the sample schedule" uses.
+ * Put the sample back, through the app's own reload — the same function the "Load the
+ * sample schedule" button calls, so what the suite leaves behind is exactly what the
+ * button would, forward bookings included. It used to copy the SQL, which is how the
+ * two could drift.
  *
  * The suite replaces the schedule with its own fixture, so without this it would
  * leave the deployed database empty — the sample is what the live site serves.
  */
 export async function restoreSample(): Promise<void> {
-  const db = connect();
-  try {
-    await db.begin(async (tx) => {
-      await tx`delete from review_items`;
-      await tx`delete from bookings`;
-      await tx`delete from vessels`;
-      await tx`delete from berths`;
-      await tx`insert into berths  select * from berths_seed`;
-      await tx`insert into vessels select * from vessels_seed`;
-      await tx`
-        insert into bookings (
-          id, berth_id, vessel_id, kind, status, label, start_date, end_date,
-          exclusive, notes, source, import_year, import_sheet, import_row, import_col,
-          created_at)
-        select
-          id, berth_id, vessel_id, kind, status, label, start_date, end_date,
-          exclusive, notes, source, import_year, import_sheet, import_row, import_col,
-          created_at
-        from bookings_seed`;
-      await tx`insert into review_items select * from review_items_seed`;
-    });
-  } finally {
-    await db.end();
-  }
+  if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
+  const res = await resetToImported();
+  if (!res.ok) throw new Error(`restoring the sample failed: ${res.error}`);
+  await globalThis.__berthSql?.end();
 }
 
 /** An empty schedule with the berths intact — what a fresh facility would see. */
 export async function clearSchedule(): Promise<void> {
-  const sql = connect();
-  try {
-    await sql.begin(async (tx) => {
-      await tx`delete from review_items`;
-      await tx`delete from bookings`;
-      await tx`delete from vessels`;
-    });
-  } finally {
-    await sql.end();
-  }
+  if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
+  const res = await clearScheduleInApp();
+  if (!res.ok) throw new Error(`clearing the schedule failed: ${res.error}`);
 }

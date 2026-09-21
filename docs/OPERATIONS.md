@@ -58,7 +58,8 @@ deliberate — there is no client-side database access anywhere in the app, so a
 would open a door nothing needs.
 
 Four `*_seed` tables hold the imported workbook exactly as `npm run import` loaded it;
-**Load the sample schedule** and the test suite's teardown both copy from them. They have
+**Load the sample schedule** and the test suite's teardown both copy from them, then add
+the forward bookings from `src/lib/sample.ts`, dated from the day of the reload. They have
 RLS enabled like everything else — it was found disabled on them twice and re-enabled by
 migration, most recently on 2026-09-19 — so check them first if `get_advisors` ever
 reports a table open. It is clean of ERROR-level findings.
@@ -136,7 +137,9 @@ one. This has actually happened, and it is the reason to know about it:
 - **Do not run the suite when anyone might be looking**, and especially not once a link
   has been handed to somebody.
 - If a run is interrupted before teardown, put the data back with the **Load the sample
-  schedule** button on Review, or `npm run import`.
+  schedule** button on Review, or `npm run sample:load`, which is the same function
+  from the terminal. The teardown calls that function too, so the suite leaves behind
+  exactly what the button would, forward bookings included.
 - The proper fix is a second database — a Supabase branch, or a local Postgres for the
   suite — pointed at by `DATABASE_URL` in a test env file. It was not worth the setup
   inside this project's time budget, and this note is the mitigation.

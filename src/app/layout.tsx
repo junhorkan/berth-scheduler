@@ -15,9 +15,22 @@ const poppins = Poppins({
   display: 'swap',
 });
 
+const DESCRIPTION =
+  'Berth reservations for Harborview Marine Research Center. Book a berth, check any date, and never double-book one.';
+
 export const metadata: Metadata = {
+  metadataBase: new URL('https://berth-scheduler.vercel.app'),
   title: 'Harborview Dock Schedule',
-  description: 'Berth reservations for Harborview Marine Research Center',
+  description: DESCRIPTION,
+  // So the link unfurls with the board when it is pasted somewhere.
+  openGraph: {
+    title: 'Harborview Dock Schedule',
+    description: DESCRIPTION,
+    url: '/',
+    siteName: 'Harborview Dock Schedule',
+    type: 'website',
+    images: [{ url: '/board.png', width: 1280, height: 800, alt: 'The dock schedule board' }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

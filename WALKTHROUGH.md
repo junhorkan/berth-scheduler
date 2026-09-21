@@ -81,6 +81,12 @@ about itself.
   would produce confident wrong answers.
 - **Unknown is a first-class answer.** A vessel with no recorded length is drawn hatched
   and says so. It is never assumed to fit.
+- **The sample reaches into the coming weeks.** Every workbook booking ended in 2019 and
+  you cannot book the past, so the front door was empty and the refusal was invisible
+  without making two bookings first. Seventeen bookings are now placed relative to the
+  day the sample loads — real names, invented dates only — and the module that defines
+  them is unit-tested against the overlap rule, because one overlap would refuse the
+  whole reload.
 - **The look was borrowed from a site I find easy, and then measured.** The scale, the
   centred title, the one big button. What I did not take: its emoji, and its 10px mobile
   table — that is the one thing it does wrong, and there is a rule here against it.
@@ -100,24 +106,31 @@ about itself.
 Show the history first, then create the failure live. Pointing at a violation proves the
 board renders one; watching the system refuse a booking proves the rule is real.
 
-1. **Open the board.** It lands on today. *"It opens on the current month, because this is
-   a live schedule — the line down the board is today. Everything a first-time visitor
-   needs is the title, the sentence under it, and the one blue button."*
-2. **Jump to July 2010.** *"This is the facility's legacy spreadsheet, imported: 23 years,
-   two thousand bookings. Almost every bar is hatched, which means we don't know the
-   vessel's length. That is the real state of their data, not a gap in mine."*
-3. **Point at the red bar on North Pier Face.** *"That one breaks out of its row because
+1. **Open the board.** It lands on today, with a live month on it. *"It opens on the
+   current month, because this is a live schedule — the line down the board is today.
+   Everything a first-time visitor needs is the title, the sentence under it, and the
+   one blue button."*
+2. **Point at the red bar on North Pier Face.** *"That one breaks out of its row because
    the bar's height is vessel length over berth length. A 120-foot vessel in a 75-foot
    berth. The misfit is the arithmetic, not a badge you have to learn — and nothing in
    the spreadsheet could have told you it was there."*
-4. **`+ New booking`, over a berth that is already taken.** *"Red. Save is disabled and it
-   names the booking in the way. There is no override, because the database itself
-   refuses the write — no code path, race or concurrent request gets around it."*
-5. **Move the dates clear.** *"Save enables. The length warning is still there and still
-   doesn't block. One rule is a wall, the other is advice — that asymmetry is the whole
-   design."*
-6. **Type a vessel name nothing knows.** *"New vessel — saving registers it. The register
-   fills through normal use rather than a data-entry project."*
+3. **`+ New booking`.** It opens onto North Pier West, which is taken today. *"Red. Save
+   is disabled and it names the booking in the way. There is no override, because the
+   database itself refuses the write — no code path, race or concurrent request gets
+   around it."*
+4. **Press `Find me a berth`.** *"It proposes the smallest free berth that fits and says
+   why, so the long piers stay open. It proposes; I still choose, because the
+   coordinator knows things the database doesn't — shore power, crane reach, who's
+   arriving at six."* Save enables.
+5. **Type a vessel name nothing knows.** *"New vessel — saving registers it, with no
+   length yet, so the warning is amber and it still saves. One rule is a wall, the other
+   is advice — that asymmetry is the whole design."*
+6. **Jump to July 2010.** *"This is the facility's legacy spreadsheet, imported: 23 years,
+   two thousand bookings. Almost every bar is hatched, which means we don't know the
+   vessel's length. That is the real state of their data, not a gap in mine. The
+   bookings on this month's board are the sample too — dated from the day it was loaded,
+   real vessels from the register, so the checks can be seen without building a
+   scenario first."*
 7. **Go to Review.** *"Everything the import couldn't resolve, one heading per kind of
    problem, repeats folded into one row — including one genuine double-booking from 2017 I
    kept rather than deleted. The cells it couldn't classify are traceable to their sheet,
@@ -128,8 +141,8 @@ board renders one; watching the system refuse a booking proves the rule is real.
 ## If you are asked how it was built
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
-> `src/domain` and `src/lib`, which import nothing from the database or the UI — 246 unit
-> tests run in under a second with no infrastructure. 47 Playwright specs build their own
+> `src/domain` and `src/lib`, which import nothing from the database or the UI — 252 unit
+> tests run in under a second with no infrastructure. 48 Playwright specs build their own
 > fixture against a real server and restore the sample afterwards, so the app is left in
 > the state it ships in.
 >

@@ -31,6 +31,7 @@ built is usually more informative than the thing that was.
 | 22 | [The system suggests a berth; it never assigns one](#22-the-system-suggests-a-berth-it-never-assigns-one) |
 | 23 | [A long list shows its head, and names its categories once](#23-a-long-list-shows-its-head-and-names-its-categories-once) |
 | 24 | [The masthead is the page's name, in the reference site's shape](#24-the-masthead-is-the-pages-name-in-the-reference-sites-shape) |
+| 25 | [The sample reaches into the coming weeks](#25-the-sample-reaches-into-the-coming-weeks) |
 
 ---
 
@@ -751,3 +752,50 @@ its posting page is titled *Post Listing*, with the site's name as the way back.
 shopping cart; a dock schedule with a boat in its title would be charming once and
 tiresome by Tuesday. Its top row holds sign-in and feedback, which this app has neither
 of; ours holds the tabs and the search box, which it does.
+
+---
+
+## 25. The sample reaches into the coming weeks
+
+**Decision.** Loading the sample also places seventeen bookings across the next six
+weeks, dated from the day it is loaded: real vessels from the register, event and closure
+labels the workbook uses, one vessel too long for its berth, two boats in the pooled
+slips at once, and the first berth in display order taken on the day the booking form
+opens to. They carry `source = 'sample'`, and the booking sheet says so.
+
+**Why.** Every booking in the workbook ended on 31 December 2019, and a booking cannot be
+made for a day that has passed ([8](#8-the-board-opens-on-today-you-can-look-back-but-not-book-back)).
+Put together, that meant the month the board opens to held nothing, and the strongest
+claim in the project — that the database refuses an overlap — could only be seen by
+making two bookings by hand first. The berth dropdown, built to say what every berth is
+doing ([22](#22-the-system-suggests-a-berth-it-never-assigns-one)), had seven free rows
+and nothing to say. And the demo script's step *"move the dates clear, Save enables"* was
+false on any month of the workbook, because every one of them is in the past.
+
+Now the board opens on a live month with a misfit on it, the form opens onto a taken
+berth so the refusal is the first verdict, and *Find me a berth* has a real answer.
+
+**Dated at load, not fixed.** Fixed dates would have been in the past by the time anyone
+looked — the same failure as the fixed window in
+[8](#8-the-board-opens-on-today-you-can-look-back-but-not-book-back). The offsets are
+resolved against the facility's today when the reload runs, so the sample is current for
+whoever loads it, and reloading it re-bases it.
+
+**Nothing invented but the dates.** Every name resolves against the register the seed
+just restored; a name that does not is an error that fails the reload, not a row that
+is skipped. The module is pure, in `src/lib`, and unit-tested against the overlap rule
+in `src/domain`, because a single overlap between two forward bookings on an exclusive
+berth would make the constraint refuse the entire reload transaction.
+
+**What it costs.** The front door no longer opens on the empty-board introduction
+([18](#18-an-empty-month-is-not-an-empty-page)); it appears on any empty month, which
+is now the month after next. And the sample is no longer purely the workbook, which is
+why these rows are marked as what they are rather than as imported or entered.
+
+**The suite loads it the same way.** The Playwright teardown used to copy the reload's
+SQL; it now calls the reload itself, so what it leaves on the live database is exactly
+what the button leaves. `npm run sample:load` is the same function from the terminal.
+
+**Rejected: landing on the last month with data.** Already rejected in
+[18](#18-an-empty-month-is-not-an-empty-page) — a live scheduler must open on today.
+This is the other way round: bring today's month to the data, not the board to 2019.

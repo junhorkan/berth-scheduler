@@ -83,4 +83,32 @@ test.describe('an empty schedule', () => {
     await expect(page.locator('.rail')).toHaveCount(7);
     await expect(page.locator('.bar')).toHaveCount(0);
   });
+
+  test('loading the sample puts a live schedule on the front door', async ({ page }) => {
+    // The reload copies 2,031 bookings and then places the forward ones; ~12s.
+    test.setTimeout(120_000);
+    page.once('dialog', (d) => d.accept());
+    await page.goto('/');
+    await page.getByRole('button', { name: /load the sample schedule/i }).click();
+
+    // The board opens on today, and the sample reaches into it: the first berth is
+    // taken from the load day, so the month the board opens to always has a bar.
+    await expect(page.locator('.bar').first()).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator('.boardnote')).toHaveCount(0);
+
+    // The form opens onto that taken berth, so the refusal is the first verdict.
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await expect(page.getByText(/Blocked — berth already occupied/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save booking' })).toBeDisabled();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    // And one forward booking does not fit its berth, two days out — which may be
+    // next month, so look where it is rather than only on the front door.
+    const facilityToday = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const misfitDay = new Date(Date.parse(`${facilityToday}T00:00:00Z`) + 2 * 86_400_000);
+    await page.goto(`/?y=${misfitDay.getUTCFullYear()}&m=${misfitDay.getUTCMonth() + 1}`);
+    await expect(page.locator('.bar.toolong')).toHaveCount(1);
+  });
 });

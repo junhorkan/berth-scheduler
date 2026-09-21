@@ -57,7 +57,10 @@ one, but the detail that makes it obeyable is there.
    before today, in the save path as well, since `min` only guards the picker. A fixed
    bound has hidden real bookings three times.
 8. **Empty is supported, and never silent.** The full grid still draws, and one line
-   says where the bookings are. → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent)
+   says where the bookings are. The sample reaches into the coming weeks precisely so
+   the front door is not empty; `lib/sample` is unit-tested against the overlap rule,
+   because an overlap there refuses the whole reload.
+   → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent)
 9. **Explain the tool, never the project.** Three tabs; no About page; `/search` is a
    destination, **not a fourth tab**. Each page's masthead is its own name and one line;
    orientation only on the empty board.
@@ -77,7 +80,8 @@ one, but the detail that makes it obeyable is there.
 
 ```
 src/domain/   pure rules: conflicts, fit, classification. No DB, no React.
-src/lib/      pure view helpers: nav, bar geometry, search, grouping, berth suggestion.
+src/lib/      pure view helpers: nav, bar geometry, search, grouping, berth suggestion,
+              and the sample's forward bookings.
 src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
 src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.
@@ -90,9 +94,10 @@ scheduler library: none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev       # local dev server
-npm test          # 246 unit tests, no database needed
-npm run e2e       # 47 specs. HITS THE LIVE DB: swaps in a fixture, restores after
+npm test          # 252 unit tests, no database needed
+npm run e2e       # 48 specs. HITS THE LIVE DB: swaps in a fixture, restores after
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
+npm run sample:load # the Load button, from the terminal: seed snapshot + forward bookings
 npm run db:check  # verify the connection and that the constraint exists
 npm run build     # production build
 ```
