@@ -69,9 +69,12 @@ obeyable.
     → [DESIGN](docs/DESIGN.md#10-light-only-and-one-obvious-action)
 11. **Nothing outside the grid below 13px.** When something will not fit, change its shape,
     not its point size. → [DESIGN](docs/DESIGN.md#11-nothing-outside-the-grid-below-13px)
-12. **Nothing destructive is irreversible, except Clear, whose dialog says so.** Cancelling
-    is a soft delete restored from Review, and restoring re-runs the constraint, so it can
-    be refused. → [DECISIONS 20](DECISIONS.md#20-cancelling-is-reversible-not-restricted)
+12. **Nothing destructive is irreversible.** No accounts, so reversibility is the answer
+    rather than a gate. Cancelling is a soft delete restored from Review, and restoring
+    re-runs the constraint, so it can be refused. **Clear** snapshots into the `*_undo`
+    tables inside the same transaction that empties the live ones, so the delete and its
+    undo cannot come apart.
+    → [DECISIONS 20 and 28](DECISIONS.md#20-cancelling-is-reversible-not-restricted)
 13. **Never use WHOI's name or marks.** A real institution, a public site, synthetic data.
     → [DECISIONS 21](DECISIONS.md#21-the-facility-is-not-whoi)
 
@@ -93,8 +96,8 @@ scheduler library: none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev         # local dev server
-npm test            # 255 unit tests, no database needed
-npm run e2e         # 48 specs. HITS THE LIVE DB: swaps in a fixture, restores after
+npm test            # 258 unit tests, no database needed
+npm run e2e         # 49 specs. HITS THE LIVE DB: swaps in a fixture, restores after
 npm run import      # reload the workbook (needs data/*.xlsx, gitignored)
 npm run sample:load # the Load button, from the terminal: seed snapshot + forward bookings
 npm run db:check    # verify the connection and that the constraint exists

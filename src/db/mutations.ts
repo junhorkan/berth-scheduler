@@ -22,6 +22,21 @@ import { todayISO } from '../lib/nav';
  */
 type Queryable = ReturnType<typeof db> | postgres.TransactionSql;
 
+/**
+ * The columns each table is snapshotted and restored through, written out rather than
+ * `select *` for the same reason resetToImported does: `bookings.during` is GENERATED
+ * and Postgres refuses to have one written to.
+ */
+const BOOKING_COLS =
+  'id, berth_id, vessel_id, kind, status, label, start_date, end_date, exclusive, '
+  + 'notes, source, import_year, import_sheet, import_row, import_col, created_at, cancelled_at';
+const VESSEL_COLS =
+  'id, canonical_name, normalized_name, length_ft, loa_ft, length_source, operator, '
+  + 'notes, created_at';
+const REVIEW_COLS =
+  'id, type, booking_id, vessel_id, berth_id, raw_text, detail, import_year, '
+  + 'import_sheet, import_row, import_col, resolved_at, created_at';
+
 export type CheckResult = {
   bookable: boolean;
   /** Hard stop: overlapping bookings on this berth. */
@@ -439,6 +454,13 @@ export async function resetToImported(): Promise<{ ok: boolean; error?: string }
         from bookings_seed`;
       await tx`insert into review_items select * from review_items_seed`;
       await insertSampleBookings(tx, todayISO());
+
+      // Choosing new content retires the undo: "undo the clear" after deliberately
+      // loading something else would silently throw that choice away.
+      await tx`delete from review_items_undo`;
+      await tx`delete from bookings_undo`;
+      await tx`delete from vessels_undo`;
+      await tx`delete from clear_undo_meta`;
     });
     return { ok: true };
   } catch (e) {
@@ -449,16 +471,39 @@ export async function resetToImported(): Promise<{ ok: boolean; error?: string }
 /**
  * Empty the schedule, keeping the berths.
  *
- * This is the one irreversible action in the app, and its dialog says so: a booking
- * made here is deleted outright, not soft-deleted like a cancellation. Berths survive
- * because they are the facility itself — without them there are no lanes to book
- * into and the board has nothing to draw. They are defined in a migration, not
- * created here.
+ * Everything it deletes is copied into the `*_undo` tables first, in the same
+ * transaction, so the delete and its snapshot cannot come apart: if the copy fails
+ * nothing is removed, and if the delete fails the snapshot rolls back with it. That
+ * is what makes this the last destructive action in the app to become reversible, and
+ * it is why invariant 12 no longer carries an exception.
+ *
+ * Berths survive because they are the facility itself — without them there are no lanes
+ * to book into and the board has nothing to draw. They are defined in a migration.
  */
 export async function clearSchedule(): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {
     await sql.begin(async (tx) => {
+      // One clear is undoable at a time; taking a new snapshot drops the old one.
+      await tx`delete from review_items_undo`;
+      await tx`delete from bookings_undo`;
+      await tx`delete from vessels_undo`;
+
+      await tx`insert into vessels_undo select ${sql.unsafe(VESSEL_COLS)} from vessels`;
+      await tx`insert into bookings_undo select ${sql.unsafe(BOOKING_COLS)} from bookings`;
+      await tx`insert into review_items_undo select ${sql.unsafe(REVIEW_COLS)} from review_items`;
+
+      const [counts] = await tx`
+        select (select count(*)::int from bookings_undo) as bookings,
+               (select count(*)::int from vessels_undo)  as vessels`;
+      await tx`
+        insert into clear_undo_meta (id, taken_at, bookings, vessels)
+        values (1, now(), ${counts.bookings as number}, ${counts.vessels as number})
+        on conflict (id) do update
+          set taken_at = excluded.taken_at,
+              bookings = excluded.bookings,
+              vessels  = excluded.vessels`;
+
       await tx`delete from review_items`;
       await tx`delete from bookings`;
       await tx`delete from vessels`;
@@ -467,6 +512,53 @@ export async function clearSchedule(): Promise<{ ok: boolean; error?: string }> 
   } catch (e) {
     return { ok: false, error: describeDbError(e) };
   }
+}
+
+/**
+ * Put back whatever the last clear removed.
+ *
+ * Restoring replaces the current schedule rather than merging into it, because a clear
+ * is an all-or-nothing act and undoing it should land you exactly where you were. The
+ * snapshot is consumed on the way out: an undo you can run twice would quietly wipe
+ * work done since the first one.
+ */
+export async function undoClear(): Promise<{ ok: boolean; error?: string }> {
+  const sql = db();
+  try {
+    let empty = false;
+    await sql.begin(async (tx) => {
+      const [meta] = await tx`select bookings from clear_undo_meta where id = 1`;
+      if (!meta) { empty = true; return; }
+
+      await tx`delete from review_items`;
+      await tx`delete from bookings`;
+      await tx`delete from vessels`;
+
+      await tx`insert into vessels (${sql.unsafe(VESSEL_COLS)}) select ${sql.unsafe(VESSEL_COLS)} from vessels_undo`;
+      await tx`insert into bookings (${sql.unsafe(BOOKING_COLS)}) select ${sql.unsafe(BOOKING_COLS)} from bookings_undo`;
+      await tx`insert into review_items (${sql.unsafe(REVIEW_COLS)}) select ${sql.unsafe(REVIEW_COLS)} from review_items_undo`;
+
+      await tx`delete from review_items_undo`;
+      await tx`delete from bookings_undo`;
+      await tx`delete from vessels_undo`;
+      await tx`delete from clear_undo_meta`;
+    });
+    if (empty) return { ok: false, error: 'There is no cleared schedule to put back.' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: describeDbError(e) };
+  }
+}
+
+/** Throw away the snapshot, without restoring it. */
+export async function discardClearUndo(): Promise<void> {
+  const sql = db();
+  await sql.begin(async (tx) => {
+    await tx`delete from review_items_undo`;
+    await tx`delete from bookings_undo`;
+    await tx`delete from vessels_undo`;
+    await tx`delete from clear_undo_meta`;
+  });
 }
 
 /** Turn a Postgres error into something a dock coordinator can act on. */

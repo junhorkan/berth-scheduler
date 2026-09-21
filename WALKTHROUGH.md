@@ -75,6 +75,11 @@ about itself.
   installed, so loading is an action rather than a fixture — and I built the empty path
   first, which is how I found two bugs that hundreds of preloaded vessels had been
   hiding. Keeping both states working is the point.
+- **Nothing in it is destructive for long.** Cancelling is a soft delete you restore from
+  Review, and restoring re-runs the constraint, so it can be refused. Clearing the whole
+  schedule snapshots what it deletes in the same transaction that deletes it, so the undo
+  can never be out of step with what it is undoing. There are no accounts, so
+  reversibility does the work a login would have done badly.
 - **What I chose not to build.** No auth, no request-and-approve flow, no notifications,
   no drag-and-drop, no rafting. Each is in `DECISIONS.md` with a reason.
 - **What the data cannot support.** Draft/depth checking is impossible. Inventing depths
@@ -87,7 +92,9 @@ about itself.
   loads, behind it as well as ahead — real names, invented dates only — so the board looks
   like a dock that has been running rather than one switched on this morning. The module
   that defines them is unit-tested against the overlap rule, because one overlap would
-  refuse the whole reload.
+  refuse the whole reload. It was overdone first: 33 bookings filled every lane edge to
+  edge and two bars broke out of their lanes, which read worse than the empty board it
+  replaced. 23 with gaps and one misfit is the version that works.
 - **The look was borrowed from a site I find easy, and then measured.** The scale, the
   centred title, the one big button. What I did not take: its emoji, and its 10px mobile
   table — that is the one thing it does wrong, and there is a rule here against it.
@@ -143,7 +150,7 @@ board renders one; watching the system refuse a booking proves the rule is real.
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
 > `src/domain` and `src/lib`, which import nothing from the database or the UI — 252 unit
-> tests run in under a second with no infrastructure. 48 Playwright specs build their own
+> tests run in under a second with no infrastructure. 49 Playwright specs build their own
 > fixture against a real server and restore the sample afterwards, so the app is left in
 > the state it ships in.
 >

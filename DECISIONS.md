@@ -34,6 +34,7 @@ built is usually more informative than the thing that was.
 | 25 | [The sample reaches around today](#25-the-sample-reaches-around-today) |
 | 26 | [A queue holds work; history goes in an archive](#26-a-queue-holds-work-history-goes-in-an-archive) |
 | 27 | [The vessel register loads when the panel opens](#27-the-vessel-register-loads-when-the-panel-opens) |
+| 28 | [Clear is undoable, and the board is not a wall](#28-clear-is-undoable-and-the-board-is-not-a-wall) |
 
 ---
 
@@ -916,3 +917,58 @@ a supported path, already tested, rather than a broken panel.
 **Rejected: fetching on mount instead of on open.** It would have kept the page small
 and still paid for the register on every visit, just over a second connection. The
 point is that a list behind a button should cost nothing until the button is pressed.
+
+---
+
+## 28. Clear is undoable, and the board is not a wall
+
+Two corrections from the owner looking at the running app. Different in size, identical
+in kind: both were places where a defensible decision had drifted past the point it
+served anybody.
+
+### Clear was the last irreversible thing
+
+**Decision.** `clearSchedule` copies every booking, vessel and review item into
+`bookings_undo`, `vessels_undo` and `review_items_undo` **inside the same transaction
+that empties the live tables**, and records what it took in `clear_undo_meta`. An
+**Undo the clear** button then appears on Review and on the empty board.
+
+**Why in one transaction.** If the copy and the delete were separate steps, a failure
+between them would either lose the data or leave a snapshot of something that still
+exists. In one transaction a failed copy removes nothing and a failed delete rolls its
+snapshot back, so the undo can never be out of step with what it is undoing.
+
+**Why the empty board offers it too.** Whoever just pressed Clear is looking at the
+board a second later, not at the tab the button lives on. An undo you have to go and
+find is one people do not find.
+
+**The snapshot is consumed on use, and retired by loading the sample.** Running undo
+twice would wipe whatever was done after the first one, and undoing a clear *after*
+deliberately loading something else would silently discard that choice. Same rule both
+times: an undo applies to the thing it was taken for.
+
+**What this closes.** [Invariant 12](../CLAUDE.md) used to read *"nothing destructive is
+irreversible, except the one thing that says so"*. Saying so in a dialog is a warning,
+not a design. The exception is gone.
+
+### The board had become a wall
+
+**Decision.** The sample's own bookings go from 33 to 23, the stays are shorter, and
+exactly one of them is too long for its berth.
+
+**Why.** [25](#25-the-sample-reaches-around-today) fixed a board that was blank until
+today, and overshot: sixteen backfilled stays filled every lane edge to edge, and two
+misfits meant two bars breaking upward across most of the grid. The month became harder
+to read than the empty one it replaced.
+
+| | Empty | Overcorrected | Now |
+|---|---|---|---|
+| Bars on the opening month | 8 | 24 | 15 |
+| Bars breaking out of a lane | 1 | 2 | 1 |
+| Lanes with nothing in them | 4 | 0 | 0 |
+
+**What the gaps are for.** A real berth sits idle between visits, and the white space is
+what lets the eye find a booking at all. Density was never the goal; legible evidence
+that the checks work was, and one misfit demonstrates that better than two, because two
+read as a broken board rather than an instructive one. A unit test now fixes that count
+at one, so the next person to add a sample booking has to mean it.

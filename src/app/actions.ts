@@ -110,6 +110,15 @@ export async function resolveReviewGroupAction(ids: string[]) {
   return res;
 }
 
+/** Put back whatever the last clear removed. The snapshot is consumed on success. */
+export async function undoClearAction() {
+  const res = await m.undoClear();
+  revalidatePath('/');
+  revalidatePath('/vessels');
+  revalidatePath('/review');
+  return res;
+}
+
 export async function clearScheduleAction() {
   const res = await m.clearSchedule();
   revalidatePath('/');

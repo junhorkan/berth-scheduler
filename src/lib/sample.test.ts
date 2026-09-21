@@ -5,7 +5,7 @@ import { capacityModeFor } from '../domain/normalize';
 
 const TODAY = '2026-09-20';
 
-describe('the sample bookings in the coming weeks', () => {
+describe('the sample bookings around the load day', () => {
   it('never overlap on an exclusive berth, or the database would refuse the whole reload', () => {
     const dated = dateSampleBookings(TODAY);
     for (const a of dated) {
@@ -51,10 +51,26 @@ describe('the sample bookings in the coming weeks', () => {
   });
 
   it('put two boats in the pooled slips at the same time', () => {
+    // Some pair, not the first two: the pooled berth also holds stays that do not
+    // overlap, and an earlier version of this asserted on position and broke the
+    // moment one was added in front.
     const pooled = dateSampleBookings(TODAY).filter((b) => capacityModeFor(b.berth) === 'pooled');
-    expect(pooled.length).toBeGreaterThanOrEqual(2);
-    const [a, b] = pooled;
-    expect(overlaps({ start: a.start, end: a.end }, { start: b.start, end: b.end })).toBe(true);
+    const together = pooled.some((a, i) =>
+      pooled.slice(i + 1).some((b) =>
+        overlaps({ start: a.start, end: a.end }, { start: b.start, end: b.end })));
+    expect(together, 'no two pooled stays overlap, so nothing demonstrates pooling').toBe(true);
+  });
+
+  it('breaks exactly one bar out of its lane, so the board reads as informative', () => {
+    // Two misfits in one month made the board look broken rather than instructive:
+    // each one grows into the lane above it, and two of them crossed most of the grid.
+    const TOO_LONG: Record<string, number> = { 'R/V CLEAR TERN': 120, 'R/V Wild Ledge': 120 };
+    const BERTH_FT: Record<string, number> = { 'North Pier Face': 75, 'Inner Channel': 55 };
+    const misfits = SAMPLE_BOOKINGS.filter(
+      (b) => TOO_LONG[b.label] != null && BERTH_FT[b.berth] != null
+        && TOO_LONG[b.label] > BERTH_FT[b.berth],
+    );
+    expect(misfits).toHaveLength(1);
   });
 
   it('cover a vessel, an event and a closure', () => {

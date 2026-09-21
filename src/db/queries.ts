@@ -169,6 +169,28 @@ export async function getRecentlyCancelled(limit = 8): Promise<CancelledRow[]> {
   }));
 }
 
+export type ClearUndo = { takenAt: string; bookings: number; vessels: number };
+
+/**
+ * What the last "Clear the schedule" removed, if it can still be put back.
+ *
+ * Null means there is nothing to undo — either nothing was ever cleared, or the
+ * snapshot was consumed by an undo or retired by loading the sample. The counts are
+ * read from the snapshot rather than recomputed, so the button can say what it will
+ * restore before anybody presses it.
+ */
+export async function getClearUndo(): Promise<ClearUndo | null> {
+  const sql = db();
+  const [r] = await sql`
+    select taken_at, bookings, vessels from clear_undo_meta where id = 1`;
+  if (!r) return null;
+  return {
+    takenAt: (r.taken_at as Date).toISOString(),
+    bookings: r.bookings as number,
+    vessels: r.vessels as number,
+  };
+}
+
 export type SystemSummary = {
   berths: number;
   vessels: number;

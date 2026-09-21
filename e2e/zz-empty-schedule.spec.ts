@@ -124,4 +124,49 @@ test.describe('an empty schedule', () => {
     await expect(history).toBeVisible();
     await expect(history.locator('.queue li', { hasText: 'R/V CLEAR TERN' })).not.toHaveCount(0);
   });
+
+  /**
+   * Self-contained: it makes the one booking it is about to lose, rather than leaning
+   * on the sample the previous spec loaded. An earlier version read the review badge
+   * to check the queue came back, which does not exist when the queue is empty — so
+   * the spec hung for three minutes waiting for an element that was correctly absent.
+   */
+  test('a cleared schedule can be put back', async ({ page }) => {
+    test.setTimeout(120_000);
+    page.on('dialog', (d) => d.accept());
+
+    await page.goto('/');
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByRole('button', { name: 'Event', exact: true }).click();
+    await page.getByLabel('Description').fill('E2E undo the clear');
+    await page.getByLabel('Berth', { exact: true }).selectOption({ label: 'Inner Channel — 55ft' });
+    const dates = page.locator('input[type="date"]');
+    const start = await dates.first().inputValue();
+    const day = Number(start.slice(8, 10));
+    await dates.nth(1).fill(`${start.slice(0, 8)}${String(Math.min(day + 2, 28)).padStart(2, '0')}`);
+    await page.getByRole('button', { name: 'Save booking' }).click();
+    await expect(page.getByLabel(/E2E undo the clear/)).toBeVisible();
+
+    await page.goto('/review');
+    await page.getByRole('button', { name: /Clear the schedule/ }).click();
+
+    // Gone: the board draws its seven lanes and nothing else.
+    await expect.poll(async () => {
+      await page.goto('/');
+      return page.locator('.bar').count();
+    }, { timeout: 60_000 }).toBe(0);
+    await expect(page.locator('.rail')).toHaveCount(7);
+
+    // And the way back is offered where the person is looking — on the empty board,
+    // not only on the tab whose button they pressed.
+    const undo = page.getByRole('button', { name: /Undo the clear/ });
+    await expect(undo).toBeVisible();
+    await undo.click();
+
+    await expect(page.getByLabel(/E2E undo the clear/)).toBeVisible({ timeout: 60_000 });
+
+    // The offer is gone, because the snapshot was consumed. An undo you can run twice
+    // would wipe whatever was done after the first one.
+    await expect(page.getByRole('button', { name: /Undo the clear/ })).toHaveCount(0);
+  });
 });

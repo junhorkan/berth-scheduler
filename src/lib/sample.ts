@@ -32,35 +32,23 @@ const POOLED = 'Small craft slips (institution boats)';
 
 export const SAMPLE_BOOKINGS: readonly SampleBooking[] = [
   // ---- Behind the load day ------------------------------------------------------
-  // A working dock has a past. Without these the board opened on a month that was
-  // blank until today and busy after it, which reads as a system switched on this
-  // morning rather than one in use. Negative offsets are the reason the reload places
-  // these rows itself instead of going through the form, which refuses a past date.
-  { kind: 'vessel',  label: 'R/V GOLDEN COMPASS',  berth: 'North Pier West',  from: -18, to: -12 },
-  { kind: 'vessel',  label: 'OSV AMBER REEF',      berth: 'North Pier West',  from: -9,  to: -3 },
-
-  { kind: 'vessel',  label: 'R/V Iron Ketch',      berth: 'North Pier Face',  from: -16, to: -13 },
-  // A misfit that has already sailed: red on the board, and in the archive rather than
-  // the queue, which is the distinction DECISIONS 26 draws made visible on one screen.
-  { kind: 'vessel',  label: 'R/V Wild Ledge',      berth: 'North Pier Face',  from: -6,  to: -2 },
-
-  { kind: 'vessel',  label: 'R/V Long Anchor',     berth: 'North Pier East',  from: -20, to: -15 },
-  { kind: 'vessel',  label: 'M/V NORTHERN HARBOR', berth: 'North Pier East',  from: -11, to: -7 },
-  { kind: 'event',   label: 'Community sail day',  berth: 'North Pier East',  from: -4,  to: -1 },
-
-  { kind: 'vessel',  label: 'M/V Deep Reef',       berth: 'Inner Channel',    from: -14, to: -10 },
-  { kind: 'vessel',  label: 'S/V FAR HORIZON',     berth: 'Inner Channel',    from: -5,  to: -1 },
-
-  { kind: 'vessel',  label: 'M/Y GREEN LANTERN',   berth: 'South Float West', from: -17, to: -11 },
-  { kind: 'vessel',  label: 'R/V Clear Sextant',   berth: 'South Float West', from: -8,  to: -2 },
-
-  { kind: 'vessel',  label: 'R/V SALT DRIFT',      berth: 'South Float East', from: -19, to: -14 },
-  { kind: 'closure', label: 'Road race - access limited', berth: 'South Float East', from: -10, to: -5 },
+  // A working dock has a past. Without these the board opened on a month blank until
+  // today and busy after it, which reads as a system switched on this morning. Only
+  // the reload can place them: the form refuses a past date, and that rule is for
+  // people, not for a fixture.
+  //
+  // Deliberately sparse. The first attempt put sixteen stays back here, which filled
+  // every lane edge to edge and made the month harder to read than the empty one it
+  // replaced. A real berth sits idle between visits, and the gaps are what let the
+  // eye find a booking at all.
+  { kind: 'vessel',  label: 'R/V GOLDEN COMPASS',  berth: 'North Pier West',  from: -16, to: -11 },
+  { kind: 'vessel',  label: 'R/V Iron Ketch',      berth: 'North Pier Face',  from: -14, to: -12 },
+  { kind: 'vessel',  label: 'R/V Long Anchor',     berth: 'North Pier East',  from: -18, to: -14 },
+  { kind: 'vessel',  label: 'M/V Deep Reef',       berth: 'Inner Channel',    from: -9,  to: -6 },
+  { kind: 'vessel',  label: 'M/Y GREEN LANTERN',   berth: 'South Float West', from: -13, to: -8 },
+  { kind: 'vessel',  label: 'M/Y Green Horizon',   berth: POOLED,             from: -8,  to: -2 },
   // Still alongside on the load day, so the board always has a stay crossing "today".
-  { kind: 'vessel',  label: 'F/V SALT FATHOM',     berth: 'South Float East', from: -2,  to: 1 },
-
-  { kind: 'vessel',  label: 'M/Y Green Horizon',   berth: POOLED, from: -12, to: -4 },
-  { kind: 'vessel',  label: 'M/Y WILD VOYAGER',    berth: POOLED, from: -7,  to: 0 },
+  { kind: 'vessel',  label: 'F/V SALT FATHOM',     berth: 'South Float East', from: -5,  to: 1 },
 
   // ---- The load day and ahead ---------------------------------------------------
   // North Pier West is the first berth in display order, so the form opens onto it,
@@ -70,8 +58,9 @@ export const SAMPLE_BOOKINGS: readonly SampleBooking[] = [
   { kind: 'vessel',  label: 'R/V GOLDEN COMPASS', berth: 'North Pier West',  from: 15, to: 22 },
   { kind: 'vessel',  label: 'R/V Long Ketch',     berth: 'North Pier West',  from: 30, to: 38 },
 
-  // North Pier Face, 75ft. The live misfit: a 120ft vessel, drawn 1.6 lanes tall, and
-  // the one thing on the review queue that somebody can still act on.
+  // North Pier Face, 75ft. The one bar that breaks out of its lane, and the one item
+  // on the review queue somebody can still act on. There is exactly one of these on
+  // purpose: a second made the board look broken rather than informative.
   { kind: 'vessel',  label: 'R/V CLEAR TERN',     berth: 'North Pier Face',  from: 2,  to: 4 },
   { kind: 'event',   label: 'Science stroll',     berth: 'North Pier Face',  from: 25, to: 25 },
 
@@ -79,7 +68,6 @@ export const SAMPLE_BOOKINGS: readonly SampleBooking[] = [
   { kind: 'event',   label: 'Community sail day', berth: 'North Pier East',  from: 3,  to: 3 },
   { kind: 'vessel',  label: 'M/V Iron Heron',     berth: 'North Pier East',  from: 7,  to: 11 },
   { kind: 'vessel',  label: 'M/Y Wild Tern',      berth: 'North Pier East',  from: 18, to: 21 },
-  { kind: 'vessel',  label: 'F/V High Skua',      berth: 'North Pier East',  from: 33, to: 35 },
 
   // Inner Channel, 55ft.
   { kind: 'closure', label: 'Dock maintenance - restricted access', berth: 'Inner Channel', from: 5, to: 8 },
@@ -93,9 +81,11 @@ export const SAMPLE_BOOKINGS: readonly SampleBooking[] = [
   // South Float East, 90ft.
   { kind: 'vessel',  label: 'Barge SALT DORY',    berth: 'South Float East', from: 13, to: 17 },
 
-  // Small craft slips is pooled: two institution boats at once, which is what pooled means.
-  { kind: 'vessel',  label: 'M/V Amber Skua',     berth: POOLED, from: 1, to: 9 },
-  { kind: 'vessel',  label: 'R/V Silver Petrel',  berth: POOLED, from: 6, to: 13 },
+  // Small craft slips is pooled: two institution boats at once, which is what pooled
+  // means. One overlapping pair is enough to show it — a second only makes the lane
+  // taller for no extra information.
+  { kind: 'vessel',  label: 'M/V Amber Skua',     berth: POOLED, from: 4,  to: 11 },
+  { kind: 'vessel',  label: 'R/V Silver Petrel',  berth: POOLED, from: 8,  to: 15 },
 ];
 
 /** `2026-09-20` + 12 -> `2026-10-02`. Through UTC, so no timezone can shift a day. */

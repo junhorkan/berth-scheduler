@@ -66,11 +66,13 @@ is the central design decision. See `DECISIONS.md`.
   shipped state lives here too.
 - **The legacy schedule is imported, and removable.** 23 years of bookings are loaded so
   the conflict and size checks can be tried against real, messy data, and the sample
-  reaches around today: 33 bookings dated from the day it was loaded, behind it as well
+  reaches around today: 23 bookings dated from the day it was loaded, behind it as well
   as ahead, using the register's own vessels, so the board opens on a working dock with
   a misfit on it rather than on a grid that is blank until this morning. **Clear the schedule** empties it and **Load the sample schedule** puts it
   back, both on Review — an empty schedule is a supported state, not a broken one, and
-  an empty month names the nearest month that is not and links to it.
+  an empty month names the nearest month that is not and links to it. **Clearing is
+  undoable**: it snapshots what it removes in the same transaction that removes it, so
+  an accidental clear is one button away from being put back.
 - **Find** — one box, searching every vessel name, event label and closure note across
   all 276 months at once. Results group by identity, so a vessel with 267 bookings is one
   block and not 267 rows, and each result jumps straight to its own month on the board.
@@ -102,8 +104,8 @@ npm run dev
 ```
 
 ```bash
-npm test          # 255 unit tests, no database required
-npm run e2e       # 48 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
+npm test          # 258 unit tests, no database required
+npm run e2e       # 49 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
@@ -123,7 +125,7 @@ src/app/      Next.js routes and components. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
-navigation and search rules are provably correct without a database — 255 unit tests run
+navigation and search rules are provably correct without a database — 258 unit tests run
 in well under a second with no infrastructure at all. The importer and the UI call the
 same functions, so the rule the board shows you is the rule the import applied.
 
@@ -146,7 +148,7 @@ booking fills its lane, and none can draw a bar that **overhangs** its row.
   ping keeps it awake. If the site ever errors after a long quiet period, opening the
   Supabase dashboard restores it.
 - **The app is public and unauthenticated by design**, so a reviewer can exercise the
-  conflict check without credentials. **Load the sample schedule** on the Review tab
-  puts back the state the app ships in. **Clear the schedule** is the one action that
-  cannot be undone: it removes every booking and vessel, including anything created
-  through the app, and leaves the seven berths.
+  conflict check without credentials. Nothing it offers is destructive for long:
+  cancelling a booking is restored from Review, and **Clear the schedule** is undone by
+  a button that appears once it has run. **Load the sample schedule** puts back the
+  state the app ships in.

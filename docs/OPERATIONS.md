@@ -57,6 +57,11 @@ application reaches the database as the owning role, which RLS does not apply to
 deliberate — there is no client-side database access anywhere in the app, so a policy
 would open a door nothing needs.
 
+Three `*_undo` tables plus `clear_undo_meta` hold whatever the last **Clear the
+schedule** removed. They are written inside the same transaction that empties the live
+tables, and emptied again when the undo is used or when the sample is loaded over it.
+They are snapshots, never a source of truth.
+
 Four `*_seed` tables hold the imported workbook exactly as `npm run import` loaded it;
 **Load the sample schedule** and the test suite's teardown both copy from them, then add
 the forward bookings from `src/lib/sample.ts`, dated from the day of the reload. They have

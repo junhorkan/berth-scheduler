@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { resetToImportedAction, clearScheduleAction } from '../app/actions';
+import { resetToImportedAction, clearScheduleAction, undoClearAction } from '../app/actions';
 
 /**
  * The sample workbook is a demonstration, not this facility's history, so loading it
  * is an explicit, reversible choice rather than something baked into the deployment.
  *
  * Loading is additive and safe, so it appears wherever someone might want it. Clearing
- * destroys work, so it appears once, at the foot of Review, behind a confirmation.
+ * removes everything, so it appears once, at the foot of Review, behind a confirmation
+ * — and it is now undoable, which is why the dialog no longer warns that it cannot be.
  *
  * Both report failure. They used to `await` the action and throw the result away, so a
  * refusal — a cold database, an exhausted pool, a killed function — was indistinguishable
@@ -60,12 +61,53 @@ export function ClearScheduleButton() {
         className="btn danger"
         disabled={pending}
         onClick={() => {
-          if (!confirm('Clear the whole schedule? Every booking and vessel is removed, and bookings made here cannot be recovered. The berths stay, and the sample can be loaded again.')) return;
+          if (!confirm('Clear the whole schedule? Every booking and vessel is removed. The berths stay, and an \u201cUndo the clear\u201d button appears if you want it back.')) return;
           go();
         }}
       >
         {pending ? 'Clearing…' : '✕ Clear the schedule'}
       </button>
+      {error && <span className="actionerr">{error}</span>}
+    </>
+  );
+}
+
+/**
+ * Put back what the last clear removed.
+ *
+ * Rendered only when there is a snapshot, which is what keeps this from being a button
+ * that usually does nothing. It says what it will restore before it is pressed, because
+ * restoring replaces the current schedule and the person should know the size of that
+ * before they commit to it.
+ */
+export function UndoClearButton({
+  bookings,
+  vessels,
+  when,
+}: {
+  bookings: number;
+  vessels: number;
+  /** Relative, e.g. "4 minutes ago". Rendered by the caller, which has lib/cancelled. */
+  when?: string;
+}) {
+  const { error, pending, go } = useAction(undoClearAction);
+  return (
+    <>
+      <button
+        className="btn"
+        disabled={pending}
+        onClick={() => {
+          if (!confirm(
+            `Put back the ${bookings.toLocaleString()} booking${bookings === 1 ? '' : 's'} and `
+            + `${vessels.toLocaleString()} vessel${vessels === 1 ? '' : 's'} removed by the last clear? `
+            + 'This replaces whatever is on the schedule now.',
+          )) return;
+          go();
+        }}
+      >
+        {pending ? 'Putting it back…' : '↩ Undo the clear'}
+      </button>
+      {when && <span className="sub-hint">Cleared {when}.</span>}
       {error && <span className="actionerr">{error}</span>}
     </>
   );
