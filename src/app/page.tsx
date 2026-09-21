@@ -5,8 +5,7 @@ import BookingDetail from '../components/BookingDetail';
 import { LoadSampleButton } from '../components/SampleData';
 import MonthJump from '../components/MonthJump';
 import {
-  getBerths, getBookingsInRange, getSummary, getVesselOptions, getBookingById,
-  getNearestBookedMonth,
+  getBerths, getBookingsInRange, getSummary, getBookingById, getNearestBookedMonth,
 } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import {
@@ -44,10 +43,12 @@ export default async function BoardPage({
   );
 
   const bounds = monthBounds(year, month);
-  const [berths, bookings, vessels] = await Promise.all([
+  // The vessel register is deliberately NOT fetched here. The booking panel asks for it
+  // when it opens; sending it with every board render cost 36KB a page for a list most
+  // visits never use. See vesselOptionsAction.
+  const [berths, bookings] = await Promise.all([
     getBerths(),
     getBookingsInRange(bounds.start, bounds.end),
-    getVesselOptions(),
   ]);
 
   // Checked, not merely present: an id that is not a uuid used to reach SQL and 500
@@ -94,7 +95,6 @@ export default async function BoardPage({
         actions={
           <BookingPanel
             berths={berths}
-            vessels={vessels}
             defaultDate={newBookingDate}
             minDate={firstBookableISO()}
             maxDate={lastBookableISO()}

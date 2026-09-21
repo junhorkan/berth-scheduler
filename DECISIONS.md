@@ -33,6 +33,7 @@ built is usually more informative than the thing that was.
 | 24 | [The masthead is the page's name, in the reference site's shape](#24-the-masthead-is-the-pages-name-in-the-reference-sites-shape) |
 | 25 | [The sample reaches around today](#25-the-sample-reaches-around-today) |
 | 26 | [A queue holds work; history goes in an archive](#26-a-queue-holds-work-history-goes-in-an-archive) |
+| 27 | [The vessel register loads when the panel opens](#27-the-vessel-register-loads-when-the-panel-opens) |
 
 ---
 
@@ -876,3 +877,42 @@ honest.
 and it would have defaulted to either lying (hiding history by default) or to today's
 problem (showing everything). Two cards state the distinction without asking anybody to
 operate anything.
+
+---
+
+## 27. The vessel register loads when the panel opens
+
+**Decision.** The board no longer receives the 418-vessel register. `BookingPanel` asks
+for it with a server action the first time it opens, and the field works before it
+arrives.
+
+**Why, measured.** The board page was 91KB, of which 73KB was serialized React payload
+and only 18KB was visible markup. About 36KB of that was every vessel's id, name and
+length — sent on the first load and again on every month click, to populate an
+autocomplete list that most visits never open. The board is the page people navigate
+most, and it was the heaviest one for a feature behind a button.
+
+| | Before | After |
+|---|---|---|
+| Serialized payload | 73 KB | 56 KB |
+| …with 16 more bookings on screen | — | yes |
+| Register in the HTML | all 418 | none |
+
+**Why it is safe to arrive late.** A name that matches nothing is a new vessel anyway
+([invariant 2](../CLAUDE.md)), and `createBooking` resolves a known name to its row on
+the server through `findOrCreateVessel`. So while the register is in flight the field
+still accepts anything and a save still lands on the right vessel. What waits is the
+autocomplete list and the *"100ft on record"* line, not the ability to book.
+
+**The one thing that had to be guarded.** `vessels` is `null` while loading, which is
+not the same as empty, and the *"New vessel — saving adds it to the register"* hint is
+suppressed until it resolves. Without that, typing a hull the system knows perfectly
+well would flash a claim that it is new — confidently wrong, for about 50ms, on the
+screen where trust matters most.
+
+**A failed fetch falls back to empty**, which behaves exactly like a name nobody knows:
+a supported path, already tested, rather than a broken panel.
+
+**Rejected: fetching on mount instead of on open.** It would have kept the page small
+and still paid for the register on every visit, just over a second connection. The
+point is that a list behind a button should cost nothing until the button is pressed.

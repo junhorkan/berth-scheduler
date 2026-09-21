@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { checkBookingAction, createBookingAction, berthOccupancyAction } from '../app/actions';
-import type { BerthRow } from '../db/queries';
+import {
+  checkBookingAction, createBookingAction, berthOccupancyAction, vesselOptionsAction,
+} from '../app/actions';
+import type { BerthRow, VesselOption } from '../db/queries';
 import type { CheckResult } from '../db/mutations';
 import type { BookingKind } from '../domain/types';
 import { describeChoices, suggestBerth } from '../lib/suggest';
@@ -24,13 +26,11 @@ import type { Occupancy } from '../lib/suggest';
  */
 export default function BookingPanel({
   berths,
-  vessels,
   defaultDate,
   minDate,
   maxDate,
 }: {
   berths: BerthRow[];
-  vessels: { id: string; name: string; lengthFt: number | null }[];
   defaultDate: string;
   /** The bookable window, from lib/nav. Hard-coding it here let the form accept dates
    *  the board could not navigate to, which is how a saved booking became invisible. */
@@ -38,6 +38,15 @@ export default function BookingPanel({
   maxDate: string;
 }) {
   const [open, setOpen] = useState(false);
+  /**
+   * The register, fetched the first time this panel opens.
+   *
+   * `null` means "not here yet", which is different from "no vessels": until it
+   * arrives the field still accepts anything, because an unmatched name is a new
+   * vessel and the save path resolves a known one by name on the server. What waits
+   * is the autocomplete list and the recorded length, not the ability to book.
+   */
+  const [vessels, setVessels] = useState<VesselOption[] | null>(null);
   const [kind, setKind] = useState<BookingKind>('vessel');
   const [berthId, setBerthId] = useState(berths[0]?.id ?? '');
   const [vesselName, setVesselName] = useState('');
@@ -51,7 +60,18 @@ export default function BookingPanel({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const vessel = vessels.find((v) => v.name.toLowerCase() === vesselName.trim().toLowerCase());
+  useEffect(() => {
+    if (!open || vessels !== null) return;
+    let live = true;
+    vesselOptionsAction()
+      .then((rows) => { if (live) setVessels(rows); })
+      // A failed fetch must not break booking: an empty register behaves exactly like
+      // a name nobody knows, which is a supported path.
+      .catch(() => { if (live) setVessels([]); });
+    return () => { live = false; };
+  }, [open, vessels]);
+
+  const vessel = vessels?.find((v) => v.name.toLowerCase() === vesselName.trim().toLowerCase());
   const vesselId = kind === 'vessel' ? vessel?.id ?? null : null;
   const effectiveLabel = kind === 'vessel' ? vessel?.name ?? vesselName.trim() : label.trim();
 
@@ -114,7 +134,8 @@ export default function BookingPanel({
     setSuggestion(s.reason);
   }
 
-  const isNewVessel = kind === 'vessel' && !vessel && vesselName.trim() !== '';
+  const isNewVessel =
+    kind === 'vessel' && vessels !== null && !vessel && vesselName.trim() !== '';
   const missingLabel = effectiveLabel === '';
   const blocked = check ? !check.bookable : false;
   /**
@@ -196,7 +217,7 @@ export default function BookingPanel({
                 onChange={(e) => setVesselName(e.target.value)}
               />
               <datalist id="vessel-list">
-                {vessels.map((v) => <option key={v.id} value={v.name} />)}
+                {(vessels ?? []).map((v) => <option key={v.id} value={v.name} />)}
               </datalist>
               {vessel && (
                 <div className="sub-hint">

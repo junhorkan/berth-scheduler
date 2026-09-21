@@ -54,6 +54,19 @@ export async function berthOccupancyAction(
   return q.getBerthOccupancy(start, end, excludeBookingId);
 }
 
+/**
+ * The vessel register, for the new-booking typeahead.
+ *
+ * Fetched when the panel first opens rather than passed down from the board. All 418
+ * names, ids and lengths came to about 36KB of serialized props on every board render
+ * — 40% of that page — and on every month click, to power a list most visits never
+ * open. Typing works before it arrives: an unmatched name is a new vessel anyway, and
+ * the save path resolves a known one by name on the server.
+ */
+export async function vesselOptionsAction() {
+  return q.getVesselOptions();
+}
+
 /** Undo a cancellation. Refused by the constraint if the slot was taken meanwhile. */
 export async function restoreBookingAction(id: string) {
   const res = await m.restoreBooking(id);
