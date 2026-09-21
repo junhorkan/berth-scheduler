@@ -102,13 +102,26 @@ test.describe('an empty schedule', () => {
     await expect(page.getByRole('button', { name: 'Save booking' })).toBeDisabled();
     await page.getByRole('button', { name: 'Cancel' }).click();
 
-    // And one forward booking does not fit its berth, two days out — which may be
-    // next month, so look where it is rather than only on the front door.
+    // And a booking that does not fit its berth is on the board two days out — which
+    // may be next month, so look where it is rather than only on the front door. The
+    // sample also puts a misfit behind the load day, so this counts at least one
+    // rather than exactly one.
     const facilityToday = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(new Date());
     const misfitDay = new Date(Date.parse(`${facilityToday}T00:00:00Z`) + 2 * 86_400_000);
     await page.goto(`/?y=${misfitDay.getUTCFullYear()}&m=${misfitDay.getUTCMonth() + 1}`);
-    await expect(page.locator('.bar.toolong')).toHaveCount(1);
+    expect(await page.locator('.bar.toolong').count()).toBeGreaterThan(0);
+
+    // The queue asks about the live one only. The one that already sailed is on the
+    // board in red and in the archive below, not in the badge — DECISIONS 26.
+    await page.goto('/review');
+    // Scoped to the work card: this hull was also too long for the same berth in 2010,
+    // so it legitimately appears in the archive as well. That is the point of the split.
+    const work = page.locator('.board:not(.history)');
+    await expect(work.locator('.queue li', { hasText: 'R/V CLEAR TERN' })).toHaveCount(1);
+    const history = page.locator('.board.history');
+    await expect(history).toBeVisible();
+    await expect(history.locator('.queue li', { hasText: 'R/V CLEAR TERN' })).not.toHaveCount(0);
   });
 });

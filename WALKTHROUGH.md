@@ -81,12 +81,13 @@ about itself.
   would produce confident wrong answers.
 - **Unknown is a first-class answer.** A vessel with no recorded length is drawn hatched
   and says so. It is never assumed to fit.
-- **The sample reaches into the coming weeks.** Every workbook booking ended in 2019 and
-  you cannot book the past, so the front door was empty and the refusal was invisible
-  without making two bookings first. Seventeen bookings are now placed relative to the
-  day the sample loads — real names, invented dates only — and the module that defines
-  them is unit-tested against the overlap rule, because one overlap would refuse the
-  whole reload.
+- **The sample reaches around today.** Every workbook booking ended in 2019 and you
+  cannot book the past, so the front door was empty and the refusal was invisible without
+  making two bookings first. 33 bookings are now placed relative to the day the sample
+  loads, behind it as well as ahead — real names, invented dates only — so the board looks
+  like a dock that has been running rather than one switched on this morning. The module
+  that defines them is unit-tested against the overlap rule, because one overlap would
+  refuse the whole reload.
 - **The look was borrowed from a site I find easy, and then measured.** The scale, the
   centred title, the one big button. What I did not take: its emoji, and its 10px mobile
   table — that is the one thing it does wrong, and there is a rule here against it.

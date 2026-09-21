@@ -66,9 +66,9 @@ is the central design decision. See `DECISIONS.md`.
   shipped state lives here too.
 - **The legacy schedule is imported, and removable.** 23 years of bookings are loaded so
   the conflict and size checks can be tried against real, messy data, and the sample
-  reaches into the coming weeks: seventeen bookings dated from the day it was loaded,
-  using the register's own vessels, so the board opens on a live month with a misfit
-  on it. **Clear the schedule** empties it and **Load the sample schedule** puts it
+  reaches around today: 33 bookings dated from the day it was loaded, behind it as well
+  as ahead, using the register's own vessels, so the board opens on a working dock with
+  a misfit on it rather than on a grid that is blank until this morning. **Clear the schedule** empties it and **Load the sample schedule** puts it
   back, both on Review — an empty schedule is a supported state, not a broken one, and
   an empty month names the nearest month that is not and links to it.
 - **Find** — one box, searching every vessel name, event label and closure note across

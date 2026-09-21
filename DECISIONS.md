@@ -31,7 +31,7 @@ built is usually more informative than the thing that was.
 | 22 | [The system suggests a berth; it never assigns one](#22-the-system-suggests-a-berth-it-never-assigns-one) |
 | 23 | [A long list shows its head, and names its categories once](#23-a-long-list-shows-its-head-and-names-its-categories-once) |
 | 24 | [The masthead is the page's name, in the reference site's shape](#24-the-masthead-is-the-pages-name-in-the-reference-sites-shape) |
-| 25 | [The sample reaches into the coming weeks](#25-the-sample-reaches-into-the-coming-weeks) |
+| 25 | [The sample reaches around today](#25-the-sample-reaches-around-today) |
 | 26 | [A queue holds work; history goes in an archive](#26-a-queue-holds-work-history-goes-in-an-archive) |
 
 ---
@@ -776,13 +776,14 @@ of; ours holds the tabs and the search box, which it does.
 
 ---
 
-## 25. The sample reaches into the coming weeks
+## 25. The sample reaches around today
 
-**Decision.** Loading the sample also places seventeen bookings across the next six
-weeks, dated from the day it is loaded: real vessels from the register, event and closure
-labels the workbook uses, one vessel too long for its berth, two boats in the pooled
-slips at once, and the first berth in display order taken on the day the booking form
-opens to. They carry `source = 'sample'`, and the booking sheet says so.
+**Decision.** Loading the sample also places 33 bookings around the day it is loaded —
+three weeks behind it and six ahead — using real vessels from the register and event and
+closure labels the workbook uses. Among them: a vessel too long for its berth on each
+side of today, two boats in the pooled slips at once, a stay straddling the load day, and
+the first berth in display order taken on the day the booking form opens to. They carry
+`source = 'sample'`, and the booking sheet says so.
 
 **Why.** Every booking in the workbook ended on 31 December 2019, and a booking cannot be
 made for a day that has passed ([8](#8-the-board-opens-on-today-you-can-look-back-but-not-book-back)).
@@ -795,6 +796,16 @@ false on any month of the workbook, because every one of them is in the past.
 
 Now the board opens on a live month with a misfit on it, the form opens onto a taken
 berth so the refusal is the first verdict, and *Find me a berth* has a real answer.
+
+**And the dock has a past, not only a future.** The first version placed everything on or
+after the load day, which left the month blank up to today and busy after it — a shape no
+real schedule has, and one that reads as a system switched on this morning. Bookings now
+run three weeks behind as well, which is only possible because the reload writes them
+itself: the form refuses a past date ([8](#8-the-board-opens-on-today-you-can-look-back-but-not-book-back)),
+and that rule is for people, not for a fixture. One of them is a misfit that has already
+sailed, so the board shows red on both sides of today while the queue asks about the live
+one only — [26](#26-a-queue-holds-work-history-goes-in-an-archive) made visible on one
+screen. Seven lanes, no empty rows, 24 bars on the opening month against 8 before.
 
 **Dated at load, not fixed.** Fixed dates would have been in the past by the time anyone
 looked — the same failure as the fixed window in

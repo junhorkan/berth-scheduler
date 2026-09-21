@@ -57,8 +57,8 @@ obeyable.
    the earliest booking; the form refuses a start before today, in the save path as well,
    since `min` only guards the picker. A fixed bound has hidden real bookings three times.
 8. **Empty is supported, and never silent.** The full grid still draws, and one line says
-   where the bookings are. The sample reaches into the coming weeks so the front door is
-   never one of those empty months.
+   where the bookings are. The sample reaches around today, behind it as well as ahead,
+   so the front door is a working dock rather than one of those empty months.
    → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent) ·
    [DECISIONS 25](DECISIONS.md#25-the-sample-reaches-into-the-coming-weeks)
 9. **Explain the tool, never the project.** Three tabs; no About page; `/search` is a
