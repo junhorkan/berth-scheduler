@@ -52,3 +52,6 @@ data/*.xlsx
 
 # vitest reporter output, never source
 /.vitest/
+
+# Notes for the project owner about submitting. Not part of the app.
+SUBMISSION.md
