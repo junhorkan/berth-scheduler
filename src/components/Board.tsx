@@ -326,6 +326,12 @@ function Legend() {
       <div><span className="sw toolong" />Too long: bar breaks out of its lane</div>
       <div><span className="sw event" />Event, not a vessel</div>
       <div><span className="sw closure" />Berth closed</div>
+      {/*
+        The height rule, said once. The legend used to explain only colour and hatching,
+        so the most important thing on the board — that a bar's height IS the fit check —
+        was the one thing it never mentioned, and a first-time reader had to infer it.
+      */}
+      <div className="legend-rule">Bar height is the vessel against its berth: 120ft in a 240ft berth fills half the lane.</div>
       <div className="legend-hint">Hover any bar for detail, or click it to edit.</div>
     </div>
   );

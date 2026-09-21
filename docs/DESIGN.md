@@ -29,6 +29,16 @@ berth is drawn 1.61 lanes tall and visibly breaks out of its row.
   which makes the board lurch sideways on hover — and the badge, which is always visible,
   gets clipped by the card: a violation late in the month read `120ft in 75ft be`.
 
+- **The overflowing bar is translucent, and its measurement keeps a solid backing.** A
+  bar taller than its lane grows over whatever is booked above it, and a solid fill hid
+  that booking's label completely. The misfit has to be impossible to miss without
+  costing you the booking next door, so the fill is 9% red, the border stays solid, and
+  the `120ft in 75ft berth` text sits on its own white chip.
+- **The legend states the height rule in words.** It listed the colours and the hatching
+  and never mentioned height, which left the board's best idea as the one thing a
+  first-time reader had to infer. One line, under the swatches: *bar height is the vessel
+  against its berth*.
+
 Full argument: [DECISIONS 4](../DECISIONS.md).
 
 ## 8. Empty is supported, and never silent

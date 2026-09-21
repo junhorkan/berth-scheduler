@@ -125,6 +125,16 @@ per booking — is the hotel PMS **tape chart**.
 berth is proportionally a 3px hairline that reads as an empty berth. Proportionality
 still governs everything above the floor, including every overflow.
 
+**Adjusted again, from the owner reading the board cold.** Two things were wrong and
+neither was the idea. The overflowing bar was filled solid, so where it grew into the
+lane above it covered that booking's label outright — making the misfit visible was
+costing the booking next to it. It is now 9% red with a solid border, and the
+measurement sits on its own white chip, so both read at once. And the legend explained
+every colour and the hatching while never mentioning height, which left *the height is
+the fit check* as the only thing on the board nobody was told. It now says so in a line.
+The lesson is the ordinary one: the person who has looked at a thing for a week cannot
+tell which parts of it are legible.
+
 **Borrowed as an anti-pattern:** tape-chart documentation warns the chart must never be
 used to judge availability, because reservations without an assigned room are omitted
 from it. A view that silently omits records is dangerous, which is why a booking the

@@ -178,9 +178,16 @@ a { color: var(--vessel); }
   background-image: repeating-linear-gradient(45deg, transparent 0 3px, var(--unknown-hatch) 3px 4.5px);
 }
 .bar.toolong {
-  background: var(--critical-fill); border: 1px solid var(--critical);
+  /* Translucent, not solid: this bar is taller than its lane by design, so it grows over
+     whatever sits above it. Solid fill hid that booking's label entirely — the misfit
+     must be impossible to miss, and it must not cost you the booking next door. */
+  background: rgba(208, 59, 59, 0.09); border: 1px solid var(--critical);
   border-top: 2px dashed var(--critical); color: var(--critical);
   font-weight: 650; z-index: 3;
+}
+/* The measurement keeps a solid backing, or it sits unreadable over another bar. */
+.bar.toolong .ft {
+  background: var(--surface); border-radius: 2px; padding: 1px 3px; opacity: 1;
 }
 .bar.unresolved { outline: 2px solid var(--critical); outline-offset: 1px; z-index: 4; }
 .bar.closure {
@@ -458,6 +465,8 @@ a { color: var(--vessel); }
 .bar[data-tip]::after { max-width: 560px; overflow: hidden; text-overflow: ellipsis; }
 
 .legend-hint { color: var(--ink-muted); font-style: italic; }
+/* The height rule reads as a sentence under the swatches, not as a sixth swatch. */
+.legend-rule { flex-basis: 100%; color: var(--ink-2); }
 
 .qcount {
   margin-left: 6px; padding: 0 5px; border-radius: 7px;
