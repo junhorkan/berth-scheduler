@@ -32,6 +32,7 @@ built is usually more informative than the thing that was.
 | 23 | [A long list shows its head, and names its categories once](#23-a-long-list-shows-its-head-and-names-its-categories-once) |
 | 24 | [The masthead is the page's name, in the reference site's shape](#24-the-masthead-is-the-pages-name-in-the-reference-sites-shape) |
 | 25 | [The sample reaches into the coming weeks](#25-the-sample-reaches-into-the-coming-weeks) |
+| 26 | [A queue holds work; history goes in an archive](#26-a-queue-holds-work-history-goes-in-an-archive) |
 
 ---
 
@@ -809,3 +810,48 @@ what the button leaves. `npm run sample:load` is the same function from the term
 **Rejected: landing on the last month with data.** Already rejected in
 [18](#18-an-empty-month-is-not-an-empty-page) — a live scheduler must open on today.
 This is the other way round: bring today's month to the data, not the board to 2019.
+
+---
+
+## 26. A queue holds work; history goes in an archive
+
+**Decision.** Review splits in two. **Needs a decision** holds items whose booking has not
+ended yet, and it is what the red badge in the nav counts. **From the imported history**
+holds everything else — bookings that already ended, and cells the importer could not read
+— with its counts, its groupings and its buttons intact, in a quieter card that does not
+claim to be pending work.
+
+**Why, measured.** The badge read **30**. Of those thirty:
+
+| | Count | When |
+|---|---|---|
+| A booking that had not happened yet | **1** | two days out |
+| Bookings that had already ended | 10 | 2006–2017 |
+| Cells with no booking attached at all | 19 | sheets back to 2001 |
+
+Nobody can move a vessel that sailed in 2017. Presenting twenty-nine such items as work
+asks for a decision that cannot be made, and a queue mostly full of those is one people
+stop reading — at which point the one real item, a 120ft vessel in a 75ft berth this
+coming Tuesday, is the thing that gets missed. The queue was hiding its own best find.
+
+**Why the history is not deleted.** It is the evidence that the import dropped nothing
+silently, which is [invariant 3](../CLAUDE.md). "What happened to the cells you could not
+parse?" has to have a better answer than "gone". So nothing is removed; only the framing
+changes, and that is the whole fix.
+
+**The split is by actionability, not by severity.** An unresolved conflict is the worst
+thing the queue can hold, and a 2017 one still goes to the archive, because severity is
+not the question — *can anybody still do something about it* is. The predicate is one
+line of SQL, `b.end_date >= current_date`, and an item with no booking joins to nothing
+and lands in the archive, which is correct: an unreadable cell from a 2001 sheet is a
+record, not a task.
+
+**A consequence worth stating.** The badge now moves with the calendar. A misfit booked
+for next week counts; the morning after that booking ends, it stops counting and moves
+down to the archive on its own. Nothing has to be marked done for the number to stay
+honest.
+
+**Rejected: a date filter on the existing queue.** Same information, one more control,
+and it would have defaulted to either lying (hiding history by default) or to today's
+problem (showing everything). Two cards state the distinction without asking anybody to
+operate anything.

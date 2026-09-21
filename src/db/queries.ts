@@ -193,8 +193,14 @@ export const getSummary = cache(async function getSummary(): Promise<SystemSumma
       (select count(*)::int from vessels where length_ft is not null) as vessels_with_length,
       (select count(*)::int from bookings where status <> 'cancelled') as bookings,
       (select count(*)::int from bookings where status = 'conflict_unresolved') as unresolved,
-      (select count(*)::int from review_items
-        where resolved_at is null and type <> 'missing_length') as open_review,
+      -- Only what somebody can still act on: an item whose booking has not ended.
+      -- An item with no booking at all is a cell from an old sheet, so the join drops
+      -- it here and the history card below carries it instead. A badge that counts
+      -- 2017 is a badge people learn to ignore.
+      (select count(*)::int from review_items r
+         join bookings b on b.id = r.booking_id
+        where r.resolved_at is null and r.type <> 'missing_length'
+          and b.end_date >= current_date) as open_review,
       (select extract(year from min(start_date))::int from bookings) as first_year,
       (select extract(year from max(start_date))::int from bookings) as last_year`;
   return {
@@ -307,6 +313,8 @@ export type ReviewRow = {
   importSheet: string | null;
   importRow: number | null;
   importCol: number | null;
+  /** Its booking has not ended yet, so a person can still do something about it. */
+  isCurrent: boolean;
 };
 
 /** The coordinator's attention queue: open items, worst class first. */
@@ -315,7 +323,8 @@ export async function getReviewItems(limit = 200): Promise<ReviewRow[]> {
   const rows = await sql`
     select r.id, r.type, r.raw_text, r.detail, r.vessel_id, r.booking_id,
            b.start_date as booking_start, be.name as berth_name,
-           r.import_sheet, r.import_row, r.import_col
+           r.import_sheet, r.import_row, r.import_col,
+           (b.end_date >= current_date) as is_current
       from review_items r
       left join bookings b on b.id = r.booking_id
       left join berths be on be.id = coalesce(r.berth_id, b.berth_id)
@@ -340,6 +349,8 @@ export async function getReviewItems(limit = 200): Promise<ReviewRow[]> {
     importSheet: r.import_sheet as string | null,
     importRow: r.import_row as number | null,
     importCol: r.import_col as number | null,
+    // Null for an item with no booking — an unreadable cell — which is history.
+    isCurrent: r.is_current === true,
   }));
 }
 

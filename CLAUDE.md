@@ -44,7 +44,9 @@ obeyable.
 3. **Nothing vanishes silently, but repetition is not information.** What the importer
    cannot place becomes a review item carrying its sheet/row/column; missing lengths are
    derived, not stored; identical problems fold with a count (`lib/review.ts`), and
-   conflicts never fold. → [DECISIONS 17 and 23](DECISIONS.md#17-repetition-is-not-information)
+   conflicts never fold. **A queue holds work**: an item whose booking has ended moves to
+   the archive card and leaves the badge, and nothing is ever deleted to get it there.
+   → [DECISIONS 17, 23 and 26](DECISIONS.md#17-repetition-is-not-information)
 4. **`Small craft slips` is pooled** and exempt from conflict detection. Every other berth
    is exclusive.
 5. **The berths live in a migration**, not in application code. They are the facility.

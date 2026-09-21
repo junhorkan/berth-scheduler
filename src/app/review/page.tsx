@@ -2,7 +2,7 @@ import Nav from '../../components/Nav';
 import { ResolveButton } from '../../components/ResolveButton';
 import { LoadSampleButton, ClearScheduleButton } from '../../components/SampleData';
 import {
-  getReviewItems, getReviewCounts, getMissingLengthSummary, getRecentlyCancelled,
+  getReviewItems, getMissingLengthSummary, getRecentlyCancelled,
 } from '../../db/queries';
 import type { ReviewRow } from '../../db/queries';
 import { groupReviewItems, describeOccurrences } from '../../lib/review';
@@ -62,20 +62,36 @@ function tighten(detail: string): string {
 }
 
 export default async function ReviewPage() {
-  const [items, counts, missing, cancelled] = await Promise.all([
-    getReviewItems(), getReviewCounts(), getMissingLengthSummary(), getRecentlyCancelled(),
+  const [items, missing, cancelled] = await Promise.all([
+    getReviewItems(), getMissingLengthSummary(), getRecentlyCancelled(),
   ]);
-  // Only a kind of item that exists gets a section. Permanently-zero sections are noise.
-  const order = ['conflict', 'too_long', 'unclassified'].filter((t) => (counts[t] ?? 0) > 0);
-  // One row per problem, not per affected booking.
-  const groups = groupReviewItems(items);
-  // ...and one HEADING per kind of problem. The type used to be printed on every row,
-  // so "Could not be read" appeared ten times and "Vessel too long" five, to convey
-  // two facts. Same rule as the queue folding itself, one level up.
-  const sections = order
-    .map((type) => ({ type, groups: groups.filter((g) => g.type === type) }))
-    .filter((s) => s.groups.length > 0);
-  const open = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  /*
+    A work queue holds work. Of the 30 items the 23-year import produced, one was about
+    a booking that had not happened yet; the rest were bookings that ended between 2006
+    and 2017, and cells from sheets going back to 2001. Nobody can move a vessel that
+    sailed nine years ago, and a queue mostly full of those teaches people to stop
+    reading it.
+
+    So the split is by whether anything can still be done, not by how bad it is. What is
+    deleted: nothing. The history is the evidence that the import dropped nothing
+    silently (invariant 3), and it keeps its counts and its buttons — it just stops
+    calling itself a decision.
+  */
+  const current = items.filter((i) => i.isCurrent);
+  const historical = items.filter((i) => !i.isCurrent);
+  const open = current.length;
+
+  // One row per problem, not per affected booking; and one HEADING per kind of problem,
+  // rather than the type printed on every row beneath it.
+  const sectionsFor = (rows: typeof items) => {
+    const groups = groupReviewItems(rows);
+    return ['conflict', 'too_long', 'unclassified']
+      .map((type) => ({ type, groups: groups.filter((g) => g.type === type) }))
+      .filter((s) => s.groups.length > 0);
+  };
+  const currentSections = sectionsFor(current);
+  const historySections = sectionsFor(historical);
 
   return (
     <main className="shell">
@@ -90,9 +106,9 @@ export default async function ReviewPage() {
         current="review"
         title="Review"
         tagline={open === 0
-          ? 'Nothing needs a decision.'
+          ? 'Nothing on the schedule needs a decision.'
           : <>
-              <b>{open} item{open === 1 ? '' : 's'} need a decision.</b>{' '}
+              <b>{open} item{open === 1 ? '' : 's'} need{open === 1 ? 's' : ''} a decision.</b>{' '}
               Anything the import could not place is here rather than in a log file.
             </>}
       />
@@ -123,8 +139,10 @@ export default async function ReviewPage() {
 
         {items.length === 0 && missing.vessels === 0 ? (
           <p className="empty">Nothing needs attention.</p>
+        ) : currentSections.length === 0 ? (
+          <p className="empty">Nothing on the schedule needs a decision.</p>
         ) : (
-          sections.map(({ type, groups: rows }) => {
+          currentSections.map(({ type, groups: rows }) => {
             const head = rows.slice(0, HEAD);
             const tail = rows.slice(HEAD);
             return (
@@ -132,7 +150,9 @@ export default async function ReviewPage() {
                 {/* Stated once, with its count, instead of on every row beneath it. */}
                 <h2 className={`qhead ${LABEL[type].tone}`}>
                   {LABEL[type].title}
-                  <span className="qhcount">{counts[type] ?? rows.length}</span>
+                  <span className="qhcount">
+                    {rows.reduce((a, g) => a + g.rows.length, 0)}
+                  </span>
                 </h2>
                 <ul className="queue">
                   {head.map((group) => <Row key={group.key} type={type} group={group} />)}
@@ -156,9 +176,54 @@ export default async function ReviewPage() {
         )}
 
         {items.length >= 200 && (
-          <p className="note">Showing the first 200 open items of {Object.values(counts).reduce((a, b) => a + b, 0)}.</p>
+          <p className="note">Showing the first 200 open items.</p>
         )}
       </div>
+
+      {/*
+        Everything the import turned up that nobody can act on any more. It keeps its
+        counts, its groupings and its buttons; what it loses is the claim that it is
+        pending work. Deleting it instead would answer "what happened to the cells you
+        could not parse?" with "gone", which is the one answer this project does not give.
+      */}
+      {historical.length > 0 && (
+        <div className="board history">
+          <h2 className="cardtitle">From the imported history</h2>
+          <p className="note">
+            {historical.length} item{historical.length === 1 ? '' : 's'} from the 23-year
+            import: bookings that have already ended, and cells the importer could not
+            read. Kept as the record that nothing was dropped silently.
+          </p>
+          {historySections.map(({ type, groups: rows }) => {
+            const head = rows.slice(0, HEAD);
+            const tail = rows.slice(HEAD);
+            return (
+              <section key={type} className="qsection">
+                <h2 className={`qhead ${LABEL[type].tone}`}>
+                  {LABEL[type].title}
+                  <span className="qhcount">
+                    {rows.reduce((a, g) => a + g.rows.length, 0)}
+                  </span>
+                </h2>
+                <ul className="queue">
+                  {head.map((group) => <Row key={group.key} type={type} group={group} />)}
+                </ul>
+                {tail.length > 0 && (
+                  <details className="qmore">
+                    <summary>
+                      <span className="when-closed">Show the remaining {tail.length}</span>
+                      <span className="when-open">Show fewer</span>
+                    </summary>
+                    <ul className="queue">
+                      {tail.map((group) => <Row key={group.key} type={type} group={group} />)}
+                    </ul>
+                  </details>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {/*
         Anyone can cancel anything here, because there are no accounts. Rather than
