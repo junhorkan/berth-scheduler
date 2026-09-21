@@ -91,7 +91,7 @@ scheduler library: none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev         # local dev server
-npm test            # 252 unit tests, no database needed
+npm test            # 255 unit tests, no database needed
 npm run e2e         # 48 specs. HITS THE LIVE DB: swaps in a fixture, restores after
 npm run import      # reload the workbook (needs data/*.xlsx, gitignored)
 npm run sample:load # the Load button, from the terminal: seed snapshot + forward bookings
@@ -104,6 +104,9 @@ Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERAT
 
 ## Gotchas that cost time before
 
+- **Every URL parameter is data from outside; check it before it reaches SQL.** `y` and
+  `m` go through `clampMonth`, and `sel` goes through `isBookingId` — without that guard
+  a non-uuid reached `where b.id = $1` and the board answered **500**, live.
 - `bookings.during` is a **generated** column. `insert ... select *` into `bookings`
   fails; list columns explicitly.
 - **Resolve every date in `America/New_York`, never the server's UTC**, the way

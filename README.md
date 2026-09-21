@@ -102,7 +102,7 @@ npm run dev
 ```
 
 ```bash
-npm test          # 252 unit tests, no database required
+npm test          # 255 unit tests, no database required
 npm run e2e       # 48 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean
@@ -123,7 +123,7 @@ src/app/      Next.js routes and components. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
-navigation and search rules are provably correct without a database — 252 unit tests run
+navigation and search rules are provably correct without a database — 255 unit tests run
 in well under a second with no infrastructure at all. The importer and the UI call the
 same functions, so the rule the board shows you is the rule the import applied.
 

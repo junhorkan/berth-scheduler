@@ -11,7 +11,7 @@ import {
 import { monthBounds } from '../lib/layout';
 import {
   clampMonth, monthHref, MONTH_NAMES, step, currentMonth, firstYear, lastYear,
-  firstBookableISO, lastBookableISO, todayISO, isCurrentMonth,
+  firstBookableISO, lastBookableISO, todayISO, isCurrentMonth, isBookingId,
 } from '../lib/nav';
 
 // A cached schedule is a wrong schedule.
@@ -50,7 +50,10 @@ export default async function BoardPage({
     getVesselOptions(),
   ]);
 
-  const selected = sp.sel ? await getBookingById(sp.sel) : null;
+  // Checked, not merely present: an id that is not a uuid used to reach SQL and 500
+  // the board. An unknown-but-well-formed id already returns null and draws no sheet.
+  const selectedId = isBookingId(sp.sel) ? sp.sel : undefined;
+  const selected = selectedId ? await getBookingById(selectedId) : null;
   const prev = step(year, month, -1, undefined, earliest);
   const next = step(year, month, 1, undefined, earliest);
   const navFirst = firstYear(undefined, earliest);
@@ -104,7 +107,7 @@ export default async function BoardPage({
         bookings={bookings}
         year={year}
         month={month}
-        selectedId={sp.sel}
+        selectedId={selectedId}
         head={head}
         emptyNote={
           // The only screen that renders no explanation of its own, so this is where the

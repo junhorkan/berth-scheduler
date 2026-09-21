@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   clampMonth, step, currentMonth, firstYear, lastYear, todayISO, isCurrentMonth,
-  firstBookableISO, lastBookableISO, YEARS_BACK, YEARS_AHEAD,
+  firstBookableISO, lastBookableISO, YEARS_BACK, YEARS_AHEAD, isBookingId,
 } from './nav';
 
 /** A fixed instant so every assertion below is deterministic: 11:00 EDT, 19 Sep 2026. */
@@ -111,5 +111,26 @@ describe('isCurrentMonth', () => {
     expect(isCurrentMonth(2026, 9, NOW)).toBe(true);
     expect(isCurrentMonth(2026, 8, NOW)).toBe(false);
     expect(isCurrentMonth(2025, 7, NOW)).toBe(false);
+  });
+});
+
+describe('isBookingId', () => {
+  it('accepts a uuid in either case', () => {
+    expect(isBookingId('c452b069-94c6-495f-b780-db614bd8434c')).toBe(true);
+    expect(isBookingId('C452B069-94C6-495F-B780-DB614BD8434C')).toBe(true);
+  });
+
+  it('rejects anything else, because it would reach SQL as a uuid and crash the page', () => {
+    // `/?sel=hello` answered 500 on the live site until this existed: Postgres refused
+    // the value as a malformed uuid while rendering the board.
+    for (const junk of ['hello', '', '1;drop', 'c452b069', `${'a'.repeat(36)}`,
+                        'c452b069-94c6-495f-b780-db614bd8434', 'zzzzzzzz-94c6-495f-b780-db614bd8434c']) {
+      expect(isBookingId(junk), junk).toBe(false);
+    }
+  });
+
+  it('rejects a missing parameter without being asked to', () => {
+    expect(isBookingId(undefined)).toBe(false);
+    expect(isBookingId(null)).toBe(false);
   });
 });

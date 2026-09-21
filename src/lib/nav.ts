@@ -99,6 +99,24 @@ export function step(
   return clampMonth(year, month + delta, now, earliestBookingYear);
 }
 
+/**
+ * Is this URL parameter shaped like a booking id?
+ *
+ * The board takes three parameters — `y`, `m` and `sel` — and `clampMonth` has always
+ * guarded the first two. The third went straight into `where b.id = $1` against a
+ * `uuid` column, so `/?sel=hello` made Postgres reject the value as malformed and the
+ * whole board answered 500. The query was parameterised, so this was never an
+ * injection; it was a crash, on the one URL a stranger is handed.
+ *
+ * A parameter is data from outside, and every one of them gets checked before it
+ * reaches SQL.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isBookingId(raw: string | undefined | null): raw is string {
+  return typeof raw === 'string' && UUID.test(raw);
+}
+
 export function monthHref(year: number, month: number): string {
   return `/?y=${year}&m=${month}`;
 }
