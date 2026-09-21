@@ -32,49 +32,46 @@ unusable) or softening the overlap guarantee (the strongest claim here).
 
 ## Invariants
 
-Breaking any of these looks like an improvement and is not. Why, for each:
-[DECISIONS.md](DECISIONS.md). **6 and 8–11 are stated in full in
-[docs/DESIGN.md](docs/DESIGN.md)** — the line here is the whole rule, not a summary of
-one, but the detail that makes it obeyable is there.
+Breaking any of these looks like an improvement and is not. Each line is the whole rule;
+the arrow leads to the reasoning and, for the visual ones, to the detail that makes it
+obeyable.
 
 1. **`src/domain` and `src/lib` import nothing from `db` or `app`.** Pure, and unit-tested
    without infrastructure.
 2. **Never invent a vessel length, and never gate a booking on picking a known vessel.**
-   Booking registers the vessel; a gate once made vessel bookings impossible entirely.
-   The berth suggester **proposes and explains, never assigns**: with no length it ranks
-   on availability and says the fit was not checked.
+   Booking registers the vessel. The berth suggester **proposes and explains, never
+   assigns**. → [DECISIONS 22](DECISIONS.md#22-the-system-suggests-a-berth-it-never-assigns-one)
 3. **Nothing vanishes silently, but repetition is not information.** What the importer
-   cannot place becomes a review item with its sheet/row/column; missing lengths are
-   derived, not stored; identical problems fold with a count (`lib/review.ts`) and
-   conflicts never fold.
+   cannot place becomes a review item carrying its sheet/row/column; missing lengths are
+   derived, not stored; identical problems fold with a count (`lib/review.ts`), and
+   conflicts never fold. → [DECISIONS 17 and 23](DECISIONS.md#17-repetition-is-not-information)
 4. **`Small craft slips` is pooled** and exempt from conflict detection. Every other berth
    is exclusive.
 5. **The berths live in a migration**, not in application code. They are the facility.
-6. **Bar height is `vessel length ÷ berth length`**, stated in words at any width, with
-   an instant `data-tip` and never the native `title`. → [DESIGN](docs/DESIGN.md#6-bar-height-is-the-fit-check)
+6. **Bar height is `vessel length ÷ berth length`**, stated in words at any width, with an
+   instant `data-tip` and never the native `title`.
+   → [DESIGN](docs/DESIGN.md#6-bar-height-is-the-fit-check)
 7. **Every date bound comes from `lib/nav`; none is hard-coded.** The floor stretches to
-   the earliest booking so imported history stays reachable; the form refuses a start
-   before today, in the save path as well, since `min` only guards the picker. A fixed
-   bound has hidden real bookings three times.
-8. **Empty is supported, and never silent.** The full grid still draws, and one line
-   says where the bookings are. The sample reaches into the coming weeks precisely so
-   the front door is not empty; `lib/sample` is unit-tested against the overlap rule,
-   because an overlap there refuses the whole reload.
-   → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent)
+   the earliest booking; the form refuses a start before today, in the save path as well,
+   since `min` only guards the picker. A fixed bound has hidden real bookings three times.
+8. **Empty is supported, and never silent.** The full grid still draws, and one line says
+   where the bookings are. The sample reaches into the coming weeks so the front door is
+   never one of those empty months.
+   → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent) ·
+   [DECISIONS 25](DECISIONS.md#25-the-sample-reaches-into-the-coming-weeks)
 9. **Explain the tool, never the project.** Three tabs; no About page; `/search` is a
    destination, **not a fourth tab**. Each page's masthead is its own name and one line;
    orientation only on the empty board.
    → [DESIGN](docs/DESIGN.md#9-explain-the-tool-never-the-project)
 10. **Light only; one filled button per page; no control that only confirms another.**
     → [DESIGN](docs/DESIGN.md#10-light-only-and-one-obvious-action)
-11. **Nothing outside the grid below 13px.** When something will not fit, change its
-    shape, not its point size. → [DESIGN](docs/DESIGN.md#11-nothing-outside-the-grid-below-13px)
-12. **Nothing destructive is irreversible, except the one thing that says so.** No
-    accounts, so reversibility is the answer rather than a gate: cancelling is a soft
-    delete restored from Review, and restoring re-runs the constraint, so it can be
-    refused. **Clear the schedule** is the exception: a hard delete, and its dialog says
-    that bookings made here are not recoverable. **Never use WHOI's name or marks** —
-    synthetic data, public site.
+11. **Nothing outside the grid below 13px.** When something will not fit, change its shape,
+    not its point size. → [DESIGN](docs/DESIGN.md#11-nothing-outside-the-grid-below-13px)
+12. **Nothing destructive is irreversible, except Clear, whose dialog says so.** Cancelling
+    is a soft delete restored from Review, and restoring re-runs the constraint, so it can
+    be refused. → [DECISIONS 20](DECISIONS.md#20-cancelling-is-reversible-not-restricted)
+13. **Never use WHOI's name or marks.** A real institution, a public site, synthetic data.
+    → [DECISIONS 21](DECISIONS.md#21-the-facility-is-not-whoi)
 
 ## Structure
 
@@ -93,13 +90,13 @@ scheduler library: none can draw a bar that overhangs its lane.
 ## Commands
 
 ```bash
-npm run dev       # local dev server
-npm test          # 252 unit tests, no database needed
-npm run e2e       # 48 specs. HITS THE LIVE DB: swaps in a fixture, restores after
-npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
+npm run dev         # local dev server
+npm test            # 252 unit tests, no database needed
+npm run e2e         # 48 specs. HITS THE LIVE DB: swaps in a fixture, restores after
+npm run import      # reload the workbook (needs data/*.xlsx, gitignored)
 npm run sample:load # the Load button, from the terminal: seed snapshot + forward bookings
-npm run db:check  # verify the connection and that the constraint exists
-npm run build     # production build
+npm run db:check    # verify the connection and that the constraint exists
+npm run build       # production build
 ```
 
 Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERATIONS.md).
@@ -109,19 +106,15 @@ Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERAT
 
 - `bookings.during` is a **generated** column. `insert ... select *` into `bookings`
   fails; list columns explicitly.
-- `todayISO()` resolves in `America/New_York`, not the server's UTC. Using UTC rolls the
-  board to the next month at 8pm on the last day of a month.
-- Pushing to `main` deploys, **but Vercel blocks a build whose commit author it does not
-  recognise** — check `git config user.email` if a deployment comes back `BLOCKED`.
-- **Server Actions inherit their route's `maxDuration`**; the 10s default killed the
-  ~12s workbook restore mid-transaction, and the button discarded its `{ok, error}`, so
-  it failed in total silence. Never throw a mutation's result away.
-- **Compute test dates in `America/New_York`, not UTC.** `Date.now() - 86_400_000` is the
-  facility's *today* after 8pm Eastern, so a spec silently stops testing anything.
-- **An ignore rule never untracks a file already committed.** The sample workbook sat in
-  the repo for 16 commits after `data/*.xlsx` was ignored; history was rewritten on
-  2026-09-19 to remove it. `git ls-files data` must print nothing.
-- The pool-sizing trap and the keep-warm ping: [docs/OPERATIONS.md](docs/OPERATIONS.md).
+- **Resolve every date in `America/New_York`, never the server's UTC**, the way
+  `todayISO()` does. After 8pm Eastern the UTC date has already rolled over, so the board
+  jumps a month early, and `Date.now() - 86_400_000` in a spec is the facility's *today* —
+  which makes the spec silently stop testing anything.
+- **Server Actions inherit their route's `maxDuration`.** The 10s default killed the ~12s
+  workbook restore mid-transaction, and the button discarded its `{ok, error}`, so it
+  failed in total silence. Never throw a mutation's result away.
+- Deployments that come back `BLOCKED`, the pool-sizing trap, the keep-warm ping, and why
+  `git ls-files data` must print nothing: [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
