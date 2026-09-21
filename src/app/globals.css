@@ -257,8 +257,25 @@ a { color: var(--vessel); }
 .qmain { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .qtext { font-size: 15px; font-weight: 600; }
 .qdetail { font-size: 13px; color: var(--ink-2); }
-.qmeta { font-size: 12px; color: var(--ink-muted); font-family: var(--mono); }
-.qact { display: flex; gap: 6px; flex: none; padding-top: 2px; }
+.qmeta { font-size: 13px; color: var(--ink-muted); }
+.qact { display: flex; gap: 14px; align-items: center; flex: none; padding-top: 2px; }
+/* Navigation reads as a link; only the decision is a button. Same as the search results. */
+.qlink { font-size: 13px; color: var(--vessel); text-decoration: none; white-space: nowrap; }
+.qlink:hover { text-decoration: underline; }
+/* A section shows its head; the tail is one click away, with no JavaScript. */
+.qmore { margin-top: 6px; }
+.qmore summary {
+  display: inline-block; cursor: pointer; list-style: none;
+  font-size: 13px; color: var(--ink-2);
+}
+.qmore summary::-webkit-details-marker { display: none; }
+.qmore summary::before { content: '\25b8\00a0'; }
+.qmore[open] summary::before { content: '\25be\00a0'; }
+.qmore summary:hover { color: var(--ink); text-decoration: underline; }
+.qmore .when-open { display: none; }
+.qmore[open] .when-open { display: inline; }
+.qmore[open] .when-closed { display: none; }
+.qmore .queue { margin-top: 4px; border-top: 1px solid var(--grid); }
 
 /* ------------------------------------------------------- booking panel */
 /* The one thing this tool is for, sized like it. */

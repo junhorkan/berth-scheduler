@@ -701,6 +701,16 @@ looking at the cell. On a conflict or a misfit the booking is on the board, wher
 sheet coordinates tell you nothing you can act on. It is the evidence that nothing was
 silently dropped, so it stays where it is evidence and goes where it was noise.
 
+**Extended to Review's rows.** Measured on the live queue: 17 rows carried 23 bordered
+buttons, 16 monospace metadata lines, and three lines of text each. Three changes, none
+of which removes a fact or an action: *Show on board* is navigation, so it is a text link
+with an arrow, the way the search results already render it, and *Mark done* is the row's
+one button; the metadata line is set in the regular face, because monospace made every
+row read as a log entry; and a cell nobody could read states what it said and where it was
+on one line, with the sheet coordinates folded into it. Each section shows its first five
+rows and folds the rest behind *Show the remaining N*, the head-of-list rule above applied
+to the queue, using a native `<details>` so the page stays a server component.
+
 ---
 
 ## 24. The masthead is the page's name, in the reference site's shape

@@ -4,7 +4,9 @@ import { LoadSampleButton, ClearScheduleButton } from '../../components/SampleDa
 import {
   getReviewItems, getReviewCounts, getMissingLengthSummary, getRecentlyCancelled,
 } from '../../db/queries';
+import type { ReviewRow } from '../../db/queries';
 import { groupReviewItems, describeOccurrences } from '../../lib/review';
+import type { ReviewGroup } from '../../lib/review';
 import { relativeTime } from '../../lib/cancelled';
 import { RestoreButton } from '../../components/RestoreButton';
 
@@ -44,6 +46,13 @@ const LABEL: Record<string, { title: string; blurb: string; tone: string }> = {
 };
 
 /**
+ * Rows shown per section before the rest fold behind "Show the remaining N". The same
+ * rule as the Vessels register: a long list shows its head, and the tail is one click
+ * away rather than a screen of scrolling (DECISIONS 23).
+ */
+const HEAD = 5;
+
+/**
  * The stored detail ends with the span in brackets — `... over by 45'. (2006-02-04..
  * 2006-02-04)` — which the meta line underneath already states. Display concern only;
  * the text in the database is left exactly as the importer wrote it.
@@ -56,7 +65,7 @@ export default async function ReviewPage() {
   const [items, counts, missing, cancelled] = await Promise.all([
     getReviewItems(), getReviewCounts(), getMissingLengthSummary(), getRecentlyCancelled(),
   ]);
-  // Only show a pill for a kind of item that exists. Permanently-zero pills are noise.
+  // Only a kind of item that exists gets a section. Permanently-zero sections are noise.
   const order = ['conflict', 'too_long', 'unclassified'].filter((t) => (counts[t] ?? 0) > 0);
   // One row per problem, not per affected booking.
   const groups = groupReviewItems(items);
@@ -115,59 +124,35 @@ export default async function ReviewPage() {
         {items.length === 0 && missing.vessels === 0 ? (
           <p className="empty">Nothing needs attention.</p>
         ) : (
-          sections.map(({ type, groups: rows }) => (
-            <section key={type} className="qsection">
-              {/* Stated once, with its count, instead of on every row beneath it. */}
-              <h2 className={`qhead ${LABEL[type].tone}`}>
-                {LABEL[type].title}
-                <span className="qhcount">{counts[type] ?? rows.length}</span>
-              </h2>
-              <ul className="queue">
-                {rows.map((group) => {
-                  const head = group.rows[0];
-                  const when = describeOccurrences(group);
-                  return (
-                    <li key={group.key}>
-                      <div className="qmain">
-                        <span className="qtext">
-                          {head.rawText ?? LABEL[type].title}
-                          {group.rows.length > 1 && (
-                            <span className="qcount">{group.rows.length}&times;</span>
-                          )}
-                        </span>
-                        {head.detail && <span className="qdetail">{tighten(head.detail)}</span>}
-                        <span className="qmeta">
-                          {head.berthName && <>{head.berthName}</>}
-                          {when && <> &middot; {when}</>}
-                          {/*
-                            Where it came from in the workbook, but only for the cells
-                            nobody could classify — those are the ones you resolve by
-                            going and looking at the sheet. A conflict or a misfit is on
-                            the board, where the provenance tells you nothing you can act
-                            on, so printing it on every row was noise.
-                          */}
-                          {type === 'unclassified' && group.rows.length === 1 && head.importSheet && (
-                            <> &middot; sheet {head.importSheet}, row {head.importRow}, col {head.importCol}</>
-                          )}
-                        </span>
-                      </div>
-                      <div className="qact">
-                        {head.bookingStart ? (
-                          <a
-                            className="btn"
-                            href={`/?y=${head.bookingStart.slice(0, 4)}&m=${Number(head.bookingStart.slice(5, 7))}&sel=${head.bookingId ?? ''}`}
-                          >
-                            Show on board
-                          </a>
-                        ) : null}
-                        <ResolveButton ids={group.ids} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))
+          sections.map(({ type, groups: rows }) => {
+            const head = rows.slice(0, HEAD);
+            const tail = rows.slice(HEAD);
+            return (
+              <section key={type} className="qsection">
+                {/* Stated once, with its count, instead of on every row beneath it. */}
+                <h2 className={`qhead ${LABEL[type].tone}`}>
+                  {LABEL[type].title}
+                  <span className="qhcount">{counts[type] ?? rows.length}</span>
+                </h2>
+                <ul className="queue">
+                  {head.map((group) => <Row key={group.key} type={type} group={group} />)}
+                </ul>
+                {tail.length > 0 && (
+                  // Native <details>, like the board's rules: no JavaScript, and the
+                  // page stays a server component.
+                  <details className="qmore">
+                    <summary>
+                      <span className="when-closed">Show the remaining {tail.length}</span>
+                      <span className="when-open">Show fewer</span>
+                    </summary>
+                    <ul className="queue">
+                      {tail.map((group) => <Row key={group.key} type={type} group={group} />)}
+                    </ul>
+                  </details>
+                )}
+              </section>
+            );
+          })
         )}
 
         {items.length >= 200 && (
@@ -221,5 +206,58 @@ export default async function ReviewPage() {
         </span>
       </div>
     </main>
+  );
+}
+
+/**
+ * One problem, one row, one decision.
+ *
+ * Two lines for a cell nobody could read — what it said, and where it was — and three
+ * for a conflict or a misfit: what it said, the measurement, and the berth and dates.
+ * "Show on board" is navigation, not a decision, so it is a link and not a second
+ * bordered button; "Mark done" is the row's one button.
+ */
+function Row({ type, group }: { type: string; group: ReviewGroup<ReviewRow> }) {
+  const head = group.rows[0];
+  const when = describeOccurrences(group);
+  // Where it came from in the workbook, but only for the cells nobody could classify —
+  // those are the ones you resolve by going and looking at the sheet. A conflict or a
+  // misfit is on the board, where the provenance tells you nothing you can act on.
+  const provenance =
+    type === 'unclassified' && group.rows.length === 1 && head.importSheet
+      ? `sheet ${head.importSheet}, row ${head.importRow}, col ${head.importCol}`
+      : null;
+  const meta =
+    type === 'unclassified' ? null : [head.berthName, when].filter(Boolean).join(' · ');
+
+  return (
+    <li>
+      <div className="qmain">
+        <span className="qtext">
+          {head.rawText ?? LABEL[type].title}
+          {group.rows.length > 1 && (
+            <span className="qcount">{group.rows.length}&times;</span>
+          )}
+        </span>
+        {head.detail && (
+          <span className="qdetail">
+            {tighten(head.detail)}
+            {provenance && <> &middot; {provenance}</>}
+          </span>
+        )}
+        {meta && <span className="qmeta">{meta}</span>}
+      </div>
+      <div className="qact">
+        {head.bookingStart && (
+          <a
+            className="qlink"
+            href={`/?y=${head.bookingStart.slice(0, 4)}&m=${Number(head.bookingStart.slice(5, 7))}&sel=${head.bookingId ?? ''}`}
+          >
+            Show on board &rarr;
+          </a>
+        )}
+        <ResolveButton ids={group.ids} />
+      </div>
+    </li>
   );
 }

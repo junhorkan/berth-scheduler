@@ -99,7 +99,8 @@ commit at a time.
   are distinct pairs of bookings. See [DECISIONS 17 and 23](../DECISIONS.md).
 - **A long list shows its head.** Vessels renders 25 of 418 with a filter that searches
   the whole register. Rendering all of them made the page 21,713px tall and buried the
-  page's own argument.
+  page's own argument. Review shows five rows per section and folds the rest behind a
+  `<details>`; navigation on a row is a text link, and only the decision is a button.
 - **A count strip is repetition too.** The board once carried *7 berths · 0 in September ·
   418 vessels · 29 to review* beside the month; three of the four were already on screen
   as seven lanes, the empty-month line, and the Review badge. It is gone (DECISIONS 24).
