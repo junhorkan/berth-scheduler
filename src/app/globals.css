@@ -226,7 +226,6 @@ a { color: var(--vessel); }
   border-bottom: 1px solid var(--axis);
 }
 .tbl td { padding: 11px 10px 11px 0; border-bottom: 1px solid var(--grid); vertical-align: middle; }
-.tbl tr.needs td:first-child { box-shadow: inset 2px 0 0 var(--event); padding-left: 8px; }
 
 .flag {
   display: inline-block; margin-left: 8px; font-size: 10px;
@@ -524,23 +523,26 @@ a { color: var(--vessel); }
    Radios and labels rather than JavaScript, so Review stays a server component. */
 
 .histrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.histbtn, .histhide { position: relative; cursor: pointer; font-size: 13px; }
-.histbtn {
+.catbtn, .histhide { position: relative; cursor: pointer; font: inherit; font-size: 13px; }
+/* One category, as a control: History's labels and the Vessels register's toggle. */
+.catbtn {
   font-weight: 600; padding: 6px 12px; border-radius: 9px;
   border: 1px solid var(--axis); background: transparent; color: var(--ink-2);
 }
 /* The radio lies under its own label: it keeps the keyboard and the accessible name,
    and never draws a dot beside the button. */
-.histbtn input, .histhide input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
-.histbtn:hover { border-color: var(--ink-2); color: var(--ink); background: var(--surface); }
+.catbtn input, .histhide input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.catbtn:hover { border-color: var(--ink-2); color: var(--ink); background: var(--surface); }
 /* Keyboard only: a mouse click focuses the radio too, and a ring on every click is
    noise. */
-.histbtn:has(input:focus-visible),
+.catbtn:has(input:focus-visible),
+.catbtn:focus-visible,
 .histhide:has(input:focus-visible) { outline: 2px solid var(--vessel); outline-offset: 2px; }
 /* Open reads as pressed, never as the page's one filled button (invariant 10). The card
    is transparent, so its ground IS --plane: the open one has to be the one that lifts
    off it, or the selection dissolves and the three closed ones stand proud instead. */
-.histbtn:has(input:checked) {
+.catbtn:has(input:checked),
+.catbtn[aria-expanded='true'] {
   background: var(--surface); border-color: var(--ink-2); color: var(--ink); font-weight: 650;
 }
 /* A way back to the closed card, so it is a link and not a fourth category. It has
@@ -553,7 +555,7 @@ a { color: var(--vessel); }
   overflow: hidden; clip-path: inset(50%);
 }
 .histhide:hover { text-decoration: underline; }
-.histswitch:has(.histbtn input:checked) .histhide,
+.histswitch:has(.catbtn input:checked) .histhide,
 .histhide:has(input:focus-visible) {
   /* relative, not static: the radio inside is absolutely positioned over its own
      label, and a static label would hand it the whole page to cover. */
@@ -576,6 +578,19 @@ a { color: var(--vessel); }
   .histrow { display: none; }
   .histpanel { display: block; }
 }
+/* The fold Review opens with a <details> summary. The register is filtered in the
+   browser, so here it is a button — and it has to read as the same thing. */
+.qmorebtn {
+  font: inherit; font-size: 13px; color: var(--ink-2); background: none; border: 0;
+  padding: 6px 0; margin-top: 2px; cursor: pointer;
+}
+.qmorebtn::before { content: '\25b8\00a0'; }
+.qmorebtn:hover { color: var(--ink); text-decoration: underline; }
+
+/* The measured hulls sit under their own button, away from the work. */
+.vrecorded { margin-top: 20px; }
+.vrecorded .qsection { margin-top: 12px; }
+
 .cardtitle {
   margin: 0 0 8px; font-size: 11px; font-weight: 650;
   text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted);
@@ -592,7 +607,7 @@ a { color: var(--vessel); }
 
 /* ---- Vessels: a filter, and the head of a long list ---- */
 
-.vfilter { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.vfilter { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 .vfilter input {
   font: inherit; font-size: 13px; padding: 7px 11px; width: 240px;
   border: 1px solid var(--axis); border-radius: 8px;
@@ -601,9 +616,6 @@ a { color: var(--vessel); }
 .vfilter input:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
 .vcount { font-size: 13px; color: var(--ink-muted); font-family: var(--mono); }
 
-.tbl .vnum { text-align: right; font-family: var(--mono); }
-.tbl .vyear { text-align: right; font-family: var(--mono); font-size: 13px; color: var(--ink-muted); }
-.vmore { margin-top: 12px; }
 
 /* ---- Review: the category named once, above its rows ---- */
 

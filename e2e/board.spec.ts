@@ -388,22 +388,23 @@ test.describe('the other tabs', () => {
     // Rendering all 418 made the page 21,713px tall and contradicted its own argument,
     // which is that the first handful carry most of the value.
     await page.goto('/vessels');
-    const rows = page.locator('tbody tr');
-    const total = await page.locator('.vcount').innerText();
+    const rows = page.locator('.queue li');
+    const head = await rows.count();
+    expect(head).toBeLessThanOrEqual(5);
 
-    if (Number(total.split(' of ')[1]) > 25) {
-      await expect(rows).toHaveCount(25);
-      await page.getByRole('button', { name: /Show the remaining/ }).click();
-    }
-    const everything = await rows.count();
-
-    // Filtering is a search, so it looks past the cut rather than inside the first 25.
+    // Filtering is a search across the whole register, not inside what is on screen.
     await page.getByLabel('Filter vessels by name').fill('Drifter');
     await expect(rows).toHaveCount(1);
     await expect(page.getByText('M/V Test Drifter')).toBeVisible();
 
     await page.getByLabel('Filter vessels by name').fill('');
-    await expect(rows).toHaveCount(everything);
+    await expect(rows).toHaveCount(head);
+
+    // A hull that already has a length is not work, so it sits behind a button.
+    await expect(page.getByText('R/V Test Harbor')).toBeHidden();
+    await page.getByRole('button', { name: 'With a length recorded' }).click();
+    await expect(page.getByText('R/V Test Harbor')).toBeVisible();
+    expect(await rows.count()).toBeGreaterThan(head);
   });
 
   test('Review collapses missing lengths into one row instead of one per vessel', async ({ page }) => {

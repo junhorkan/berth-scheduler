@@ -116,7 +116,7 @@ test.describe('an empty schedule', () => {
     // tabbing out of the card above has to land on the first category.
     await page.locator('.qheadlink').focus();
     await page.keyboard.press('Tab');
-    await expect(history.locator('.histbtn input').first()).toBeFocused();
+    await expect(history.locator('.catbtn input').first()).toBeFocused();
 
     await history.getByRole('radio', { name: 'Unresolved conflict' }).check();
     await expect(history.getByText('Utility work on pier face')).toBeVisible();

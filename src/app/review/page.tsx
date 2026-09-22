@@ -164,7 +164,7 @@ export default async function ReviewPage() {
           <div className="histswitch">
             <div className="histrow" role="radiogroup" aria-label="History category">
               {historySections.map(({ type }) => (
-                <label key={type} className="histbtn">
+                <label key={type} className="catbtn">
                   <input type="radio" name="hcat" id={`h-${type}`} />
                   {LABEL[type].title}
                 </label>

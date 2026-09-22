@@ -678,6 +678,9 @@ worth showing — *why* that berth. One dropdown that explains itself does the s
 *Show the remaining 393*; Review groups its queue under one heading per kind of problem
 and drops the toolbar pills that said the same thing.
 
+> **The Vessels half is revised at the foot of this entry**: the table is a queue of five
+> rows now, with the measured hulls behind a button. The Review half stands as written.
+
 **Why, measured.** Both pages had the fault named in
 [17](#17-repetition-is-not-information), one level up from where it was fixed there:
 
@@ -694,9 +697,33 @@ concentrated — ten lengths cover half the schedule — and then rendered all 4
 booking order, burying that claim under 24 screens of scrolling. Showing the head and
 keeping the tail one click away is the page agreeing with itself.
 
-The filter searches the **whole** register, not the visible 25: cutting the list must not
-cut what you can find. A vessel you have the measurement for is exactly the one you came
-to type in, and it is usually in the tail.
+The filter searches the **whole** register, not the visible head: cutting the list must
+not cut what you can find. A vessel you have the measurement for is exactly the one you
+came to type in, and it is usually in the tail.
+
+### Revised: the register is a queue, and looks like one
+
+**Decision.** The four-column table is gone. A vessel is the row Review uses — its name,
+a quiet line saying what a length there would unlock (*267 bookings · last 2019*), and
+the length box on the right where a review row puts its one button. The rows are split
+under two headings: **No length on record**, five at a time, and **With a length
+recorded** behind a button, because a hull that has been measured is not work. The line
+under the page's name counts exactly the rows on screen, from the same constant.
+
+**Why.** 25 near-identical rows, each carrying an empty box, is a wall — the fault of
+[17](#17-repetition-is-not-information) again, one level up. The page is a queue: work
+first, measured hulls out of the way, one category named once above its rows. It is also
+the shape the owner asked for, having seen it work on Review.
+
+| | Table of 25 | Queue of five |
+|---|---|---|
+| Page height | 1,671px | **900px**, one screen |
+| Empty length boxes on screen | 25 | 5 |
+| Column headers, and their alignment on a phone | 4 | none |
+
+**What it costs.** A table lines its numbers up, and this does not: *267 bookings · last
+2019* is a sentence, not a column. With five rows it reads at a glance, and it survives a
+375px screen, which the four columns did by squeezing a vessel's name to one word a line.
 
 **What was cut from Vessels, and why each.**
 

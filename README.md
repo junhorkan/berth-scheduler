@@ -70,8 +70,10 @@ is the central design decision. See `DECISIONS.md`.
   `vessel length ÷ berth length`**, so a vessel that does not fit visibly breaks out of
   its lane. Create, cancel and reassign bookings, for vessels, non-vessel events and
   berth closures alike.
-- **Vessels** — the register, ordered by *bookings blocked* rather than alphabetically,
-  so the highest-leverage gaps come first. It fills itself: booking a vessel adds it.
+- **Vessels** — the register as a queue, ordered by *bookings blocked* rather than
+  alphabetically, so the highest-leverage gaps come first: five at a time, the measured
+  hulls behind a button, and a filter that searches all 418. It fills itself: booking a
+  vessel adds it.
 - **Review** — the coordinator's queue. What someone can still act on sits on top and
   is what the nav badge counts; what the import found in bookings that have already
   ended sits below as history, kept rather than deleted. Loading and clearing the
