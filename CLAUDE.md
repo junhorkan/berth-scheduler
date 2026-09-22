@@ -57,7 +57,9 @@ obeyable.
    the earliest booking; the form refuses a start before today, in the save path as well,
    since `min` only guards the picker. A fixed bound has hidden real bookings three times.
 8. **Empty is supported, and never silent.** The full grid still draws, and one line says
-   where the bookings are. Every booking in the sample ended in 2019, and the board opens
+   where the bookings are. **Review's rows stay drawn at zero** — a count and a line
+   saying what would fill it — rather than deleting themselves and leaving a bare page.
+   Every booking in the sample ended in 2019, and the board opens
    on the facility's own month, so the front door is an empty month — and **no booking is
    ever invented to fill it**, which was tried and removed. → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent) ·
    [DECISIONS 29](DECISIONS.md#29-nothing-on-the-board-is-invented)

@@ -973,36 +973,67 @@ name every category whether or not it is open. Paper and a browser without `:has
 get the old, fully expanded card: `@media print` and `@supports not selector(:has(*))`
 draw every panel and hide the buttons.
 
-### The foot of the page says one thing, not four
+### Every row says what it is, and an empty one says what would be in it
 
-**Decision.** Under **Load the sample schedule** and **Clear the schedule** there is one
-line — *Both can be put back afterwards.* — and, beside it, *Check a workbook →*.
+Four complaints from the owner in one sitting, all of them about the same page, and the
+last one the sharpest: **"Do we need it in the first place?"**
 
-**What went.** A paragraph that said the sample was *"the 23-year legacy workbook, as
-imported"*, that loading and clearing each replace the whole schedule, that either can be
-put back, and that the seven berths always stay. Four facts, in a flex child clamped to
-`min-width: 200px`, so one sentence set as five short lines of ragged column beside the
-buttons — the controls and their explanation competing for the same width.
+> *"The review page is a little bit bare right now. And "Nothing on the schedule needs a
+> decision." is a bad header — the header should explain what the review page is for.
+> What is the Check a workbook button used for? Saying "Both can be put back afterward"
+> is also pretty ambiguous and not clear."*
 
-**Why those three.** Two of them are already in the confirmation dialog, which states
-them at the moment they matter rather than a click early: *"It replaces what is on the
-schedule now"* and *"The berths stay."* Repeating them under the buttons is
-[invariant 3](CLAUDE.md#invariants) — repetition is not information. The provenance is
-[invariant 9](CLAUDE.md#invariants): *the 23-year legacy workbook* explains where the
-project got its data, which is a fact about the project, not about the tool. The owner
-put it plainly — the sample **is** a schedule somebody kept, so calling it a legacy
-workbook adds nothing a reader can act on.
+**Why it was bare, and it was not a layout accident.** Every problem the import found
+dates from 2001–2017, so `isCurrent` is false for all 46 of them: the work card was empty
+**by construction**, and it was written to delete itself when empty. What remained was a
+masthead, one stray row, a card of three buttons, and a footer. The page's best evidence —
+the one genuine double-booking in 23 years, kept rather than deleted — was two clicks
+inside a card labelled *History*.
 
-**Why that one stays.** Reversibility is the only fact that has to be known *before* the
-click, because it is what makes a red button safe to approach. Somebody who never presses
-Clear never reads the dialog that would have reassured them.
-→ [28](#28-clear-is-undoable-and-the-board-is-not-a-wall)
+**Decision.** Three cards, and every row in them named, counted and drawn whether or not
+it holds anything.
 
-**Why the link stays.** `/check` is a destination, not a tab ([invariant
-9](CLAUDE.md#invariants)), and this is the only link to it — dropping it strands the
-page. It moves out of the sentence and onto its own item, in the `Add lengths →` shape
-the card above already uses, so the two rows are *the actions* and *the one line under
-them*.
+| | |
+|---|---|
+| **Needs a decision** `0` | *Nothing right now.* — and what would arrive here |
+| **No recorded length** `398` | *Add lengths →* |
+| **Cancelled bookings** `0` | *Cancelling a booking removes it from the schedule and lists it here, where it can be put back.* |
+| **History** | what it holds, and that nothing was deleted to get it there |
+| **The schedule** | Load · Clear · Put back, and the way in to `/check` |
+
+**Why a row that says zero.** A count of `0` beside *Cancelled bookings*, with one line
+saying what would put something there, is the page explaining what it is for. The same
+row deleted is a page that looks broken — and, on this sample, a page that is *always*
+broken. This is [invariant 8](CLAUDE.md#invariants) — empty is supported, and never
+silent — applied to a queue rather than to the board.
+
+**The header states the purpose, not the state.** *"Problems with the schedule, and what
+to do about them."* The old line was true and still argued, on the front door, that the
+page had no reason to exist. Every other masthead in the app already states a purpose;
+Review was the exception. → [DESIGN 9](docs/DESIGN.md#9-explain-the-tool-never-the-project)
+
+**Do we need the page?** Yes, and the question is answerable in one list: it is the only
+place that resolves the imported double-booking, the only way a cancelled booking comes
+back, the only answer to *what happened to the cells you could not read*, and the only
+home for Load and Clear. Without it, cancelling becomes irreversible — which is
+[invariant 12](CLAUDE.md#invariants) — and the import's honesty has nowhere to be seen.
+The page was never the problem; the page not saying so was.
+
+**"Check a workbook" was a label nobody could act on.** The owner had to ask what it did,
+which is the label failing, not the reader. `/check` is a destination with exactly one way
+in, so the link now carries the sentence: *open your own copy of a schedule spreadsheet
+and see what the importer makes of it — how many bookings, which cells it could not read,
+and whether it matches what is loaded here. Nothing is saved.*
+
+**"Both can be put back afterwards" was ambiguous twice over** — both *what*, and put back
+to *what*. It names the verbs and their blast radius now: *loading or clearing replaces
+every booking and vessel. The seven berths stay, and either one can be undone here
+afterwards.* That is three facts rather than one, which a
+[previous pass](#17-repetition-is-not-information) had cut on the grounds that the
+confirmation dialog already states them. The dialog still does — but a dialog is read
+*after* the decision to click, and a red button nobody dares press is not a safe button,
+it is a dead one. The card has the width for a sentence; the flex row beside the buttons
+never did.
 
 ---
 

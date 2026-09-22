@@ -467,9 +467,10 @@ test.describe('the queue agrees with the board', () => {
   const day = (d: number) =>
     `${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-  // Open items only: the Recently cancelled card uses the same list styling.
+  // Open items only. Cancelled bookings are a section of the same card now, drawn
+  // with the same list styling, so the row that can be put back is excluded by name.
   const openRow = (page: import('@playwright/test').Page, label: string) =>
-    page.locator('.qsection .queue li', { hasText: label });
+    page.locator('.qsection:not(.undo) .queue li', { hasText: label });
 
   // The Tern booked on the 5th–8th, by its dates rather than by position: once it has
   // moved berths it is no longer the first Tern bar in the grid.

@@ -25,11 +25,19 @@ test.describe('an empty schedule', () => {
 
   test('has an empty review queue and no badge', async ({ page }) => {
     await page.goto('/review');
-    // Said once, under the page's name, and no empty card repeating it.
-    await expect(page.getByText('Nothing on the schedule needs a decision.')).toHaveCount(1);
     await expect(page.locator('.queue li')).toHaveCount(0);
     // The badge should be absent entirely, not showing a zero.
     await expect(page.locator('.tabs .count')).toHaveCount(0);
+
+    // Empty is a state, not a missing page: the line under the name says what Review
+    // is FOR, and each row still stands there with its count and what would fill it.
+    // Both used to vanish, which left a masthead and a footer and nothing between.
+    await expect(page.locator('.hero .tagline'))
+      .toHaveText('Problems with the schedule, and what to do about them.');
+    for (const name of ['Needs a decision', 'No recorded length', 'Cancelled bookings']) {
+      await expect(page.getByRole('heading', { name: new RegExp(name, 'i') })).toHaveCount(1);
+    }
+    await expect(page.locator('.qhcount').first()).toHaveText('0');
   });
 
   test('registers a vessel the first time it is booked', async ({ page }) => {
@@ -114,7 +122,7 @@ test.describe('an empty schedule', () => {
     // And the keyboard reaches the switch. A checked radio is a group's only tab stop,
     // so checking a hidden one to mean "nothing open" skipped every button in it:
     // tabbing out of the card above has to land on the first category.
-    await page.locator('.qheadlink').focus();
+    await page.locator('.qheadlink').first().focus();
     await page.keyboard.press('Tab');
     await expect(history.locator('.catbtn input').first()).toBeFocused();
 

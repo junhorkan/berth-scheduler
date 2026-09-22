@@ -520,7 +520,7 @@ a { color: var(--vessel); }
 
 /* ---- Recently cancelled: undo instead of a login wall ---- */
 
-.board.undo, .board.history { margin-top: 14px; }
+.board.history { margin-top: 14px; }
 /* The archive sits quieter than the work above it. */
 .board.history { background: transparent; box-shadow: none; border-style: dashed; }
 
@@ -650,17 +650,19 @@ a { color: var(--vessel); }
   border-radius: 7px; padding: 1px 7px;
 }
 
-/* Two rows, not one. The note was a fifth flex child clamped to 200px, so one sentence
-   rendered as five short lines of ragged column beside the buttons — the controls and
-   their explanation competing for the same width. Under them it is one line. */
-.sampledata { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--axis); }
+/* What a section says when it has nothing in it. A count of 0 states the fact; this
+   line says what would be there, which is how an empty row still explains the page. */
+.qempty { margin: 2px 0 0; font-size: 13px; color: var(--ink-muted); max-width: 72ch; }
+/* The card's own line sits under its title, above the buttons it describes. */
+.board.history > .qempty { margin: -4px 0 12px; }
+
+/* The schedule's own card: the two controls that replace everything, and the way in to
+   /check. Its heading is what makes it a section of the page rather than a footer. */
+.board.schedule { margin-top: 14px; }
+.board.schedule .qsection { margin-top: 20px; }
 .sampleacts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sampleacts .sub-hint { margin-top: 0; }
-/* The note and the link wrap as two items rather than one run of inline text, so at
-   phone width the link starts a line flush left instead of indented by its own margin. */
-.sampledata > .sub-hint {
-  margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline;
-}
+.board.schedule > .sub-hint { margin-top: 10px; max-width: 72ch; }
 
 /* A destructive control that fails silently is worse than one that fails loudly. */
 .actionerr { font-size: 13px; color: var(--critical); max-width: 340px; }

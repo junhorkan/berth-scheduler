@@ -59,8 +59,9 @@ Building the empty path is what exposed both bugs in invariant 2.
 
 Three tabs: **Board, Vessels, Review**. No About page, no architecture in the product.
 `/search` and `/check` are destinations, **not tabs** — do not add them to the nav, and
-do not delete them for breaking the rule. `/check` is reached from the sample controls at
-the foot of Review, beside the schedule it compares against.
+do not delete them for breaking the rule. `/check` is reached from **The schedule** card
+at the foot of Review, beside the schedule it compares against, and the link **says what
+the page does**: a destination with one way in cannot afford a name you have to guess at.
 
 Orientation is allowed in exactly **one** place: the empty board. Every other explanation
 in the app hangs off something on screen — the legend off a bar, the verdict strip off a
@@ -75,6 +76,12 @@ save, the queue off a problem — and on an empty month none of them render, inc
   adds the primary action. Vessels and Review put their lede under their name; the site's
   name becomes a small link back in the top row, with the search box and the tabs. A
   one-line tagline is not a page, and neither is a title. See DECISIONS 24.
+- **That line says what the page is FOR, not how it happens to be doing.** Review's read
+  *"Nothing on the schedule needs a decision."* — true, and on the front door it argues
+  the page should not exist. State belongs in the card, against the row it is the state
+  of, where a count of `0` and a line saying what would fill it are informative rather
+  than dismissive. Vessels is the one page whose line carries a proportion, because
+  *where to start* is the only thing 398 missing lengths leaves you needing.
 
 ## 10. Light only, and one obvious action
 

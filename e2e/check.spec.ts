@@ -96,11 +96,13 @@ test.describe('checking a workbook', () => {
  * edit there once removed the paragraph the link lived inside; this is the spec that
  * notices if the next one removes the link with it.
  */
-test('Review is the way in to /check, under the sample controls', async ({ page }) => {
+test('Review is the way in to /check, and says what it is for', async ({ page }) => {
   await page.goto('/review');
-  const foot = page.locator('.sampledata');
-  await expect(foot).toContainText('Both can be put back afterwards.');
-  await foot.getByRole('link', { name: /Check a workbook/ }).click();
+  const card = page.locator('.board.schedule');
+  // The link is named AND explained: "Check a workbook" alone had to be asked about.
+  await expect(card).toContainText('see what the importer makes of it');
+  await expect(card).toContainText('Nothing is saved');
+  await card.getByRole('link', { name: /Open/ }).click();
   await expect(page).toHaveURL(/\/check$/);
   await expect(page.locator('h1')).toContainText('Check a workbook');
 });

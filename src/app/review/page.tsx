@@ -80,7 +80,6 @@ export default async function ReviewPage() {
   */
   const current = items.filter((i) => i.isCurrent);
   const historical = items.filter((i) => !i.isCurrent);
-  const open = current.length;
 
   // One row per problem, not per affected booking; and one HEADING per kind of problem,
   // rather than the type printed on every row beneath it.
@@ -96,50 +95,111 @@ export default async function ReviewPage() {
   return (
     <main className="shell">
       {/*
-        The count is the page's one line, under its name. The pills that used to sit
-        here each named a category and gave its count, which every section heading
-        below now does a few pixels lower. Clearing goes to the foot of the page — a
-        destructive action does not belong in a header, one slip away from the button
-        that loads data.
+        The page's one line says what the page is FOR, the way every other masthead
+        does. It used to report state — "Nothing on the schedule needs a decision." —
+        which reads, on the front door, as "this page has no reason to exist". The
+        state belongs in the card below, against the row it is the state of.
       */}
       <Nav
         current="review"
         title="Review"
-        tagline={open === 0
-          ? 'Nothing on the schedule needs a decision.'
-          : <>
-              <b>{open} item{open === 1 ? '' : 's'} need{open === 1 ? 's' : ''} a decision.</b>{' '}
-              Anything the import could not place is here rather than in a log file.
-            </>}
+        tagline="Problems with the schedule, and what to do about them."
       />
 
       {/*
-        The card holds work. When there is none, it is not drawn: the line under the
-        page's name already says so, and an empty card repeating it is noise.
+        One card, one named row per job this page does, each with its count and its
+        verb — and each drawn whether or not it has anything in it. A row reading
+        "Cancelled bookings · 0 · anything you cancel comes back here" is the page
+        explaining itself; the same row deleted is a page that looks broken.
+
+        The card used to disappear entirely when there was no work, which on the
+        sample is always: every problem the import found dates from 2001–2017, so the
+        queue is empty by construction and the page rendered as a masthead and a
+        footer. DECISIONS 26.
       */}
-      {(missing.vessels > 0 || currentSections.length > 0) && (
       <div className="board">
+        {/*
+          When there is work, its own categories head it — "Unresolved conflict · 1"
+          says more than "Needs a decision · 1". When there is none, one row stands in
+          for all three and says what would appear there.
+        */}
+        {currentSections.length > 0 ? (
+          currentSections.map(({ type, groups }) => (
+            <QueueSection key={type} type={type} groups={groups} />
+          ))
+        ) : (
+          <section className="qsection">
+            <h2 className="qhead muted">
+              Needs a decision
+              <span className="qhcount">0</span>
+            </h2>
+            <p className="qempty">
+              Nothing right now. Overlapping bookings, vessels too long for their berth,
+              and cells the importer could not read all arrive here.
+            </p>
+          </section>
+        )}
+
         {/*
           Not a review item: a length is missing on most vessels, and that is expected
           (invariant 2). It is here as a pointer to where the work is, with its count,
           and no sentence explaining the arithmetic — the Vessels page does that.
         */}
-        {missing.vessels > 0 && (
-          <section className="qsection">
-            <h2 className="qhead muted">
-              No recorded length
-              <span className="qhcount">{missing.vessels.toLocaleString()}</span>
+        <section className="qsection">
+          <h2 className="qhead muted">
+            No recorded length
+            <span className="qhcount">{missing.vessels.toLocaleString()}</span>
+            {missing.vessels > 0 && (
               <a className="qlink qheadlink" href="/vessels">Add lengths &rarr;</a>
-            </h2>
-          </section>
-        )}
+            )}
+          </h2>
+          {missing.vessels === 0 && (
+            // True of a schedule where every length is recorded AND of an empty one.
+            // "Every vessel has a length" is a claim about vessels that may not exist.
+            <p className="qempty">No vessel on the schedule is missing one.</p>
+          )}
+        </section>
 
-        {currentSections.map(({ type, groups }) => (
-          <QueueSection key={type} type={type} groups={groups} />
-        ))}
+        {/*
+          Anyone can cancel anything here, because there are no accounts. Rather than
+          restricting the action, it is reversible: a cancel is a soft delete, so undoing
+          one is a status change. Restoring re-runs the EXCLUDE constraint, so a slot
+          taken in the meantime refuses the restore — which is the correct answer.
 
+          It was its own card below the queue; as a row in the queue it says the same
+          thing and, at zero, says the thing worth knowing before you cancel anything.
+          It still must not reach the nav badge: a cancellation is not an open problem.
+        */}
+        <section className="qsection undo">
+          <h2 className="qhead muted">
+            Cancelled bookings
+            <span className="qhcount">{cancelled.length}</span>
+          </h2>
+          {cancelled.length === 0 ? (
+            <p className="qempty">
+              None. Cancelling a booking on the board removes it from the schedule and
+              lists it here, where it can be put back.
+            </p>
+          ) : (
+            <ul className="queue">
+              {cancelled.map((c) => (
+                <li key={c.id}>
+                  <div className="qmain">
+                    <span className="qtext">{c.label}</span>
+                    <span className="qdetail">
+                      {c.berthName} &middot; {c.startDate} to {c.endDate}
+                    </span>
+                    <span className="qmeta">Cancelled {relativeTime(c.cancelledAt)}</span>
+                  </div>
+                  <div className="qact">
+                    <RestoreButton id={c.id} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
-      )}
 
       {/*
         Everything the import turned up that nobody can act on any more. Nothing is
@@ -156,6 +216,16 @@ export default async function ReviewPage() {
       {historical.length > 0 && (
         <div className="board history">
           <h2 className="cardtitle">History</h2>
+          {/*
+            Every other card on this page says what it holds; this one said only its
+            name, which left "History of what?" to the buttons underneath. One line,
+            and it also says the thing that keeps the card honest: nothing was deleted
+            to put it here.
+          */}
+          <p className="qempty">
+            Problems from bookings that have already ended. Nothing can be done about
+            them now, and nothing was deleted to get them here.
+          </p>
           {/*
             Radios and labels, not JavaScript: pressing a button shows that list and
             closes the others, and the page stays a server component like the rest of
@@ -198,49 +268,16 @@ export default async function ReviewPage() {
       )}
 
       {/*
-        Anyone can cancel anything here, because there are no accounts. Rather than
-        restricting the action, it is reversible: a cancel is a soft delete, so undoing
-        one is a status change. Restoring re-runs the EXCLUDE constraint, so a slot
-        taken in the meantime refuses the restore — which is the correct answer.
+        The schedule itself, in a card of its own that says so. These replace everything
+        on the board, which is why they are at the foot and not in a header one slip
+        from the button that loads data.
 
-        Deliberately its own card, below the queue, and never a pill in the toolbar:
-        a cancellation is not an open problem and must not inflate the nav badge.
+        The line under them was "Both can be put back afterwards", which is ambiguous
+        twice over — both *what*, and put back to *what*. Naming the two verbs and what
+        they replace costs six words and removes the guessing. DECISIONS 26.
       */}
-      {cancelled.length > 0 && (
-        <div className="board undo">
-          <h2 className="cardtitle">Recently cancelled</h2>
-          <ul className="queue">
-            {cancelled.map((c) => (
-              <li key={c.id}>
-                <div className="qmain">
-                  <span className="qtext">{c.label}</span>
-                  <span className="qdetail">
-                    {c.berthName} &middot; {c.startDate} to {c.endDate}
-                  </span>
-                  <span className="qmeta">Cancelled {relativeTime(c.cancelledAt)}</span>
-                </div>
-                <div className="qact">
-                  <RestoreButton id={c.id} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/*
-        The sample controls, at the foot. Loading is additive and safe; clearing destroys
-        everything and is one slip from it, which is why neither belongs in a header
-        beside the counts.
-
-        The paragraph that used to sit beside them said what the sample was, that both
-        actions replace the schedule, that both are reversible, and that the berths stay
-        — four facts, three of which the confirmation dialog already states at the moment
-        they matter, wrapped into a 200px column beside the buttons. What is left is the
-        one fact that has to be known *before* the click, since it is what makes the red
-        button safe to press. DECISIONS 26.
-      */}
-      <div className="sampledata">
+      <div className="board schedule">
+        <h2 className="cardtitle">The schedule</h2>
         <div className="sampleacts">
           <LoadSampleButton />
           <ClearScheduleButton />
@@ -254,9 +291,26 @@ export default async function ReviewPage() {
           )}
         </div>
         <p className="sub-hint">
-          Both can be put back afterwards.{' '}
-          <a className="qlink" href="/check">Check a workbook &rarr;</a>
+          Loading or clearing replaces every booking and vessel. The seven berths stay,
+          and either one can be undone here afterwards.
         </p>
+
+        {/*
+          A destination, not a tab (invariant 9), and this is the only way in — so the
+          link states what the page does rather than leaving "Check a workbook" to be
+          guessed at. The owner had to ask what it was for, which is the label failing.
+        */}
+        <section className="qsection">
+          <h2 className="qhead muted">
+            Check a workbook
+            <a className="qlink qheadlink" href="/check">Open &rarr;</a>
+          </h2>
+          <p className="qempty">
+            Open your own copy of a schedule spreadsheet and see what the importer makes
+            of it &mdash; how many bookings, which cells it could not read, and whether it
+            matches what is loaded here. Nothing is saved.
+          </p>
+        </section>
       </div>
     </main>
   );
