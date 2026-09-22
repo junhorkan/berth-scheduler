@@ -90,3 +90,17 @@ test.describe('checking a workbook', () => {
     await expect(result).toContainText('merged cell');
   });
 });
+
+/**
+ * /check is a destination, not a tab, and the foot of Review is the only way in. A copy
+ * edit there once removed the paragraph the link lived inside; this is the spec that
+ * notices if the next one removes the link with it.
+ */
+test('Review is the way in to /check, under the sample controls', async ({ page }) => {
+  await page.goto('/review');
+  const foot = page.locator('.sampledata');
+  await expect(foot).toContainText('Both can be put back afterwards.');
+  await foot.getByRole('link', { name: /Check a workbook/ }).click();
+  await expect(page).toHaveURL(/\/check$/);
+  await expect(page.locator('h1')).toContainText('Check a workbook');
+});

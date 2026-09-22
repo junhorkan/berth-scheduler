@@ -650,11 +650,17 @@ a { color: var(--vessel); }
   border-radius: 7px; padding: 1px 7px;
 }
 
-.sampledata {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--axis);
+/* Two rows, not one. The note was a fifth flex child clamped to 200px, so one sentence
+   rendered as five short lines of ragged column beside the buttons — the controls and
+   their explanation competing for the same width. Under them it is one line. */
+.sampledata { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--axis); }
+.sampleacts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sampleacts .sub-hint { margin-top: 0; }
+/* The note and the link wrap as two items rather than one run of inline text, so at
+   phone width the link starts a line flush left instead of indented by its own margin. */
+.sampledata > .sub-hint {
+  margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline;
 }
-.sampledata .sub-hint { margin-top: 0; flex: 1; min-width: 200px; }
 
 /* A destructive control that fails silently is worse than one that fails loudly. */
 .actionerr { font-size: 13px; color: var(--critical); max-width: 340px; }

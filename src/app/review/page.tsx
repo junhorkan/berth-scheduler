@@ -232,25 +232,31 @@ export default async function ReviewPage() {
         The sample controls, at the foot. Loading is additive and safe; clearing destroys
         everything and is one slip from it, which is why neither belongs in a header
         beside the counts.
+
+        The paragraph that used to sit beside them said what the sample was, that both
+        actions replace the schedule, that both are reversible, and that the berths stay
+        — four facts, three of which the confirmation dialog already states at the moment
+        they matter, wrapped into a 200px column beside the buttons. What is left is the
+        one fact that has to be known *before* the click, since it is what makes the red
+        button safe to press. DECISIONS 26.
       */}
       <div className="sampledata">
-        <LoadSampleButton />
-        <ClearScheduleButton />
-        {undo && (
-          <RestorePreviousButton
-            bookings={undo.bookings}
-            vessels={undo.vessels}
-            kind={undo.kind}
-            when={relativeTime(undo.takenAt)}
-          />
-        )}
-        <span className="sub-hint">
-          The sample is the 23-year legacy workbook, as imported. Loading and clearing
-          each replace the whole schedule, and either can be put back afterwards. The
-          seven berths always stay: they are the facility, not schedule data.{' '}
-          <a href="/check">Check a workbook</a> to see what the importer makes of your own
-          copy.
-        </span>
+        <div className="sampleacts">
+          <LoadSampleButton />
+          <ClearScheduleButton />
+          {undo && (
+            <RestorePreviousButton
+              bookings={undo.bookings}
+              vessels={undo.vessels}
+              kind={undo.kind}
+              when={relativeTime(undo.takenAt)}
+            />
+          )}
+        </div>
+        <p className="sub-hint">
+          Both can be put back afterwards.{' '}
+          <a className="qlink" href="/check">Check a workbook &rarr;</a>
+        </p>
       </div>
     </main>
   );

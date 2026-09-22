@@ -973,6 +973,37 @@ name every category whether or not it is open. Paper and a browser without `:has
 get the old, fully expanded card: `@media print` and `@supports not selector(:has(*))`
 draw every panel and hide the buttons.
 
+### The foot of the page says one thing, not four
+
+**Decision.** Under **Load the sample schedule** and **Clear the schedule** there is one
+line — *Both can be put back afterwards.* — and, beside it, *Check a workbook →*.
+
+**What went.** A paragraph that said the sample was *"the 23-year legacy workbook, as
+imported"*, that loading and clearing each replace the whole schedule, that either can be
+put back, and that the seven berths always stay. Four facts, in a flex child clamped to
+`min-width: 200px`, so one sentence set as five short lines of ragged column beside the
+buttons — the controls and their explanation competing for the same width.
+
+**Why those three.** Two of them are already in the confirmation dialog, which states
+them at the moment they matter rather than a click early: *"It replaces what is on the
+schedule now"* and *"The berths stay."* Repeating them under the buttons is
+[invariant 3](CLAUDE.md#invariants) — repetition is not information. The provenance is
+[invariant 9](CLAUDE.md#invariants): *the 23-year legacy workbook* explains where the
+project got its data, which is a fact about the project, not about the tool. The owner
+put it plainly — the sample **is** a schedule somebody kept, so calling it a legacy
+workbook adds nothing a reader can act on.
+
+**Why that one stays.** Reversibility is the only fact that has to be known *before* the
+click, because it is what makes a red button safe to approach. Somebody who never presses
+Clear never reads the dialog that would have reassured them.
+→ [28](#28-clear-is-undoable-and-the-board-is-not-a-wall)
+
+**Why the link stays.** `/check` is a destination, not a tab ([invariant
+9](CLAUDE.md#invariants)), and this is the only link to it — dropping it strands the
+page. It moves out of the sentence and onto its own item, in the `Add lengths →` shape
+the card above already uses, so the two rows are *the actions* and *the one line under
+them*.
+
 ---
 
 ## 27. The vessel register loads when the panel opens

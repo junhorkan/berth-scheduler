@@ -42,7 +42,7 @@ export function LoadSampleButton({ label = '↻ Load the sample schedule' }: { l
         className="btn"
         disabled={pending}
         onClick={() => {
-          if (!confirm('Load the 23-year sample schedule? It replaces what is on the schedule now, and you can put that back afterwards.')) return;
+          if (!confirm('Load the sample schedule? It replaces what is on the schedule now, and you can put that back afterwards.')) return;
           go();
         }}
       >
