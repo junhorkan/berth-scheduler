@@ -139,7 +139,7 @@ npm run dev
 
 ```bash
 npm test          # 260 unit tests with no database; 299 once the workbook is in data/
-npm run e2e       # 55 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
+npm run e2e       # 56 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean
 npm run import    # replace the schedule with the workbook (needs data/*.xlsx, gitignored)
