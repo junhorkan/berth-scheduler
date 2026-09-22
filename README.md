@@ -22,10 +22,11 @@ Everything on the board is from the workbook you sent. Nothing is invented.
    day, so the verdict is red, Save is off, and it names the booking in the way. The
    database refuses the write, and there is no override. **Find me a berth** proposes a
    free one and says why. Cancel your booking when you are done; Review can restore it.
-3. **Open Review → From the imported history.** The one double-booking in all 23 years —
-   South Float East, 11 July 2017 — is kept, not deleted. The cells the importer could
-   not read carry their sheet, row and column. **Show on board** opens a booking where it
-   sits on the board.
+3. **Open Review → History → Unresolved conflict.** The archive starts closed, one button
+   per kind of problem. The one double-booking in all 23 years — South Float East, 11 July
+   2017 — is kept, not deleted, and **Could not be read** holds the cells the importer
+   would not guess at, each with its sheet, row and column. **Show on board** opens a
+   booking where it sits on the board.
 4. **Open [Check a workbook](https://berth-scheduler.vercel.app/check) and choose your copy
    of the workbook.** Your browser reads it with the importer's own code, uploads nothing,
    and says whether it matches the sample imported here, booking for booking. Plant a

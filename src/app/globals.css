@@ -415,6 +415,10 @@ a { color: var(--vessel); }
   .boardhead .month { min-width: 0; flex: 1; font-size: 17px; }
   /* The pickers take a row of their own, or they squeeze the month into the arrows. */
   .boardhead .jump { flex-basis: 100%; }
+  /* A queue row stacks: side by side, the two controls left "Utility work on pier face"
+     breaking one word to a line. The decision stays on the right of its own row. */
+  .queue li { flex-direction: column; gap: 8px; }
+  .qact { align-self: flex-end; padding-top: 0; }
 }
 
 .navbtn.today {
@@ -515,7 +519,37 @@ a { color: var(--vessel); }
 .board.undo, .board.history { margin-top: 14px; }
 /* The archive sits quieter than the work above it. */
 .board.history { background: transparent; box-shadow: none; border-style: dashed; }
-.board.history > .note { margin: 0 0 14px; max-width: 74ch; }
+
+/* ---- History: the archive opens one category at a time, and starts closed ----
+   Radios and labels rather than JavaScript, so Review stays a server component. */
+
+.histrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.histbtn, .histhide { position: relative; cursor: pointer; font-size: 13px; }
+.histbtn {
+  font-weight: 600; padding: 6px 12px; border-radius: 9px;
+  border: 1px solid var(--axis); background: var(--surface); color: var(--ink-2);
+}
+/* The radio lies under its own label: it keeps the keyboard and the accessible name,
+   and never draws a dot beside the button. */
+.histbtn input, .histhide input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.histbtn:hover { border-color: var(--ink-2); color: var(--ink); }
+/* Keyboard only: a mouse click focuses the radio too, and a ring on every click is
+   noise. */
+.histbtn:has(input:focus-visible),
+.histhide:has(input:focus-visible) { outline: 2px solid var(--vessel); outline-offset: 2px; }
+/* Open reads as pressed, never as the page's one filled button (invariant 10). */
+.histbtn:has(input:checked) { border-color: var(--ink); color: var(--ink); background: var(--plane); }
+/* A way back to the closed card, so it is a link and not a fourth category. */
+.histhide { color: var(--vessel); padding: 6px 2px; border-radius: 7px; }
+.histhide:hover { text-decoration: underline; }
+.histswitch:has(#h-none:checked) .histhide,
+.histswitch:not(:has(.histrow input:checked)) .histhide { display: none; }
+
+.histpanel { display: none; margin-top: 16px; }
+/* One rule per category: the closed set of types in the review queue's LABEL. */
+.histswitch:has(#h-conflict:checked) .histpanel[data-cat='conflict'],
+.histswitch:has(#h-too_long:checked) .histpanel[data-cat='too_long'],
+.histswitch:has(#h-unclassified:checked) .histpanel[data-cat='unclassified'] { display: block; }
 .cardtitle {
   margin: 0 0 8px; font-size: 11px; font-weight: 650;
   text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted);

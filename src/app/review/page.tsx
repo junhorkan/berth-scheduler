@@ -134,83 +134,52 @@ export default async function ReviewPage() {
           </section>
         )}
 
-        {currentSections.map(({ type, groups: rows }) => {
-            const head = rows.slice(0, HEAD);
-            const tail = rows.slice(HEAD);
-            return (
-              <section key={type} className="qsection">
-                {/* Stated once, with its count, instead of on every row beneath it. */}
-                <h2 className={`qhead ${LABEL[type].tone}`}>
-                  {LABEL[type].title}
-                  <span className="qhcount">
-                    {rows.reduce((a, g) => a + g.rows.length, 0)}
-                  </span>
-                </h2>
-                <ul className="queue">
-                  {head.map((group) => <Row key={group.key} type={type} group={group} />)}
-                </ul>
-                {tail.length > 0 && (
-                  // Native <details>, like the board's rules: no JavaScript, and the
-                  // page stays a server component.
-                  <details className="qmore">
-                    <summary>
-                      <span className="when-closed">Show the remaining {tail.length}</span>
-                      <span className="when-open">Show fewer</span>
-                    </summary>
-                    <ul className="queue">
-                      {tail.map((group) => <Row key={group.key} type={type} group={group} />)}
-                    </ul>
-                  </details>
-                )}
-              </section>
-            );
-          })}
+        {currentSections.map(({ type, groups }) => (
+          <QueueSection key={type} type={type} groups={groups} />
+        ))}
 
       </div>
       )}
 
       {/*
-        Everything the import turned up that nobody can act on any more. It keeps its
-        counts, its groupings and its buttons; what it loses is the claim that it is
-        pending work. Deleting it instead would answer "what happened to the cells you
-        could not parse?" with "gone", which is the one answer this project does not give.
+        Everything the import turned up that nobody can act on any more. Nothing is
+        deleted to get it here: it keeps its groupings, its counts and its buttons, and
+        loses only the claim that it is pending work. Deleting it instead would answer
+        "what happened to the cells you could not parse?" with "gone", which is the one
+        answer this project does not give.
+
+        It opens on request, one category at a time, and starts closed. Whoever is
+        looking at Review came for the work above; the archive is for the question
+        "what did the import make of X", which is asked about one kind of thing at a
+        time. DECISIONS 26.
       */}
       {historical.length > 0 && (
         <div className="board history">
-          <h2 className="cardtitle">From the imported history</h2>
-          <p className="note">
-            {historical.length} item{historical.length === 1 ? '' : 's'} from the 23-year
-            import: bookings that have already ended, and cells the importer could not
-            read. Kept as the record that nothing was dropped silently.
-          </p>
-          {historySections.map(({ type, groups: rows }) => {
-            const head = rows.slice(0, HEAD);
-            const tail = rows.slice(HEAD);
-            return (
-              <section key={type} className="qsection">
-                <h2 className={`qhead ${LABEL[type].tone}`}>
+          <h2 className="cardtitle">History</h2>
+          {/*
+            Radios and labels, not JavaScript: pressing a button shows that list and
+            closes the others, and the page stays a server component like the rest of
+            Review. The CSS is in globals.css under "History".
+          */}
+          <div className="histswitch">
+            <div className="histrow" role="radiogroup" aria-label="History category">
+              {historySections.map(({ type }) => (
+                <label key={type} className="histbtn">
+                  <input type="radio" name="hcat" id={`h-${type}`} defaultChecked={false} />
                   {LABEL[type].title}
-                  <span className="qhcount">
-                    {rows.reduce((a, g) => a + g.rows.length, 0)}
-                  </span>
-                </h2>
-                <ul className="queue">
-                  {head.map((group) => <Row key={group.key} type={type} group={group} />)}
-                </ul>
-                {tail.length > 0 && (
-                  <details className="qmore">
-                    <summary>
-                      <span className="when-closed">Show the remaining {tail.length}</span>
-                      <span className="when-open">Show fewer</span>
-                    </summary>
-                    <ul className="queue">
-                      {tail.map((group) => <Row key={group.key} type={type} group={group} />)}
-                    </ul>
-                  </details>
-                )}
-              </section>
-            );
-          })}
+                </label>
+              ))}
+              <label className="histhide">
+                <input type="radio" name="hcat" id="h-none" defaultChecked />
+                Hide
+              </label>
+            </div>
+            {historySections.map(({ type, groups }) => (
+              <div key={type} className="histpanel" data-cat={type}>
+                <QueueSection type={type} groups={groups} />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -278,6 +247,43 @@ export default async function ReviewPage() {
         </span>
       </div>
     </main>
+  );
+}
+
+/**
+ * One category: its name and count once, five rows, and the rest behind a fold.
+ *
+ * The same section in both cards — the work above and the History archive below — so
+ * they cannot drift apart. It was written out twice until the archive learned to open
+ * one category at a time.
+ */
+function QueueSection({ type, groups }: { type: string; groups: ReviewGroup<ReviewRow>[] }) {
+  const head = groups.slice(0, HEAD);
+  const tail = groups.slice(HEAD);
+  return (
+    <section className="qsection">
+      {/* Stated once, with its count, instead of on every row beneath it. */}
+      <h2 className={`qhead ${LABEL[type].tone}`}>
+        {LABEL[type].title}
+        <span className="qhcount">{groups.reduce((a, g) => a + g.rows.length, 0)}</span>
+      </h2>
+      <ul className="queue">
+        {head.map((group) => <Row key={group.key} type={type} group={group} />)}
+      </ul>
+      {tail.length > 0 && (
+        // Native <details>, like the board's rules: no JavaScript, and the page stays
+        // a server component.
+        <details className="qmore">
+          <summary>
+            <span className="when-closed">Show the remaining {tail.length}</span>
+            <span className="when-open">Show fewer</span>
+          </summary>
+          <ul className="queue">
+            {tail.map((group) => <Row key={group.key} type={type} group={group} />)}
+          </ul>
+        </details>
+      )}
+    </section>
   );
 }
 

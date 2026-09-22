@@ -102,11 +102,23 @@ test.describe('an empty schedule', () => {
 
     // What the import found is on Review as history rather than as work: the one real
     // double-booking in 23 years, kept rather than deleted, and no badge demanding a
-    // decision about a boat that sailed in 2017.
+    // decision about a boat that sailed in 2017. History starts closed — a button per
+    // category, and nothing on screen until one is pressed.
     await page.goto('/review');
     const history = page.locator('.board.history');
     await expect(history).toBeVisible();
+    await expect(history.locator('.histpanel:visible')).toHaveCount(0);
+    await expect(history.getByRole('radio', { name: 'Hide' })).toBeHidden();
+
+    await history.getByRole('radio', { name: 'Unresolved conflict' }).check();
     await expect(history.getByText('Utility work on pier face')).toBeVisible();
+    // One at a time: opening a category closes whatever was open.
+    await history.getByRole('radio', { name: 'Could not be read' }).check();
+    await expect(history.getByText('Utility work on pier face')).toBeHidden();
+    await expect(history.getByText('Ultrasonic pier test')).toBeVisible();
+    // And Hide puts the card back to its quiet state.
+    await history.getByRole('radio', { name: 'Hide' }).check();
+    await expect(history.locator('.histpanel:visible')).toHaveCount(0);
     await expect(page.locator('.tabs .count')).toHaveCount(0);
 
     // The schedule was empty when this ran, having just been cleared. Loading over an

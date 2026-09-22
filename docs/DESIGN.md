@@ -112,6 +112,11 @@ commit at a time.
   the whole register. Rendering all of them made the page 21,713px tall and buried the
   page's own argument. Review shows five rows per section and folds the rest behind a
   `<details>`; navigation on a row is a text link, and only the decision is a button.
+  Review's **History** card goes further and starts closed: one button per category, and
+  nothing drawn until one is pressed, because an archive nobody has asked for is the
+  longest list on the page ([DECISIONS 26](../DECISIONS.md#26-a-queue-holds-work-history-goes-in-an-archive)).
+  Both mechanisms are CSS on a server-rendered page — a fold is a `<details>`, the
+  archive is a radio group — so neither costs JavaScript.
 - **A count strip is repetition too.** The board once carried *7 berths · 0 in September ·
   418 vessels · 29 to review* beside the month; three of the four were already on screen
   as seven lanes, the empty-month line, and the Review badge. It is gone (DECISIONS 24).

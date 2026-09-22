@@ -846,10 +846,10 @@ This is the other way round: bring today's month to the data, not the board to 2
 ## 26. A queue holds work; history goes in an archive
 
 **Decision.** Review splits in two. **Needs a decision** holds items whose booking has not
-ended yet, and it is what the red badge in the nav counts. **From the imported history**
-holds everything else — bookings that already ended, and cells the importer could not read
-— with its counts, its groupings and its buttons intact, in a quieter card that does not
-claim to be pending work.
+ended yet, and it is what the red badge in the nav counts. **History** holds everything
+else — bookings that already ended, and cells the importer could not read — with its
+counts, its groupings and its buttons intact, in a quieter card that does not claim to be
+pending work.
 
 **Why, measured.** The badge read **30**. Of those thirty:
 
@@ -877,7 +877,7 @@ changes, and that is the whole fix.
 **The split is by actionability, not by severity.** An unresolved conflict is the worst
 thing the queue can hold, and a 2017 one still goes to the archive, because severity is
 not the question — *can anybody still do something about it* is. The predicate is one
-line of SQL, `b.end_date >= current_date`, and an item with no booking joins to nothing
+line of SQL, `b.end_date >= ${todayISO()}::date`, and an item with no booking joins to nothing
 and lands in the archive, which is correct: an unreadable cell from a 2001 sheet is a
 record, not a task.
 
@@ -890,6 +890,32 @@ honest.
 and it would have defaulted to either lying (hiding history by default) or to today's
 problem (showing everything). Two cards state the distinction without asking anybody to
 operate anything.
+
+### Revised: the archive starts closed, and opens one category at a time
+
+**Decision.** The card is headed **History** and holds one button per category —
+*Unresolved conflict*, *Vessel too long for the berth*, *Could not be read*. Nothing of it
+is on screen until a button is pressed; pressing another switches to it, and **Hide**
+puts the card back to quiet. No counts on the buttons: each panel still carries its own
+count, in the heading it always had.
+
+**Why.** The archive was three expanded sections, and on a freshly loaded sample that is
+every item the import produced — a page of 2001–2017 rows under the one card that says
+nobody needs to act on them. The owner's words: *"it doesn't show you the past history of
+reviews if you don't want to see them."* The work card above is what somebody came for;
+the archive answers a question — *what did the import make of the cells it could not
+read?* — that is asked about one kind of thing at a time.
+
+**This is not the date filter rejected above.** That one would have filtered the work
+queue, with a default that either hid items from the count or drowned it. This filters
+nothing: the split is still by actionability and still decided server-side, the badge is
+unchanged, and every category the archive holds is named on a button whether or not it is
+open. What is deferred is the drawing, not the fact.
+
+**No JavaScript.** Radios and labels, revealed by `:has()` in `globals.css` — so Review
+stays a server component, as the `<details>` folds inside each category already do. The
+alternative, a client component holding the open category in state, would have moved the
+rows through a props payload to gain nothing a radio does not already do.
 
 ---
 

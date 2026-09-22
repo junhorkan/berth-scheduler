@@ -145,11 +145,12 @@ board renders one; watching the system refuse a booking proves the rule is real.
    back each keep what they replace, in the same transaction that replaces it, so the
    undo can't be out of step with what it undoes. The one thing not kept is the untouched
    sample, because Load can always make it again."*
-7. **Go to Review.** *"Nothing on the live schedule needs a decision. Everything the
-   import couldn't resolve is below, as history — one heading per kind of problem, repeats
-   folded — including the one genuine double-booking in 23 years, kept rather than
-   deleted. The cells it couldn't read are traceable to sheet, row and column. It's
-   history and not work, because nobody can move a boat that sailed in 2017."*
+7. **Go to Review, then press History → Unresolved conflict.** *"Nothing on the live
+   schedule needs a decision. Everything the import couldn't resolve is kept below as
+   history, one button per kind of problem and closed until you ask — including the one
+   genuine double-booking in 23 years, kept rather than deleted. The cells it couldn't
+   read are traceable to sheet, row and column. It's history and not work, because nobody
+   can move a boat that sailed in 2017."*
 8. **Open Check a workbook, from the foot of Review, and choose their file.** *"This is
    the importer, running in your browser on your copy — nothing is uploaded or saved. It
    says the file matches the sample imported here, booking for booking. Add a second
