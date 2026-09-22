@@ -15,6 +15,8 @@ import type { Booking, BookingKind } from '../domain/types';
 import { nothingToLose } from '../lib/undo';
 import type { Schedule } from '../lib/undo';
 import { todayISO } from '../lib/nav';
+import type { ImportPlan } from '../import/plan';
+import { randomUUID } from 'node:crypto';
 
 /**
  * A connection or a transaction. The helpers below run inside either, and are cast to
@@ -585,6 +587,101 @@ export async function restorePrevious(): Promise<{ ok: boolean; error?: string }
     return { ok: true };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };
+  }
+}
+
+/**
+ * Replace the schedule with an import plan, and make it the new sample.
+ *
+ * The command-line importer used to do this as a run of separate statements with no
+ * transaction: it truncated the berths, rebuilt everything, then dropped and re-created
+ * the seed tables. A parse that came back empty would truncate the live site and then
+ * fail, leaving no bookings, no berths and no undo; a partial parse would overwrite the
+ * seed — the only backstop — with the reduced set, and exit cleanly.
+ *
+ * Now it is one transaction under the same lock as every other replace, it follows the
+ * same undo rule as Load, and it never touches the berths: each row is mapped by name
+ * onto the facility's seven, and a berth the facility does not have refuses the import.
+ * An empty plan cannot reach here — planImport() refuses it first — but this checks too.
+ */
+export async function writeImportPlan(
+  plan: ImportPlan,
+): Promise<{ ok: true; bookings: number; vessels: number; reviewItems: number } | { ok: false; error: string }> {
+  if (plan.bookings.length === 0) return { ok: false, error: 'The plan holds no bookings; nothing was written.' };
+  const sql = db();
+  const raw = (cols: string) => sql.unsafe(cols);
+  try {
+    await sql.begin(async (tx) => {
+      await lockSchedule(tx);
+
+      const live = await tx`select id, name from berths`;
+      const berthId = new Map(live.map((b) => [b.name as string, b.id as string]));
+      const unknown = plan.berths.map((b) => b.name).filter((n) => !berthId.has(n));
+      if (unknown.length) {
+        throw new Error(`The workbook names a berth this facility does not have: ${unknown.join(', ')}.`);
+      }
+
+      if (!nothingToLose(await liveSchedule(tx))) await saveSnapshot(tx, 'load');
+      await emptyLive(tx);
+
+      const vesselId = new Map(plan.vessels.map((v) => [v.normalized, randomUUID()]));
+      const bookingId = plan.bookings.map(() => randomUUID());
+
+      const vesselRows = plan.vessels.map((v) => ({
+        id: vesselId.get(v.normalized)!, canonical_name: v.display, normalized_name: v.normalized,
+        length_ft: v.lengthFt, loa_ft: v.loaFt, length_source: v.lengthSource, operator: v.operator,
+      }));
+      for (let i = 0; i < vesselRows.length; i += 250) {
+        await tx`insert into vessels ${sql(vesselRows.slice(i, i + 250))}`;
+      }
+
+      const bookingRows = plan.bookings.map((b, i) => {
+        const at = b.provenance[0];
+        return {
+          id: bookingId[i], berth_id: berthId.get(b.berthName)!,
+          vessel_id: b.normalizedVesselName ? vesselId.get(b.normalizedVesselName) ?? null : null,
+          kind: b.kind, status: b.status, label: b.label, start_date: b.start, end_date: b.end,
+          notes: b.conflictWith ? `Imported overlap with ${b.conflictWith}` : null,
+          source: 'import', import_year: Number(at.sheet), import_sheet: at.sheet,
+          import_row: at.row, import_col: at.col,
+        };
+      });
+      // The exclusion constraint audits the plan's own conflict classification: an
+      // overlap left 'active' fails this insert and rolls the whole import back.
+      for (let i = 0; i < bookingRows.length; i += 250) {
+        await tx`insert into bookings ${sql(bookingRows.slice(i, i + 250))}`;
+      }
+
+      const itemRows = plan.reviewItems.map((r) => ({
+        type: r.type,
+        booking_id: r.bookingIndex != null ? bookingId[r.bookingIndex] : null,
+        vessel_id: r.vesselNormalized ? vesselId.get(r.vesselNormalized) ?? null : null,
+        berth_id: r.berthName ? berthId.get(r.berthName) ?? null : null,
+        raw_text: r.rawText, detail: r.detail, import_year: r.importYear,
+        import_sheet: r.importSheet, import_row: r.importRow, import_col: r.importCol,
+      }));
+      for (let i = 0; i < itemRows.length; i += 250) {
+        await tx`insert into review_items ${sql(itemRows.slice(i, i + 250))}`;
+      }
+
+      // The new sample, in the same transaction: if anything above failed, the seed is
+      // untouched. Rows are replaced rather than the tables dropped, so the keys and
+      // row-level security the migrations gave them survive.
+      await tx`delete from review_items_seed`;
+      await tx`delete from bookings_seed`;
+      await tx`delete from vessels_seed`;
+      await tx`delete from berths_seed`;
+      await tx`insert into berths_seed select * from berths`;
+      await tx`insert into vessels_seed (${raw(VESSEL_COLS)}) select ${raw(VESSEL_COLS)} from vessels`;
+      await tx`insert into bookings_seed (${raw(SEED_BOOKING_COLS)}) select ${raw(SEED_BOOKING_COLS)} from bookings`;
+      await tx`insert into review_items_seed (${raw(REVIEW_COLS)}) select ${raw(REVIEW_COLS)} from review_items`;
+    });
+    return {
+      ok: true, bookings: plan.bookings.length, vessels: plan.vessels.length,
+      reviewItems: plan.reviewItems.length,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error && !('code' in e) ? e.message : describeDbError(e) };
   }
 }
 

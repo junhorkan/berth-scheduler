@@ -8,6 +8,7 @@
     "dev": "next dev",
     "e2e": "playwright test",
     "import": "tsx scripts/import.mts",
+    "import:check": "tsx scripts/import-check.mts",
     "sample:load": "tsx scripts/sample-load.mts",
     "lint": "eslint",
     "start": "next start",

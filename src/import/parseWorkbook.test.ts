@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { parseWorkbook, monthFromHeader, daysInMonth } from './parseWorkbook';
+import { monthFromHeader, daysInMonth } from './parseWorkbook';
+import { parseWorkbook } from './fromFile';
 
 /**
  * The reconciliation tests read the client's workbook, which is deliberately not in the

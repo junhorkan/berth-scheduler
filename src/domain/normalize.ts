@@ -117,9 +117,16 @@ export function parseBerthLabel(raw: string): { name: string; lengthFt: number |
   const text = raw.trim();
   if (text === '' || text.endsWith(':')) return null;
 
-  const withLength = text.match(/^(.*?)\s*-\s*(\d{2,4})'$/);
-  if (withLength) {
-    return { name: withLength[1].trim(), lengthFt: Number(withLength[2]) };
+  // Read from the end rather than with `^(.*?)\s*-\s*(\d{2,4})'$`: that lazy prefix
+  // retried the trailing whitespace at every position, which is quadratic — half a
+  // second on one long label. Same result, one pass: the length is the digits before the
+  // closing quote, and the name is what precedes the dash in front of them.
+  const length = /(\d{2,4})'$/.exec(text);
+  if (length) {
+    const before = text.slice(0, length.index).trimEnd();
+    if (before.endsWith('-')) {
+      return { name: before.slice(0, -1).trim(), lengthFt: Number(length[1]) };
+    }
   }
   // e.g. "Small craft slips (institution boats)" — a real berth with no stated length.
   return { name: text, lengthFt: null };

@@ -28,9 +28,9 @@
  * merge IS the span; that is the single most important fact about this file.
  */
 
-import { readFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
 import { classifyEntry, parseBerthLabel, type EntryKind } from '../domain/normalize';
+import { readWorkbook } from './workbook';
 
 /** One populated cell inside a berth row, before any stitching. */
 export type RawEntry = {
@@ -54,6 +54,12 @@ export type RawEntry = {
 
 export type ParseReport = {
   sheetsScanned: string[];
+  /**
+   * Every sheet that was NOT read as a year grid, and why. These used to be skipped with
+   * no trace, so a workbook whose grids were all misnamed parsed as "success, nothing
+   * booked". Now each one is named, and a workbook with no grids at all is an error.
+   */
+  sheetsSkipped: { sheet: string; reason: string }[];
   monthBlocks: number;
   /** Blocks where no day alignment could be found — reported, never ignored. */
   blocksWithoutDayStrip: string[];
@@ -237,17 +243,20 @@ export function findDayColumns(
 }
 
 /** Read the workbook from disk. Kept separate so the parser itself stays testable. */
-export function parseWorkbook(filePath: string): { entries: RawEntry[]; report: ParseReport } {
-  // Read the bytes ourselves rather than XLSX.readFile: the ESM build of SheetJS
-  // does not bind node's fs.
-  return parseWorkbookBuffer(readFileSync(filePath));
+/** Parse an .xlsx's bytes. Reading a path lives in `fromFile.ts`, which is Node-only. */
+export function parseWorkbookBuffer(bytes: Uint8Array): { entries: RawEntry[]; report: ParseReport } {
+  return parseGrids(readWorkbook(bytes));
 }
 
-export function parseWorkbookBuffer(buf: Buffer): { entries: RawEntry[]; report: ParseReport } {
-  const wb = XLSX.read(buf, { type: 'buffer' });
+/**
+ * Parse the year grids of a workbook that has already been read, so a caller that also
+ * wants the registry reads the file once rather than twice.
+ */
+export function parseGrids(wb: XLSX.WorkBook): { entries: RawEntry[]; report: ParseReport } {
   const entries: RawEntry[] = [];
   const report: ParseReport = {
     sheetsScanned: [],
+    sheetsSkipped: [],
     monthBlocks: 0,
     blocksWithoutDayStrip: [],
     blocksWithUnverifiedCalendar: [],
@@ -262,10 +271,22 @@ export function parseWorkbookBuffer(buf: Buffer): { entries: RawEntry[]; report:
   for (const sheetName of wb.SheetNames) {
     // Only the year grids. '8YR Dock Summary', 'Science', 'Yachts' and 'Tours' are
     // different shapes and handled elsewhere (or out of scope).
-    if (!/^\d{4}$/.test(sheetName)) continue;
+    if (!/^\d{4}$/.test(sheetName)) {
+      report.sheetsSkipped.push({ sheet: sheetName, reason: 'not named for a year' });
+      continue;
+    }
     const sheetYear = Number(sheetName);
+    // A four-digit name is not enough: '0001' matches the pattern and would produce an
+    // unpadded ISO year. Only years a schedule could plausibly hold are read.
+    if (sheetYear < 1900 || sheetYear > 2200) {
+      report.sheetsSkipped.push({ sheet: sheetName, reason: 'named for an implausible year' });
+      continue;
+    }
     const sheet = wb.Sheets[sheetName];
-    if (!sheet || !sheet['!ref']) continue;
+    if (!sheet || !sheet['!ref']) {
+      report.sheetsSkipped.push({ sheet: sheetName, reason: 'empty' });
+      continue;
+    }
     report.sheetsScanned.push(sheetName);
 
     const range = XLSX.utils.decode_range(sheet['!ref']);

@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { parseRegistry } from './parseRegistry';
+import { parseRegistry } from './fromFile';
 
 /**
  * The vessel registry — the Science and Yachts sheets — is where every known length in

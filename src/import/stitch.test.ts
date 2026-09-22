@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { parseWorkbook } from './parseWorkbook';
+import { parseWorkbook } from './fromFile';
 import { stitch } from './stitch';
 import type { RawEntry } from './parseWorkbook';
 

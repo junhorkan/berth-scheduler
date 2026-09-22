@@ -12,9 +12,9 @@
  * values are kept and surfaced; reconciling them silently would be inventing data.
  */
 
-import { readFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
 import { canonicalVesselName, extractLengthFromVesselName, stripLengthFromVesselName } from '../domain/normalize';
+import { readWorkbook } from './workbook';
 
 export type RegistryVessel = {
   displayName: string;
@@ -28,20 +28,43 @@ export type RegistryVessel = {
   sourceRow: number;
 };
 
-const NAME_WITH_LENGTH = /^((?:R\/V|M\/V|S\/V|M\/Y|S\/Y|OSV|OS\/V|F\/V|Tug|Barge)\s+[A-Za-z'’\- ]+?)\s+(\d{2,3})'$/i;
+/**
+ * A vessel name ending in its length: "R/V High Drift 120'".
+ *
+ * The name is WORDS separated by whitespace, and a word cannot contain whitespace. The
+ * previous pattern let a lazy name class and the separator after it both match spaces,
+ * so a cell of "R/V " plus 5,000 spaces took 21 seconds to fail — the engine tried every
+ * way of dividing the spaces between them. With the two made disjoint there is one way
+ * to match, and the time is linear. Same matches on the real workbook: 164 vessels.
+ */
+const NAME_WITH_LENGTH = /^((?:R\/V|M\/V|S\/V|M\/Y|S\/Y|OSV|OS\/V|F\/V|Tug|Barge)\s+[A-Za-z'’\-]+(?:\s+[A-Za-z'’\-]+)*)\s+(\d{2,3})'$/i;
+/** No registry cell is longer than 78 characters; anything past this is not a name. */
+const MAX_CELL = 300;
 const LOA_NOTE = /\bLOA:\s*(\d{2,3})'/i;
 const OPERATOR_HINT = /(University|Institute|Partners|Agency|Trust|Foundation|Academy|Charters|Sailing|Offshore|Fisheries|Research|Marine)/i;
 
-export function parseRegistry(filePath: string): {
+export type RegistryResult = {
   vessels: RegistryVessel[];
   disagreements: RegistryVessel[];
-} {
-  const wb = XLSX.read(readFileSync(filePath), { type: 'buffer' });
-  const byNormalized = new Map<string, RegistryVessel>();
+  /** Which registry sheets were present and read — a missing one is no longer silent. */
+  sheetsRead: string[];
+};
 
-  for (const sheetName of ['Science', 'Yachts']) {
+export const REGISTRY_SHEETS = ['Science', 'Yachts'] as const;
+
+/** Parse an .xlsx's bytes. Reading a path lives in `fromFile.ts`, which is Node-only. */
+export function parseRegistryBuffer(bytes: Uint8Array): RegistryResult {
+  return parseRegistryBook(readWorkbook(bytes));
+}
+
+export function parseRegistryBook(wb: XLSX.WorkBook): RegistryResult {
+  const byNormalized = new Map<string, RegistryVessel>();
+  const sheetsRead: string[] = [];
+
+  for (const sheetName of REGISTRY_SHEETS) {
     const sheet = wb.Sheets[sheetName];
     if (!sheet || !sheet['!ref']) continue;
+    sheetsRead.push(sheetName);
     const range = XLSX.utils.decode_range(sheet['!ref']);
 
     const text = (r: number, c: number) => {
@@ -52,7 +75,7 @@ export function parseRegistry(filePath: string): {
     for (let r = range.s.r; r <= range.e.r; r++) {
       for (let c = range.s.c; c <= range.e.c; c++) {
         const raw = text(r, c);
-        if (raw === '') continue;
+        if (raw === '' || raw.length > MAX_CELL) continue;
         const m = raw.match(NAME_WITH_LENGTH);
         if (!m) continue;
 
@@ -94,5 +117,5 @@ export function parseRegistry(filePath: string): {
   const disagreements = vessels.filter(
     (v) => v.nameLengthFt != null && v.loaFt != null && v.nameLengthFt !== v.loaFt,
   );
-  return { vessels, disagreements };
+  return { vessels, disagreements, sheetsRead };
 }
