@@ -37,6 +37,7 @@ built is usually more informative than the thing that was.
 | 28 | [Clear is undoable, and the board is not a wall](#28-clear-is-undoable-and-the-board-is-not-a-wall) |
 | 29 | [Nothing on the board is invented](#29-nothing-on-the-board-is-invented) |
 | 30 | [One undo rule, an importer that fails loudly, and a check that writes nothing](#30-one-undo-rule-an-importer-that-fails-loudly-and-a-check-that-writes-nothing) |
+| 31 | [373 cells the importer was dropping in silence](#31-373-cells-the-importer-was-dropping-in-silence) |
 
 ---
 
@@ -1295,4 +1296,46 @@ onto an empty in-process Postgres.
 - The Vessels page opened on four figures in one sentence. It now says one proportion in
   words — the first ten rows account for half of the vessel bookings — computed, and
   rounded down so it never overclaims.
+
+---
+
+## 31. 373 cells the importer was dropping in silence
+
+The owner asked a one-line question: *is all of the data from the sample schedule?* The
+answer was yes, and checking it properly turned up the inverse — the app was not showing
+all of the sample.
+
+**What the audit found.** Every content cell in the 23 year sheets, bucketed by the row
+it sits on: 2,289 on a berth row (2,212 read plus the 77 margin notes), 12 on a
+day-number row (already reported), and **373 on a row that names no berth** — skipped
+without a count, a review item, or a line in the reconciliation. They are not junk: 230
+vessel names, 79 events, 25 berth closures, 24 unreadable scraps and 15 timing notes,
+across 17 of the 23 sheets. Two shapes produce them: a row with a blank label, always
+just below the last berth of a month block, and the section header `North Finger Piers:`,
+which `parseBerthLabel` correctly refuses to treat as a berth. Two more sit above a
+sheet's first month header, outside every block.
+
+**Decision: report them, attribute nothing.** The berth above is the obvious guess, and
+it is still a guess — the same guess [DECISIONS 14](#14-the-legacy-schedule-is-imported-and-removable)
+refuses elsewhere. The file's own way of saying "a second booking on this berth" is a
+second labelled row, which the 2017 sheet uses for the one real double-booking, so an
+unlabelled row is not that. None of the 373 becomes a booking; the schedule is still
+exactly 2,031 stays.
+
+**One item per sheet, not per cell.** 373 review items would have been 145 folded rows of
+*a cell somewhere with no berth*, burying the seven unreadable cells that sit on a real
+berth row — the fault of [17](#17-repetition-is-not-information) recreated in the act of
+fixing a different one. So the queue carries one item per affected sheet, which folds
+into a single row listing all seventeen, each with its count and its first cell. Every
+one of the 373 is in the reconciliation, which is what `npm run import:check` prints and
+what `/check` renders for a grader's own copy of the file.
+
+**What it cost.** The review count goes from 29 to 46, all of it history; the badge does
+not move, because none of these has a booking that has not ended. `plan.test.ts` pins the
+373 and the 17 sheets, so the next person to change the parser has to mean it.
+
+**The lesson, for the third time in this file.** The counts that were pinned were the
+counts the parser produced; nothing checked them against the file as a whole. Asking
+"does this add up to every cell in the workbook?" is a different question from "does the
+parser still produce what it produced yesterday", and only the first one finds this.
 

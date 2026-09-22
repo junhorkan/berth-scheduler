@@ -52,6 +52,15 @@ that month.
 3. **2010 rows 117 and 128 have vessel names typed over the day-number row.** Those 12
    cells belong to no berth and cannot be attributed, so they become review items.
 
+4. **373 entries sit on rows that name no berth.** Two shapes: a row with a blank label,
+   always just under the last berth of a block (1997 row 21, 2002 row 64, and so on), and
+   the section header `North Finger Piers:`, which takes no bookings and has no length.
+   230 are vessel names, 79 events, 25 closures, 24 unreadable, 15 timing notes, spread
+   over 17 of the 23 sheets. The importer skipped them in silence until an audit of every
+   content cell in the file went looking; they are now reported, one item per sheet, with
+   the first cell's row and column. **None becomes a booking**: the berth above is a
+   guess, and the file does not say it.
+
 ## Four entry kinds share one cell space
 
 Classify; never assume.
@@ -85,8 +94,10 @@ never booked are reported and not stored.
     2,212   source cells read
     2,031   real stays after stitching
       145   cells merged into an existing stay  (49 across a month boundary)
-        7   berths          418 vessels         29 review items
-                  (1 conflict · 9 too long · 19 unreadable cells, 12 of them orphaned)
+        7   berths          418 vessels         46 review items
+                  (1 conflict · 9 too long · 19 unreadable cells, 12 of them orphaned,
+                   and 17 sheets holding entries on rows that name no berth)
+      373   entries on a row that names no berth, across 17 sheets — reported, not placed
        20   vessels with a recorded length  ← the whole problem, in one number
         9   physically impossible assignments (6 of them single-day)
         4   blocks that could not be calendar-verified

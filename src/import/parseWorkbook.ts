@@ -88,6 +88,14 @@ export type ParseReport = {
    * day-number row.
    */
   orphanedGridCells: { sheet: string; row: number; col: number; text: string }[];
+  /**
+   * Entries on a row inside a month block that names no berth: a blank label, or a
+   * section header like `North Finger Piers:`. 373 of them across 17 sheets, and they
+   * were skipped in silence until somebody asked whether the board showed everything in
+   * the file. Attributing them to the berth above would be inventing the one thing the
+   * file does not state, so they are reported with their sheet, row and column instead.
+   */
+  unattributedCells: { sheet: string; row: number; col: number; text: string }[];
 };
 
 const MONTHS = [
@@ -266,6 +274,7 @@ export function parseGrids(wb: XLSX.WorkBook): { entries: RawEntry[]; report: Pa
     byKind: { vessel: 0, event: 0, closure: 0, annotation: 0, unclassified: 0 },
     marginCells: 0,
     orphanedGridCells: [],
+    unattributedCells: [],
   };
 
   for (const sheetName of wb.SheetNames) {
@@ -334,6 +343,17 @@ export function parseGrids(wb: XLSX.WorkBook): { entries: RawEntry[]; report: Pa
       headers.push({ row: r, month: parsed.month, year });
     }
 
+    // Above the first month header is the sheet's own title block, not a grid — but the
+    // 2013 and 2014 sheets each carry a vessel name up there, and a cell nobody reads is
+    // a cell nobody knows about.
+    for (let r = range.s.r; r < (headers[0]?.row ?? lastRow + 1); r++) {
+      for (let c = 1; c <= lastCol; c++) {
+        const t = cellText(sheet, r, c);
+        if (t === '' || WEEKDAY.test(t) || /^\d{1,2}$/.test(t)) continue;
+        report.unattributedCells.push({ sheet: sheetName, row: r + 1, col: c + 1, text: t });
+      }
+    }
+
     for (let h = 0; h < headers.length; h++) {
       const { row: headerRow, month, year } = headers[h];
       const blockEnd = h + 1 < headers.length ? headers[h + 1].row - 1 : lastRow;
@@ -373,13 +393,21 @@ export function parseGrids(wb: XLSX.WorkBook): { entries: RawEntry[]; report: Pa
         }
 
         const label = cellText(sheet, r, 0);
-        if (label === '') continue;
         // Guard against a month name being read as a berth.
         if (monthFromHeader(label)) continue;
 
         // Returns null for 'North Finger Piers:' — a section header, not a berth.
-        const berth = parseBerthLabel(label);
-        if (!berth) continue;
+        const berth = label === '' ? null : parseBerthLabel(label);
+        if (!berth) {
+          // The row names no berth, so nothing on it can be placed — but it is not
+          // nothing: 373 vessel names, events and closures sit on rows like these.
+          for (let c = 1; c <= lastCol; c++) {
+            const t = cellText(sheet, r, c);
+            if (t === '' || WEEKDAY.test(t) || /^\d{1,2}$/.test(t)) continue;
+            report.unattributedCells.push({ sheet: sheetName, row: r + 1, col: c + 1, text: t });
+          }
+          continue;
+        }
 
         for (let c = 1; c <= lastCol; c++) {
           const text = cellText(sheet, r, c);

@@ -46,6 +46,14 @@ export function formatReconciliation(r: Reconciliation): string {
   const rows = [...new Set(orphans.map((o) => `${o.sheet} row ${o.row}`))];
   line(`  Names typed over a day-number row, so they belong to no berth (${orphans.length})`);
   line(orphans.length ? `    ${rows.join(', ')} — each is listed below` : '    none');
+  // Reported per sheet: 373 cells listed one by one would bury everything above them.
+  const un = r.defects.unattributed;
+  const bySheet = new Map<string, number>();
+  for (const u of un) bySheet.set(u.sheet, (bySheet.get(u.sheet) ?? 0) + 1);
+  line(`  Entries on a row that names no berth, so they cannot be attributed (${un.length})`);
+  line(un.length
+    ? `    ${[...bySheet].map(([s, n2]) => `${s}: ${n2}`).join(', ')}`
+    : '    none');
   line();
   line('WHAT THE SCHEDULE HOLDS');
   list('  Double-bookings, kept rather than deleted',

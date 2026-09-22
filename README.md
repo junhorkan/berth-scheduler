@@ -96,8 +96,9 @@ is the central design decision. See `DECISIONS.md`.
 ```
 2,212 source cells = 2,176 occupying a berth + 29 timing notes + 7 unreadable
 2,176 occupying    → 2,031 stays   (145 merged into the stay before, 49 across a month end)
-        7 berths · 418 vessels · 29 review items
+        7 berths · 418 vessels · 46 review items
    272 / 272 month blocks resolved
+  373 entries on rows that name no berth — reported, never attributed
 ```
 
 `npm run import:check` prints the same reconciliation without touching the database, and
@@ -125,6 +126,10 @@ Three source defects had to be handled:
 - **Two rows on the 2010 sheet have vessel names typed over the day-number row.** Those 12
   cells belong to no berth, so they are review items with their sheet, row and column,
   not guesses.
+- **373 entries sit on rows that name no berth at all** — a blank label, or the section
+  header `North Finger Piers:` — across 17 of the 23 sheets. Attributing them to the
+  berth above would invent the one thing the file does not say, so they are reported per
+  sheet, in the queue and in the reconciliation, and none of them becomes a booking.
 
 The reasoning behind each is in `ASSUMPTIONS.md` → *Reading the workbook*; the grid
 mechanics are in `docs/DATA-NOTES.md`.

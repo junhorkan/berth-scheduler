@@ -116,7 +116,9 @@ runs once the workbook is in `data/`. The mechanics are in `docs/DATA-NOTES.md`.
 - **A stay that crosses a month end is one stay.** The grid drew it as two bars; 49 of
   them are stitched back together.
 - **A cell that belongs to no berth is not guessed at.** Twelve names typed over a
-  day-number row become review items with their sheet, row and column.
+  day-number row, and 373 entries on rows with no berth label at all, become review items
+  with their sheet, row and column. The berth above them is the obvious guess and it is
+  still a guess, so the file's silence is reported rather than filled in.
 - **Four kinds of thing share one cell space.** A vessel, an event and a closure all
   occupy a berth; a timing note like `ETA 1200` does not, and never becomes a booking.
   A cell matching none of these is an unreadable cell for a person to decide.

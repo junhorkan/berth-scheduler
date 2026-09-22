@@ -75,6 +75,8 @@ export type Reconciliation = {
     carriedOverDecembers: { sheet: string; month: number; year: number }[];
     implausibleYears: { sheet: string; row: number; month: number; statedYear: number; usedYear: number }[];
     orphanedCells: (Cell & { text: string })[];
+    /** Entries on a row that names no berth — a blank label, or a section header. */
+    unattributed: (Cell & { text: string })[];
   };
   cells: { read: number; occupying: number; timingNotes: number; unreadable: number; marginNotes: number };
   stays: { total: number; cellsMerged: number; acrossMonthEnd: number };
@@ -257,6 +259,30 @@ function buildReviewItems(
       importYear: Number(o.sheet), importSheet: o.sheet, importRow: o.row, importCol: o.col,
     });
   }
+  /*
+    Entries on rows that name no berth: 373 cells across 17 sheets in the real workbook.
+    One item per sheet rather than per cell — they share a headline, so the queue folds
+    them into a single row that lists every sheet, and the seven cells that sit on a real
+    berth row are not buried under them. Every cell is in the reconciliation, which is
+    what `npm run import:check` prints and /check renders.
+  */
+  const bySheet = new Map<string, { row: number; col: number; count: number }>();
+  for (const u of report.unattributedCells) {
+    const seen = bySheet.get(u.sheet);
+    if (seen) seen.count++;
+    else bySheet.set(u.sheet, { row: u.row, col: u.col, count: 1 });
+  }
+  for (const [sheet, first] of bySheet) {
+    items.push({
+      type: 'unclassified', bookingIndex: null, berthName: null, vesselNormalized: null,
+      rawText: 'Entries on a row that names no berth',
+      // Its own fact and nothing else: the headline above says what the class is, and
+      // seventeen copies of the reasoning is the fault invariant 3 forbids.
+      detail: `${first.count} ${first.count === 1 ? 'entry' : 'entries'} on this sheet`,
+      importYear: Number(sheet), importSheet: sheet, importRow: first.row, importCol: first.col,
+    });
+  }
+
   return items;
 }
 
@@ -294,6 +320,7 @@ function reconcile(x: {
       carriedOverDecembers: report.carryOverBlocks,
       implausibleYears: report.headerYearAnomalies,
       orphanedCells: report.orphanedGridCells,
+      unattributed: report.unattributedCells,
     },
     cells: {
       read: report.rawCells,

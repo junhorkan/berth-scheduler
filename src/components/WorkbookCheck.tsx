@@ -255,6 +255,19 @@ function Report({ name, r, vs }: { name: string; r: Reconciliation; vs: Comparis
               at: r.months.calendarUnverified.map((m) => `sheet ${m.split('/')[0]}: ${monthName(m)}`),
             }]
           : []),
+        ...(r.defects.unattributed.length
+          ? [{
+              text: 'Entries on a row that names no berth',
+              detail: `${r.defects.unattributed.length} cells on rows with a blank label or a `
+                + 'section header. Reported rather than attributed to the berth above, which '
+                + 'the file does not say.',
+              at: [...new Set(r.defects.unattributed.map((u) => u.sheet))]
+                .map((sheet) => {
+                  const cells = r.defects.unattributed.filter((u) => u.sheet === sheet);
+                  return `sheet ${sheet}: ${cells.length}, from row ${cells[0].row}`;
+                }),
+            }]
+          : []),
         ...(r.defects.orphanedCells.length
           ? [{
               text: 'Names typed over a day-number row',

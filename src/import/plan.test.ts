@@ -7,7 +7,7 @@ import { readBytes } from './fromFile';
 /**
  * Every figure the documentation states about the workbook, pinned here. Five of them
  * were stated as "locked into tests" for days while no test asserted them: 2,212 cells,
- * the 29 review items, the 20 recorded lengths, the 9 impossible fits, and which three
+ * the 46 review items, the 20 recorded lengths, the 9 impossible fits, and which three
  * registry contradictions are actually stored. Skipped by name without the workbook,
  * which is the client's and is not in the repository.
  */
@@ -59,10 +59,30 @@ describe.skipIf(!HAS_WORKBOOK)(`planImport against the real workbook (needs ${WO
     expect([r.vessels.withLength, r.vessels.total]).toEqual([20, 418]);
   });
 
-  it('makes 29 review items: 1 conflict, 9 too long, 19 unreadable', () => {
+  it('makes 46 review items: 1 conflict, 9 too long, 36 unreadable', () => {
+    // 36 = 19 cells nobody could read, plus one per sheet holding entries on a row that
+    // names no berth. They share a headline, so the queue folds them into a single row.
     const byType = (t: string) => plan.reviewItems.filter((i) => i.type === t).length;
-    expect([byType('conflict'), byType('too_long'), byType('unclassified')]).toEqual([1, 9, 19]);
-    expect(r.reviewItems).toBe(29);
+    expect([byType('conflict'), byType('too_long'), byType('unclassified')]).toEqual([1, 9, 36]);
+    expect(r.reviewItems).toBe(46);
+  });
+
+  it('reports all 373 entries that sit on a row naming no berth, and imports none of them', () => {
+    // Found by asking whether the board showed everything in the file. It did not: these
+    // were skipped in silence — 230 vessel names, 79 events, 25 closures — because their
+    // row has a blank label or reads `North Finger Piers:`, a section header.
+    const un = r.defects.unattributed;
+    expect(un).toHaveLength(373);
+    expect(new Set(un.map((u) => u.sheet)).size).toBe(17);
+    for (const u of un) {
+      expect(u.sheet).toMatch(/^\d{4}$/);
+      expect(u.row).toBeGreaterThan(0);
+      expect(u.col).toBeGreaterThan(0);
+      expect(u.text.trim()).not.toBe('');
+    }
+    // Reported, never attributed: the schedule is exactly what it was before they were.
+    expect(plan.bookings).toHaveLength(2031);
+    expect(plan.berths.map((b) => b.name)).not.toContain('North Finger Piers');
   });
 
   it('keeps both answers for 3 registry contradictions, and says only 1 is ever stored', () => {
@@ -76,7 +96,8 @@ describe.skipIf(!HAS_WORKBOOK)(`planImport against the real workbook (needs ${WO
   });
 
   it('points every unreadable cell at its sheet, row and column', () => {
-    expect(r.unreadable).toHaveLength(19);
+    // 19 cells, plus the per-sheet report of the rows that name no berth.
+    expect(r.unreadable).toHaveLength(36);
     for (const u of r.unreadable) {
       expect(u.sheet).toMatch(/^\d{4}$/);
       expect(u.row).toBeGreaterThan(0);
