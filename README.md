@@ -68,7 +68,8 @@ is the central design decision. See `DECISIONS.md`.
   the 1997 imports are reachable. You can review what was booked, but not book a date
   that has passed. A bar's **height is
   `vessel length ÷ berth length`**, so a vessel that does not fit visibly breaks out of
-  its lane. Create, cancel and reassign bookings, for vessels, non-vessel events and
+  its lane. Create and cancel bookings, and move one to another berth, to other dates or
+  both at once, for vessels, non-vessel events and
   berth closures alike.
 - **Vessels** — the register as a queue, ordered by *bookings blocked* rather than
   alphabetically, so the highest-leverage gaps come first: ten to a page, its two halves

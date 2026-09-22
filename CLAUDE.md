@@ -56,6 +56,10 @@ obeyable.
 7. **Every date bound comes from `lib/nav`; none is hard-coded.** The floor stretches to
    the earliest booking; the form refuses a start before today, in the save path as well,
    since `min` only guards the picker. A fixed bound has hidden real bookings three times.
+   **A move is judged by where the booking is now** (`domain/move.ts`): one that has not
+   started cannot go behind today; one already past is a record being corrected, and has
+   no floor — otherwise all 2,031 imported rows would be uneditable.
+   → [DECISIONS 32](DECISIONS.md#32-a-move-changes-a-span-not-only-a-berth)
 8. **Empty is supported, and never silent.** The full grid still draws, and one line says
    where the bookings are. **Review's rows stay drawn at zero** — a count and a line
    saying what would fill it — rather than deleting themselves and leaving a bare page.
@@ -71,7 +75,9 @@ obeyable.
     → [DESIGN](docs/DESIGN.md#10-light-only-and-one-obvious-action)
 11. **Nothing outside the grid below 13px.** When something will not fit, change its shape,
     not its point size. → [DESIGN](docs/DESIGN.md#11-nothing-outside-the-grid-below-13px)
-12. **Nothing destructive is irreversible.** No accounts, so reversibility is the answer
+12. **Nothing destructive is irreversible**, with one stated exception: **a move
+    overwrites the berth and span in place and has no undo** — say so, do not imply it is
+    covered. No accounts, so reversibility is the answer
     rather than a gate. Cancelling is a soft delete restored from Review, and restoring
     re-runs the constraint, so it can be refused. **Clear, Load and Put back** each save
     what they replace, unless it has nothing to lose (`lib/undo.ts`, tested over every

@@ -316,6 +316,17 @@ a { color: var(--vessel); }
   background: var(--surface); color: var(--ink);
 }
 .field input:focus, .field select:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
+/* Two date inputs on one row, with the word between them rather than a second label. */
+.field.dates { align-items: baseline; }
+.field.dates .span { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; }
+.field.dates .span input { flex: 1 1 0; min-width: 0; }
+.field.dates .to { font-size: 13px; color: var(--ink-muted); flex: none; }
+/* Below this the label column and two date pickers cannot share a line without one of
+   them becoming unusable, so the label goes above and the pair keeps the full width. */
+@media (max-width: 520px) {
+  .field.dates { display: block; }
+  .field.dates > label { width: auto; padding: 0 0 4px; display: block; }
+}
 .sub-hint { font-size: 13px; color: var(--ink-muted); margin-top: 4px; }
 
 .segmented { display: flex; gap: 2px; flex: 1; }

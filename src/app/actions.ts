@@ -75,9 +75,15 @@ export async function restoreBookingAction(id: string) {
   return res;
 }
 
-export async function reassignBookingAction(id: string, berthId: string) {
-  const res = await m.reassignBooking(id, berthId);
+/** Move a booking to another berth, to other dates, or both. */
+export async function moveBookingAction(
+  id: string,
+  to: { berthId: string; start: string; end: string },
+) {
+  const res = await m.moveBooking(id, to);
   revalidatePath('/');
+  // A move re-runs the fit check, so the queue and its badge can both change.
+  revalidatePath('/review');
   return res;
 }
 

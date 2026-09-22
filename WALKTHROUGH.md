@@ -64,8 +64,11 @@ about itself.
 > **Rafting** — two vessels legitimately sharing one berth happens, and modelling it
 > properly means berth capacity in feet rather than a yes/no. **Draft and depth** —
 > vessel draft matters, but no berth depth exists anywhere in the material I was given,
-> so that check is impossible rather than merely missing. And **drag-to-reassign**, which
-> is the common real operation and the natural next interaction.
+> so that check is impossible rather than merely missing. And **undo for a move** — cancel,
+> clear and load all keep what they replace, but a move overwrites the old berth and dates
+> in place; the fix is the same shape, and I would rather say it is missing than imply it
+> is covered. **Drag-to-reassign** on the board is the natural next interaction, now that
+> moving in time and space is one action behind it.
 
 ---
 

@@ -1412,3 +1412,60 @@ counts the parser produced; nothing checked them against the file as a whole. As
 "does this add up to every cell in the workbook?" is a different question from "does the
 parser still produce what it produced yesterday", and only the first one finds this.
 
+
+---
+
+## 32. A move changes a span, not only a berth
+
+**Decision.** The booking panel's `Move to` berth dropdown becomes two fields — **Berth**
+and **Dates** — and one button saves whichever changed. `reassignBooking(id, berthId)` is
+now `moveBooking(id, { berthId, start, end })`.
+
+**Why this was a gap and not a nice-to-have.** *"The vessel is arriving two days late"* is
+at least as common as *"put it on a different berth"*, and the panel could do the second
+but not the first. The only way to change a date was to cancel and rebook, which throws
+away things the facility should keep:
+
+- the row's identity, and with it its place in the queue
+- its provenance — `imported from sheet 2010, row 75` becomes `entered in this system`
+- any review item hanging off `booking_id`
+- and it leaves two rows, one cancelled, where the facility has one booking
+
+**It costs nothing in correctness, and demonstrates the guarantee a third time.**
+`bookings.during` is a **generated** column, so an update to either date re-evaluates the
+`EXCLUDE` constraint exactly as an update to `berth_id` does. Moving into an occupied span
+is refused by the database, on the same code path and with the same error, with no
+override — the third place that guarantee proves itself, after the insert and the restore.
+`checkBooking` already accepted `start`, `end` and `excludeBookingId`; the pre-check
+needed no change at all.
+
+### The one rule a move does not share with a booking
+
+`createBooking` refuses a start before today outright: reserving a berth for a day that
+has passed is nonsense. Applying that to a move would make **every one of the 2,031
+imported bookings uneditable**, since all of them are already in the past — a date typed
+wrong in 2010 could then only be cancelled, which loses the row. But dragging a booking
+that has *not started yet* backwards past today is the same nonsense the insert refuses.
+
+So the floor is decided by **where the booking is now, not where it is going**:
+
+| Booking starts | New start before today | Verdict |
+|---|---|---|
+| today or later | yes | refused — *it has not started yet, so it cannot be moved into the past* |
+| already in the past | yes | allowed — this is correcting a record |
+
+That lives in `src/domain/move.ts`, pure and unit-tested (invariant 1), and is run
+**twice**: in the panel, to disable the button and say why, and again in `moveBooking`,
+because the action behind the panel is a public endpoint and `min` guards only the picker.
+Same function, same sentence, both places. → [invariant 7](CLAUDE.md#invariants)
+
+**What is still missing.** A move has no undo. Cancel, Clear, Load and Put back all keep
+what they replace; a move overwrites the old berth and span in place, and that was already
+true of berth changes before this. It is honest to say the fix is the same shape — snapshot
+the row inside the transaction — and that it was not built, rather than to claim
+[invariant 12](CLAUDE.md#invariants) covers a path it does not.
+
+**Three specs**, because a write path with an undo-less overwrite deserves them: a date
+move that keeps the same row, a date move refused by the constraint because another
+booking holds those days, and the past-date refusal. `src/domain/move.test.ts` covers the
+floor rule in nine cases without touching a database.

@@ -15,6 +15,7 @@ import type { Booking, BookingKind } from '../domain/types';
 import { nothingToLose } from '../lib/undo';
 import type { Schedule } from '../lib/undo';
 import { todayISO } from '../lib/nav';
+import { checkMove } from '../domain/move';
 import type { ImportPlan } from '../import/plan';
 import { randomUUID } from 'node:crypto';
 
@@ -333,21 +334,43 @@ async function refreshTooLongItems(
 }
 
 /**
- * Move a booking to a different berth.
+ * Move a booking: to a different berth, to different dates, or both.
  *
- * The conflict check is the constraint, re-run by the update itself. The fit check is
- * re-run here for the queue: the stored too-long item named the old berth, and left
- * alone it would keep reporting a problem the board no longer shows — or miss the one
- * the move just created.
+ * The conflict check is the constraint, re-run by the update itself — `during` is a
+ * generated column, so changing either date re-evaluates the exclusion exactly as
+ * changing the berth does. Moving into an occupied slot is refused by the database on
+ * this path for the same reason it is refused on an insert, and there is no override.
+ *
+ * Dates matter as much as berths and cost nothing extra to support: the alternative
+ * was cancel-and-rebook, which loses the row's identity, its import provenance and the
+ * review items hanging off it, and leaves two bookings where the facility has one.
+ *
+ * The fit check is re-run here for the queue: the stored too-long item named the old
+ * berth and the old span, and left alone it would keep reporting a problem the board no
+ * longer shows — or miss the one the move just created.
  */
-export async function reassignBooking(
+export async function moveBooking(
   id: string,
-  berthId: string,
+  to: { berthId: string; start: string; end: string },
 ): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {
+    // Where it sits now decides whether this is scheduling or correcting the record,
+    // so the rule needs the stored start — and this is the check for anything calling
+    // the action directly, which the panel's disabled button cannot be.
+    const [row] = await sql`select start_date from bookings where id = ${id}`;
+    if (!row) return { ok: false, error: 'That booking no longer exists.' };
+
+    const verdict = checkMove({
+      currentStart: String(row.start_date), start: to.start, end: to.end, today: todayISO(),
+    });
+    if (!verdict.ok) return { ok: false, error: verdict.error };
+
     await sql.begin(async (tx) => {
-      await tx`update bookings set berth_id = ${berthId} where id = ${id}`;
+      await tx`
+        update bookings
+           set berth_id = ${to.berthId}, start_date = ${to.start}, end_date = ${to.end}
+         where id = ${id}`;
       await refreshTooLongItems(tx, { bookingId: id });
     });
     return { ok: true };

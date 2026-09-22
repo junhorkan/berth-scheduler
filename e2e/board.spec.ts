@@ -481,7 +481,7 @@ test.describe('the queue agrees with the board', () => {
     await page.goto(FIXTURE_HREF);
     await earlyTern(page).click();
     // Options follow berth display order: North Pier West, Face, East, ...
-    await page.getByLabel('Move to').selectOption({ index: toIndex });
+    await page.getByLabel('Berth', { exact: true }).selectOption({ index: toIndex });
     await page.getByRole('button', { name: 'Move booking' }).click();
     await expect(page.getByRole('dialog', { name: 'Booking', exact: true })).toHaveCount(0);
   }
@@ -539,11 +539,122 @@ test.describe('the queue agrees with the board', () => {
     await page.goto(FIXTURE_HREF);
     page.once('dialog', (d) => d.accept());
     await page.getByLabel(/S\/Y Test Beacon/).first().click();
-    await expect(page.getByText(`${day(24)} to ${day(25)}`)).toBeVisible();
+    // The dates are the move fields now, not a read-only line in the meta list.
+    await expect(page.getByLabel('Start date')).toHaveValue(day(24));
+    await expect(page.getByLabel('End date')).toHaveValue(day(25));
     await page.getByRole('button', { name: 'Cancel booking' }).click();
     await expect(page.getByLabel(/S\/Y Test Beacon/)).toHaveCount(1);
 
     await page.goto('/review');
     await expect(openRow(page, 'S/Y Test Beacon')).toHaveCount(1);
+  });
+});
+
+/**
+ * A move changes a berth, a span, or both.
+ *
+ * Dates matter as much as berths — a vessel arriving two days late is the everyday
+ * edit — and the guarantee has to hold on this path too: `during` is generated from
+ * the two dates, so moving into an occupied span is refused by the same constraint
+ * that refuses an insert. These prove it, and that the fixture is left as it was found.
+ */
+test.describe('moving a booking in time', () => {
+  const day = (d: number) =>
+    `${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const bar = (page: import('@playwright/test').Page, label: string) =>
+    page.getByLabel(new RegExp(label));
+
+  async function open(page: import('@playwright/test').Page, label: string) {
+    await page.goto(FIXTURE_HREF);
+    await bar(page, label).first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+  }
+
+  /*
+    A successful move closes the panel by navigating. Without waiting for that, the
+    next `goto` cancels the server action mid-flight and the spec reads the booking
+    back unmoved — which is a spec that tests nothing rather than one that fails.
+  */
+  async function move(page: import('@playwright/test').Page, from: number, to: number) {
+    await page.getByLabel('Start date').fill(day(from));
+    await page.getByLabel('End date').fill(day(to));
+    await page.getByRole('button', { name: 'Move booking' }).click();
+  }
+
+  async function bookEvent(page: import('@playwright/test').Page, label: string, from: number, to: number) {
+    await page.goto(FIXTURE_HREF);
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByRole('button', { name: 'Event', exact: true }).click();
+    await page.getByLabel('Description').fill(label);
+    await page.getByLabel('Berth', { exact: true }).selectOption({ label: 'North Pier East — 240ft' });
+    const dates = page.locator('input[type="date"]');
+    await dates.first().fill(day(from));
+    await dates.nth(1).fill(day(to));
+    await page.getByRole('button', { name: 'Save booking' }).click();
+    await expect(bar(page, label)).toBeVisible();
+  }
+
+  async function remove(page: import('@playwright/test').Page, label: string) {
+    await page.goto(FIXTURE_HREF);
+    page.once('dialog', (d) => d.accept());
+    await bar(page, label).first().click();
+    await page.getByRole('button', { name: 'Cancel booking' }).click();
+    await expect(bar(page, label)).toHaveCount(0);
+  }
+
+  test('moves a booking to other dates, keeping the same row', async ({ page }) => {
+    await bookEvent(page, 'E2E slipping tide', 4, 6);
+
+    await open(page, 'E2E slipping tide');
+    // Nothing has changed yet, so there is nothing to save.
+    await expect(page.getByRole('button', { name: 'Move booking' })).toBeDisabled();
+
+    await move(page, 7, 8);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    // The same booking, on the new dates — not a second one beside the first.
+    await page.goto(FIXTURE_HREF);
+    await expect(bar(page, 'E2E slipping tide')).toHaveCount(1);
+    await bar(page, 'E2E slipping tide').click();
+    await expect(page.getByLabel('Start date')).toHaveValue(day(7));
+    await expect(page.getByLabel('End date')).toHaveValue(day(8));
+
+    await remove(page, 'E2E slipping tide');
+  });
+
+  test('refuses a move onto days another booking already holds', async ({ page }) => {
+    // The point of the whole feature. The berth is the same; only the span moves, and
+    // the EXCLUDE constraint judges it exactly as it judges an insert.
+    await bookEvent(page, 'E2E holder', 13, 15);
+    await bookEvent(page, 'E2E mover', 17, 18);
+
+    await open(page, 'E2E mover');
+    await move(page, 14, 15);
+
+    await expect(page.locator('.verdict.stop')).toContainText('E2E holder');
+    // Refused, not half-applied: the booking is still on its own days.
+    await page.goto(FIXTURE_HREF);
+    await bar(page, 'E2E mover').click();
+    await expect(page.getByLabel('Start date')).toHaveValue(day(17));
+
+    await remove(page, 'E2E mover');
+    await remove(page, 'E2E holder');
+  });
+
+  test('refuses to drag a booking that has not started yet into the past', async ({ page }) => {
+    // The one rule a move does not share with a berth change. A booking still ahead of
+    // today is live work; dragging it behind today is the nonsense `createBooking`
+    // already refuses. An imported 2010 row is a record and has no such floor, which is
+    // what src/domain/move.test.ts covers.
+    await bookEvent(page, 'E2E time traveller', 26, 27);
+    await open(page, 'E2E time traveller');
+
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    await page.getByLabel('Start date').fill(yesterday);
+
+    await expect(page.locator('.verdict.stop')).toContainText('cannot be moved into the past');
+    await expect(page.getByRole('button', { name: 'Move booking' })).toBeDisabled();
+
+    await remove(page, 'E2E time traveller');
   });
 });
