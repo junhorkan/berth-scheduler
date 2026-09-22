@@ -390,21 +390,24 @@ test.describe('the other tabs', () => {
     await page.goto('/vessels');
     const rows = page.locator('.queue li');
     const head = await rows.count();
-    expect(head).toBeLessThanOrEqual(5);
+    expect(head).toBeLessThanOrEqual(10);
+    await expect(page.locator('.prange')).toHaveText(/of \d+/);
 
-    // Filtering is a search across the whole register, not inside what is on screen.
+    // The two halves of the register are two buttons, and pressing one replaces the list.
+    await expect(page.getByText('M/V Test Drifter')).toBeVisible();
+    await expect(page.getByText('R/V Test Harbor')).toBeHidden();
+    await page.getByRole('button', { name: 'With a length recorded' }).click();
+    await expect(page.getByText('R/V Test Harbor')).toBeVisible();
+    await expect(page.getByText('M/V Test Drifter')).toBeHidden();
+    await page.getByRole('button', { name: 'No length on record' }).click();
+
+    // Filtering is a search across the whole register, not inside the category on screen.
     await page.getByLabel('Filter vessels by name').fill('Drifter');
     await expect(rows).toHaveCount(1);
     await expect(page.getByText('M/V Test Drifter')).toBeVisible();
 
     await page.getByLabel('Filter vessels by name').fill('');
     await expect(rows).toHaveCount(head);
-
-    // A hull that already has a length is not work, so it sits behind a button.
-    await expect(page.getByText('R/V Test Harbor')).toBeHidden();
-    await page.getByRole('button', { name: 'With a length recorded' }).click();
-    await expect(page.getByText('R/V Test Harbor')).toBeVisible();
-    expect(await rows.count()).toBeGreaterThan(head);
   });
 
   test('Review collapses missing lengths into one row instead of one per vessel', async ({ page }) => {

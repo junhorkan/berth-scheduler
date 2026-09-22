@@ -522,7 +522,7 @@ a { color: var(--vessel); }
 /* ---- History: the archive opens one category at a time, and starts closed ----
    Radios and labels rather than JavaScript, so Review stays a server component. */
 
-.histrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.catrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .catbtn, .histhide { position: relative; cursor: pointer; font: inherit; font-size: 13px; }
 /* One category, as a control: History's labels and the Vessels register's toggle. */
 .catbtn {
@@ -542,7 +542,8 @@ a { color: var(--vessel); }
    is transparent, so its ground IS --plane: the open one has to be the one that lifts
    off it, or the selection dissolves and the three closed ones stand proud instead. */
 .catbtn:has(input:checked),
-.catbtn[aria-expanded='true'] {
+.catbtn[aria-expanded='true'],
+.catbtn[aria-pressed='true'] {
   background: var(--surface); border-color: var(--ink-2); color: var(--ink); font-weight: 650;
 }
 /* A way back to the closed card, so it is a link and not a fourth category. It has
@@ -571,11 +572,11 @@ a { color: var(--vessel); }
 /* Where the switch cannot work, the card falls back to what it was: everything drawn,
    nothing to press. A browser without :has(), and paper, which has no buttons. */
 @supports not selector(:has(*)) {
-  .histrow { display: none; }
+  .catrow { display: none; }
   .histpanel { display: block; }
 }
 @media print {
-  .histrow { display: none; }
+  .catrow { display: none; }
   .histpanel { display: block; }
 }
 /* The fold Review opens with a <details> summary. The register is filtered in the
@@ -587,9 +588,17 @@ a { color: var(--vessel); }
 .qmorebtn::before { content: '\25b8\00a0'; }
 .qmorebtn:hover { color: var(--ink); text-decoration: underline; }
 
-/* The measured hulls sit under their own button, away from the work. */
-.vrecorded { margin-top: 20px; }
-.vrecorded .qsection { margin-top: 12px; }
+/* ---- Paging the register ----
+   A page of rows at a time, rather than one list that grows to 398. The count lives in
+   the pager, so the category's own name is on its button and nowhere twice. */
+.pager {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--grid);
+}
+.pager .navbtn { font: inherit; font-size: 15px; cursor: pointer; }
+.pager .navbtn:disabled { opacity: 0.4; cursor: default; border-color: var(--axis); }
+.prange { font-family: var(--mono); font-size: 13px; color: var(--ink-muted); }
+.catrow + .queue { margin-top: 14px; }
 
 .cardtitle {
   margin: 0 0 8px; font-size: 11px; font-weight: 650;

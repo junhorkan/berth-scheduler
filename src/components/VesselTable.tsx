@@ -8,33 +8,44 @@ import type { VesselRow } from '../db/queries';
  * The register, as work: the hulls whose missing length blocks the most bookings first.
  *
  * It began as a four-column table of all 418 rows, which made the page 21,713px tall —
- * 24 screens — and put the page at odds with its own argument. Then 25 rows of it, which
- * is still a wall of near-identical rows each carrying an empty box. It is a queue, and
- * it now looks like one: the same row Review uses, five at a time, the category named
- * once above them with its count, and the measured hulls behind a button because they
- * are not the work.
+ * 24 screens. Then 25 rows of it, each carrying an empty box, which is a wall. Then five
+ * rows and a *Show the remaining 393*, which is a wall one click away. So it pages: a
+ * category at a time, ten rows at a time, and the rest is a page forward rather than a
+ * longer page. DECISIONS 23.
  *
  * Client-side, because the three things you do here — filter to a hull you have the
- * measurement for, open the rest, and look at what is already recorded — are instant,
- * and none is worth a round trip or a URL.
+ * measurement for, turn a page, and look at what is already recorded — are instant, and
+ * none is worth a round trip or a URL.
  */
-export default function VesselTable({ vessels, head }: { vessels: VesselRow[]; head: number }) {
+type Category = 'missing' | 'recorded';
+
+export default function VesselTable({ vessels, perPage }: { vessels: VesselRow[]; perPage: number }) {
   const [query, setQuery] = useState('');
-  const [allMissing, setAllMissing] = useState(false);
-  const [allRecorded, setAllRecorded] = useState(false);
-  const [openRecorded, setOpenRecorded] = useState(false);
+  const [category, setCategory] = useState<Category>('missing');
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return vessels;
+    if (!q) return [];
     return vessels.filter((v) => v.canonicalName.toLowerCase().includes(q));
   }, [vessels, query]);
 
-  const missing = vessels.filter((v) => v.lengthFt == null);
-  const recorded = vessels.filter((v) => v.lengthFt != null);
-  // Filtering is a search across the whole register: it ignores the split, because
-  // somebody typing a name wants that hull, not the category it happens to sit in.
+  const missing = useMemo(() => vessels.filter((v) => v.lengthFt == null), [vessels]);
+  const recorded = useMemo(() => vessels.filter((v) => v.lengthFt != null), [vessels]);
+
+  // Filtering is a search across the whole register, not inside a category: somebody
+  // typing a name wants that hull, whichever list it happens to sit in.
   const searching = query.trim() !== '';
+  const rows = searching ? filtered : category === 'missing' ? missing : recorded;
+
+  // Clamped rather than stored: recording a length moves a row to the other category,
+  // and the page you were on can stop existing under you.
+  const pages = Math.max(1, Math.ceil(rows.length / perPage));
+  const current = Math.min(page, pages);
+  const from = (current - 1) * perPage;
+  const shown = rows.slice(from, from + perPage);
+
+  const show = (next: Category) => { setCategory(next); setPage(1); };
 
   // An empty register is a state, not a failed search, so it does not say
   // "No vessel matches" against a filter nobody typed.
@@ -54,86 +65,81 @@ export default function VesselTable({ vessels, head }: { vessels: VesselRow[]; h
           value={query}
           placeholder="Filter by name"
           aria-label="Filter vessels by name"
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
         />
         <span className="vcount">
-          {searching
-            ? `${filtered.length} of ${vessels.length}`
-            : `${vessels.length} vessels`}
+          {searching ? `${filtered.length} of ${vessels.length}` : `${vessels.length} vessels`}
         </span>
       </div>
 
-      {searching ? (
-        filtered.length === 0 ? (
-          <p className="empty">No vessel matches “{query.trim()}”.</p>
-        ) : (
-          <ul className="queue">
-            {filtered.map((v) => <VesselItem key={v.id} vessel={v} />)}
-          </ul>
-        )
-      ) : (
-        <>
-          <Section
-            title="No length on record"
-            rows={missing}
-            head={head}
-            all={allMissing}
-            onShowAll={() => setAllMissing(true)}
-          />
+      {/*
+        The two halves of the register, named on their own buttons: what still needs a
+        length, and what already has one. While a filter is typed there is one list —
+        the matches — so the buttons would be claiming a split that is not on screen.
+      */}
+      {!searching && recorded.length > 0 && (
+        <div className="catrow" role="group" aria-label="Register category">
+          <button
+            type="button"
+            className="catbtn"
+            aria-pressed={category === 'missing'}
+            onClick={() => show('missing')}
+          >
+            No length on record
+          </button>
+          <button
+            type="button"
+            className="catbtn"
+            aria-pressed={category === 'recorded'}
+            onClick={() => show('recorded')}
+          >
+            With a length recorded
+          </button>
+        </div>
+      )}
 
-          {recorded.length > 0 && (
-            // Not the work: a length already recorded is a fit check that already
-            // happens. Behind a button, like the History card on Review.
-            <section className="qsection vrecorded">
-              <button
-                type="button"
-                className="catbtn"
-                aria-expanded={openRecorded}
-                onClick={() => setOpenRecorded((o) => !o)}
-              >
-                With a length recorded
-              </button>
-              {openRecorded && (
-                <Section
-                  title="With a length recorded"
-                  rows={recorded}
-                  head={head}
-                  all={allRecorded}
-                  onShowAll={() => setAllRecorded(true)}
-                />
-              )}
-            </section>
+      {shown.length === 0 ? (
+        <p className="empty">
+          {searching ? `No vessel matches “${query.trim()}”.` : 'Nothing in this category.'}
+        </p>
+      ) : (
+        <ul className="queue">
+          {shown.map((v) => <VesselItem key={v.id} vessel={v} />)}
+        </ul>
+      )}
+
+      {/* The count lives here, so a category's name is on its button and nowhere twice. */}
+      {rows.length > 0 && (
+        <nav className="pager" aria-label="Pages">
+          {pages > 1 && (
+            <button
+              type="button"
+              className="navbtn"
+              onClick={() => setPage(current - 1)}
+              disabled={current === 1}
+              aria-label="Previous page"
+            >
+              &lsaquo;
+            </button>
           )}
-        </>
+          <span className="prange">
+            {(from + 1).toLocaleString()}&ndash;{(from + shown.length).toLocaleString()}
+            {' of '}{rows.length.toLocaleString()}
+          </span>
+          {pages > 1 && (
+            <button
+              type="button"
+              className="navbtn"
+              onClick={() => setPage(current + 1)}
+              disabled={current === pages}
+              aria-label="Next page"
+            >
+              &rsaquo;
+            </button>
+          )}
+        </nav>
       )}
     </div>
-  );
-}
-
-/** One category: its name and count once, a few rows, and the rest one click away. */
-function Section({
-  title, rows, head, all, onShowAll,
-}: {
-  title: string; rows: VesselRow[]; head: number; all: boolean; onShowAll: () => void;
-}) {
-  if (rows.length === 0) return null;
-  const shown = all ? rows : rows.slice(0, head);
-  const hidden = rows.length - shown.length;
-  return (
-    <section className="qsection">
-      <h2 className="qhead muted">
-        {title}
-        <span className="qhcount">{rows.length.toLocaleString()}</span>
-      </h2>
-      <ul className="queue">
-        {shown.map((v) => <VesselItem key={v.id} vessel={v} />)}
-      </ul>
-      {hidden > 0 && (
-        <button className="qmorebtn" onClick={onShowAll}>
-          Show the remaining {hidden.toLocaleString()}
-        </button>
-      )}
-    </section>
   );
 }
 

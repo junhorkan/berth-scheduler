@@ -135,6 +135,23 @@ test.describe('an empty schedule', () => {
     await expect(page.getByRole('button', { name: /Put back the previous schedule/ })).toBeVisible();
   });
 
+  test('the register pages through the vessels instead of growing a list', async ({ page }) => {
+    // Runs on the sample the spec above loaded: 398 hulls with no length, 20 with one.
+    await page.goto('/vessels');
+    const range = page.locator('.prange');
+    await expect(range).toHaveText('1–10 of 398');
+    await expect(page.locator('.queue li')).toHaveCount(10);
+
+    await page.getByLabel('Next page').click();
+    await expect(range).toHaveText('11–20 of 398');
+    await expect(page.locator('.queue li')).toHaveCount(10);
+
+    // Switching category starts that list at its own first page.
+    await page.getByRole('button', { name: 'With a length recorded' }).click();
+    await expect(range).toHaveText('1–10 of 20');
+    await expect(page.getByLabel('Previous page')).toBeDisabled();
+  });
+
   /**
    * Self-contained: it makes the one booking it is about to lose, rather than leaning
    * on the sample the previous spec loaded. An earlier version read the review badge

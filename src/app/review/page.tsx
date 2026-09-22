@@ -162,7 +162,7 @@ export default async function ReviewPage() {
             Review. The CSS is in globals.css under "History".
           */}
           <div className="histswitch">
-            <div className="histrow" role="radiogroup" aria-label="History category">
+            <div className="catrow" role="radiogroup" aria-label="History category">
               {historySections.map(({ type }) => (
                 <label key={type} className="catbtn">
                   <input type="radio" name="hcat" id={`h-${type}`} />

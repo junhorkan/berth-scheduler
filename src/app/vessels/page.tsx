@@ -4,11 +4,11 @@ import { getVessels } from '../../db/queries';
 import { shareInWords } from '../../lib/share';
 
 /**
- * Rows the register shows per category before the rest folds away. It lives here
- * because the line under the page's name counts exactly those rows: a page that claims
- * one number and displays another is worse than one that says nothing.
+ * Rows per page in the register. It lives here because the line under the page's name
+ * counts exactly the rows on the first page: a page that claims one number and displays
+ * another is worse than one that says nothing.
  */
-const HEAD = 5;
+const PER_PAGE = 10;
 /** Small numbers read better as words in a sentence. */
 const NUMBER: Record<number, string> = { 3: 'three', 4: 'four', 5: 'five', 6: 'six', 10: 'ten' };
 
@@ -21,8 +21,8 @@ export default async function VesselsPage() {
   // The list puts vessels with no length first, busiest first, so its head is where
   // recording a length unlocks the most fit checks. The line below counts exactly the
   // rows the register shows, so the page cannot claim one number and display another.
-  const headBookings = missing.slice(0, HEAD).reduce((a, v) => a + v.bookingCount, 0);
-  const share = missing.length > HEAD ? shareInWords(headBookings, totalBookings) : null;
+  const headBookings = missing.slice(0, PER_PAGE).reduce((a, v) => a + v.bookingCount, 0);
+  const share = missing.length > PER_PAGE ? shareInWords(headBookings, totalBookings) : null;
 
   /**
    * One line under the page's name: what is missing, and where to start. It used to be
@@ -42,7 +42,7 @@ export default async function VesselsPage() {
           : missing.length === 1
             ? 'One has no length on record yet.'
             : 'Some have no length on record yet.'}
-        {share && <> The first {NUMBER[HEAD] ?? HEAD} account for{' '}
+        {share && <> The first {NUMBER[PER_PAGE] ?? PER_PAGE} account for{' '}
           <b>{share} of the vessel bookings</b>, so start there.</>}
       </>
     );
@@ -50,7 +50,7 @@ export default async function VesselsPage() {
   return (
     <main className="shell">
       <Nav current="vessels" title="Vessels" tagline={tagline} />
-      <VesselTable vessels={vessels} head={HEAD} />
+      <VesselTable vessels={vessels} perPage={PER_PAGE} />
     </main>
   );
 }

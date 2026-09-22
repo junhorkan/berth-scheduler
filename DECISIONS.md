@@ -705,21 +705,28 @@ came to type in, and it is usually in the tail.
 
 **Decision.** The four-column table is gone. A vessel is the row Review uses — its name,
 a quiet line saying what a length there would unlock (*267 bookings · last 2019*), and
-the length box on the right where a review row puts its one button. The rows are split
-under two headings: **No length on record**, five at a time, and **With a length
-recorded** behind a button, because a hull that has been measured is not work. The line
-under the page's name counts exactly the rows on screen, from the same constant.
+the length box on the right where a review row puts its one button. The register's two
+halves are two buttons side by side, as Review's History states its categories: **No
+length on record** and **With a length recorded**, because a hull that has been measured
+is not work. Ten rows at a time, and the rest is **a page forward, not a longer page**:
+`‹ 1–10 of 398 ›`. The line under the page's name counts exactly the rows on the first
+page, from the same constant the list pages with.
 
 **Why.** 25 near-identical rows, each carrying an empty box, is a wall — the fault of
 [17](#17-repetition-is-not-information) again, one level up. The page is a queue: work
 first, measured hulls out of the way, one category named once above its rows. It is also
 the shape the owner asked for, having seen it work on Review.
 
-| | Table of 25 | Queue of five |
+| | Table of 25 | Paged queue |
 |---|---|---|
-| Page height | 1,671px | **900px**, one screen |
-| Empty length boxes on screen | 25 | 5 |
+| Page height | 1,671px | **one screen**, whichever page you are on |
+| Empty length boxes on screen | 25 | 10 |
 | Column headers, and their alignment on a phone | 4 | none |
+| Longest list one click can produce | 418 rows | 10 |
+
+**Why pages rather than a fold.** *Show the remaining 393* has one outcome, and it is the
+wall again — the owner's objection, and correct: a control whose only setting is "far too
+much" is not a control. A page forward cannot produce a longer page.
 
 **What it costs.** A table lines its numbers up, and this does not: *267 bookings · last
 2019* is a sentence, not a column. With five rows it reads at a glance, and it survives a

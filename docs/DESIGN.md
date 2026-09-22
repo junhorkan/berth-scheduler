@@ -108,11 +108,11 @@ commit at a time.
   category is named once above its rows, not on every row; a column that is blank or
   identical on every row is furniture, not data. What does *not* fold: conflicts, which
   are distinct pairs of bookings. See [DECISIONS 17 and 23](../DECISIONS.md).
-- **A long list shows its head.** Vessels renders five of 418 with a filter that searches
-  the whole register, and puts the measured hulls behind a button; rendering all of them
-  made the page 21,713px tall and buried the page's own argument. Its rows are Review's
-  rows, so the two queues read the same and the head count is stated once, in the page's
-  own line. Review shows five rows per section and folds the rest behind a
+- **A long list shows its head.** Vessels pages: ten of 418 at a time, its two halves on
+  two buttons, and a filter that searches the whole register. Rendering all of them made
+  the page 21,713px tall and buried the page's own argument, and a *Show the remaining
+  393* only moved that wall one click away. Its rows are Review's rows, so the two queues
+  read the same, and the page size is stated once, in the page's own line. Review shows five rows per section and folds the rest behind a
   `<details>`; navigation on a row is a text link, and only the decision is a button.
   Review's **History** card goes further and starts closed: one button per category, and
   nothing drawn until one is pressed, because an archive nobody has asked for is the
