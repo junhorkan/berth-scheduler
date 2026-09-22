@@ -234,11 +234,16 @@ a { color: var(--vessel); }
 
 .lenwrap { display: inline-flex; align-items: center; gap: 6px; }
 .leninput {
-  width: 72px; font: inherit; font-size: 13px; font-family: var(--mono);
+  /* Right-aligned, so the figure sits against its unit and the column reads as
+     measurements rather than as a form. */
+  width: 64px; text-align: right;
+  font: inherit; font-size: 13px; font-family: var(--mono);
   padding: 5px 8px; border: 1px solid var(--axis); border-radius: 7px;
   background: var(--surface); color: var(--ink);
 }
 .leninput:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
+/* Monospace metadata, so 12px is within the floor (DESIGN 11). */
+.unit { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); }
 .hint { font-size: 12px; color: var(--ink-muted); }
 .hint.ok { color: var(--vessel); }
 .hint.bad { color: var(--critical); }

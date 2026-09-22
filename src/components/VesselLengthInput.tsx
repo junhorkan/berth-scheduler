@@ -46,13 +46,16 @@ export default function VesselLengthInput({
         className="leninput"
         inputMode="numeric"
         value={value}
-        placeholder="— ft"
+        placeholder="—"
         aria-label={`Length in feet${bookingCount ? `, unlocks ${bookingCount} bookings` : ''}`}
         onChange={(e) => { setValue(e.target.value); setSaved(null); }}
         onBlur={save}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
         disabled={pending}
       />
+      {/* The unit belongs beside every box, not only the empty ones: a recorded length
+          read as a bare "120", which is the number this whole system compares. */}
+      <span className="unit">ft</span>
       {pending && <span className="hint">saving…</span>}
       {saved === 'ok' && <span className="hint ok">saved</span>}
       {saved && saved !== 'ok' && <span className="hint bad">{saved}</span>}
