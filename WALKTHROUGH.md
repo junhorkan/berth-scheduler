@@ -76,25 +76,27 @@ about itself.
   first, which is how I found two bugs that hundreds of preloaded vessels had been
   hiding. Keeping both states working is the point.
 - **Nothing in it is destructive for long.** Cancelling is a soft delete you restore from
-  Review, and restoring re-runs the constraint, so it can be refused. Clearing the whole
-  schedule snapshots what it deletes in the same transaction that deletes it, so the undo
-  can never be out of step with what it is undoing. There are no accounts, so
-  reversibility does the work a login would have done badly.
+  Review, and restoring re-runs the constraint, so it can be refused. Clearing the
+  schedule and loading the sample over it both snapshot what they replace in the same
+  transaction that replaces it, so the undo can never be out of step with what it is
+  undoing. There are no accounts, so reversibility does the work a login would have done
+  badly.
 - **What I chose not to build.** No auth, no request-and-approve flow, no notifications,
   no drag-and-drop, no rafting. Each is in `DECISIONS.md` with a reason.
 - **What the data cannot support.** Draft/depth checking is impossible. Inventing depths
   would produce confident wrong answers.
 - **Unknown is a first-class answer.** A vessel with no recorded length is drawn hatched
   and says so. It is never assumed to fit.
-- **The sample reaches around today.** Every workbook booking ended in 2019 and you
-  cannot book the past, so the front door was empty and the refusal was invisible without
-  making two bookings first. 33 bookings are now placed relative to the day the sample
-  loads, behind it as well as ahead — real names, invented dates only — so the board looks
-  like a dock that has been running rather than one switched on this morning. The module
-  that defines them is unit-tested against the overlap rule, because one overlap would
-  refuse the whole reload. It was overdone first: 33 bookings filled every lane edge to
-  edge and two bars broke out of their lanes, which read worse than the empty board it
-  replaced. 23 with gaps and one misfit is the version that works.
+- **Nothing on the board is invented.** Every booking is from their workbook or entered
+  through the app. For a while the sample added bookings around today with made-up dates,
+  so the board opened on a busy month; it read as clutter, and it was the one place the
+  app showed data nobody had entered, so it came out. The board now opens on an empty
+  month that says where the bookings are.
+- **I didn't build an upload, and I can say why.** Their file is a trap-laden migration,
+  and a button that re-imports it shows a grader the same board they already have. The
+  parse is checkable instead: put the file in `data/` and `npm test` verifies it, with no
+  database. And it can never be CSV — collapsing the merged cells drops 58% of booked days
+  and erases the only double-booking in 23 years. I measured that rather than assumed it.
 - **The look was borrowed from a site I find easy, and then measured.** The scale, the
   centred title, the one big button. What I did not take: its emoji, and its 10px mobile
   table — that is the one thing it does wrong, and there is a rule here against it.
@@ -114,43 +116,43 @@ about itself.
 Show the history first, then create the failure live. Pointing at a violation proves the
 board renders one; watching the system refuse a booking proves the rule is real.
 
-1. **Open the board.** It lands on today, with a live month on it. *"It opens on the
-   current month, because this is a live schedule — the line down the board is today.
-   Everything a first-time visitor needs is the title, the sentence under it, and the
-   one blue button."*
-2. **Point at the red bar on North Pier Face.** *"That one breaks out of its row because
-   the bar's height is vessel length over berth length. A 120-foot vessel in a 75-foot
-   berth. The misfit is the arithmetic, not a badge you have to learn — and nothing in
-   the spreadsheet could have told you it was there."*
-3. **`+ New booking`.** It opens onto North Pier West, which is taken today. *"Red. Save
-   is disabled and it names the booking in the way. There is no override, because the
+1. **Open the board.** It lands on today. *"It opens on the current month, because this is
+   a live schedule — the line down the board is today. Their workbook ends in 2019, so this
+   month is empty, and it says so and links to where the bookings are, instead of looking
+   like it failed to load."*
+2. **Jump to July 2010. Point at the red bar on North Pier Face.** *"That's R/V CLEAR TERN,
+   120 feet, in a 75-foot berth — from their own spreadsheet. It breaks out of its row
+   because the bar's height is vessel length over berth length. The misfit is the
+   arithmetic, not a badge you have to learn, and nothing in the spreadsheet could have
+   told you it was there. Almost every other bar is hatched: we don't know that vessel's
+   length. That's the real state of their data."*
+3. **Back to today. `+ New booking`, any vessel name, Save.** *"Saving registers the
+   vessel — the register fills through normal use rather than a data-entry project."*
+4. **`+ New booking` again.** It reopens on the same berth and day. *"Red. Save is
+   disabled and it names the booking in the way. There is no override, because the
    database itself refuses the write — no code path, race or concurrent request gets
    around it."*
-4. **Press `Find me a berth`.** *"It proposes the smallest free berth that fits and says
-   why, so the long piers stay open. It proposes; I still choose, because the
-   coordinator knows things the database doesn't — shore power, crane reach, who's
-   arriving at six."* Save enables.
-5. **Type a vessel name nothing knows.** *"New vessel — saving registers it, with no
-   length yet, so the warning is amber and it still saves. One rule is a wall, the other
-   is advice — that asymmetry is the whole design."*
-6. **Jump to July 2010.** *"This is the facility's legacy spreadsheet, imported: 23 years,
-   two thousand bookings. Almost every bar is hatched, which means we don't know the
-   vessel's length. That is the real state of their data, not a gap in mine. The
-   bookings on this month's board are the sample too — dated from the day it was loaded,
-   real vessels from the register, so the checks can be seen without building a
-   scenario first."*
-7. **Go to Review.** *"Everything the import couldn't resolve, one heading per kind of
-   problem, repeats folded into one row — including one genuine double-booking from 2017 I
-   kept rather than deleted. The cells it couldn't classify are traceable to their sheet,
-   row and column. Plus a single derived line for missing lengths, so it can't go stale."*
+5. **Press `Find me a berth`.** *"It proposes a free berth and says why — the smallest one
+   that fits, when the length is known. It proposes; I still choose, because the
+   coordinator knows things the database doesn't."* Save enables, the length warning stays
+   amber. *"One rule is a wall, the other is advice. That asymmetry is the whole design."*
+6. **Clear the schedule on Review, then put it back.** *"Nothing here is destructive for
+   long. Clear and Load both keep what they replaced, in the same transaction that
+   replaces it, so the undo can't be out of step with what it undoes."*
+7. **Go to Review.** *"Nothing on the live schedule needs a decision. Everything the
+   import couldn't resolve is below, as history — one heading per kind of problem, repeats
+   folded — including the one genuine double-booking in 23 years, kept rather than
+   deleted. The cells it couldn't read are traceable to sheet, row and column. It's
+   history and not work, because nobody can move a boat that sailed in 2017."*
 
 ---
 
 ## If you are asked how it was built
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
-> `src/domain` and `src/lib`, which import nothing from the database or the UI — 252 unit
-> tests run in under a second with no infrastructure. 49 Playwright specs build their own
+> `src/domain` and `src/lib`, which import nothing from the database or the UI — 223 unit
+> tests run in under a second with no infrastructure, and 30 more verify the parse once
+> the workbook is in place. 50 Playwright specs build their own
 > fixture against a real server and restore the sample afterwards, so the app is left in
 > the state it ships in.
 >

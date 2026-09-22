@@ -12,8 +12,6 @@ import { findConflicts, isValidRange } from '../domain/conflicts';
 import { checkFit, type FitResult } from '../domain/fit';
 import { canonicalVesselName } from '../domain/normalize';
 import type { Booking, BookingKind } from '../domain/types';
-import { dateSampleBookings } from '../lib/sample';
-import { todayISO } from '../lib/nav';
 
 /**
  * A connection or a transaction. The helpers below run inside either, and are cast to
@@ -392,37 +390,48 @@ export async function resolveReviewItems(
 }
 
 /**
- * The sample's forward bookings, dated from today.
+ * Keep what is about to be replaced, so the action replacing it can be undone.
  *
- * Names resolve against the register the seed just restored, and a name that does not
- * resolve is a bug in `lib/sample`, so it fails the reload loudly rather than skipping
- * the row. The one that does not fit its berth gets its review item here, the same way
- * a booking made through the form would.
+ * Called first inside every action that replaces the whole schedule — Clear and Load —
+ * in that action's own transaction, so the snapshot and the replacement commit or fail
+ * together. It holds one schedule: the last non-empty one an action replaced.
+ *
+ * An empty schedule has nothing to lose, so it leaves the existing snapshot alone. That
+ * is the case that matters most: Clear followed by an accidental Load must still be able
+ * to put back what was there before the Clear, and overwriting the snapshot with an
+ * empty one would throw that away.
  */
-async function insertSampleBookings(tx: Queryable, today: string) {
+async function snapshotForUndo(tx: Queryable, kind: 'clear' | 'load') {
   const sql = tx as ReturnType<typeof db>;
-  for (const b of dateSampleBookings(today)) {
-    let vesselId: string | null = null;
-    if (b.kind === 'vessel') {
-      const [v] = await sql`
-        select id from vessels where normalized_name = ${canonicalVesselName(b.label).normalized}`;
-      if (!v) throw new Error(`The sample names a vessel that is not on the register: ${b.label}`);
-      vesselId = v.id as string;
-    }
-    const [row] = await sql`
-      insert into bookings (berth_id, vessel_id, kind, status, label, start_date, end_date, source)
-      select be.id, ${vesselId}, ${b.kind}, 'active', ${b.label},
-             ${b.start}::date, ${b.end}::date, 'sample'
-        from berths be where be.name = ${b.berth}
-      returning id`;
-    if (!row) throw new Error(`The sample names a berth that does not exist: ${b.berth}`);
-    if (vesselId) await refreshTooLongItems(sql, { bookingId: row.id as string });
-  }
+  const raw = (cols: string) => db().unsafe(cols);
+  const [live] = await sql`
+    select (select count(*)::int from bookings) as bookings,
+           (select count(*)::int from vessels)  as vessels`;
+  if ((live.bookings as number) === 0 && (live.vessels as number) === 0) return;
+
+  await sql`delete from review_items_undo`;
+  await sql`delete from bookings_undo`;
+  await sql`delete from vessels_undo`;
+  await sql`insert into vessels_undo select ${raw(VESSEL_COLS)} from vessels`;
+  await sql`insert into bookings_undo select ${raw(BOOKING_COLS)} from bookings`;
+  await sql`insert into review_items_undo select ${raw(REVIEW_COLS)} from review_items`;
+  await sql`
+    insert into undo_meta (id, taken_at, bookings, vessels, kind)
+    values (1, now(), ${live.bookings as number}, ${live.vessels as number}, ${kind})
+    on conflict (id) do update
+      set taken_at = excluded.taken_at, bookings = excluded.bookings,
+          vessels  = excluded.vessels,  kind     = excluded.kind`;
 }
 
 /**
- * Restore the sample: the `*_seed` snapshot taken at import time, plus the bookings
- * in the coming weeks, dated from today (DECISIONS 25).
+ * Restore the sample: the `*_seed` snapshot taken when the workbook was imported.
+ *
+ * Every row is the client's own. An earlier version added bookings around today with
+ * invented dates, so the board opened on a busy month; it was removed as clutter and as
+ * the one place the app showed data nobody had entered (DECISIONS 29).
+ *
+ * It replaces the whole schedule, so it snapshots first and can be undone — it used to
+ * delete visitors' bookings outright and throw away the Clear undo as well.
  *
  * The app is public and unauthenticated by design, so anyone can edit it — this is
  * what makes that safe to offer: whatever a visitor does, one action puts the sample
@@ -434,6 +443,7 @@ export async function resetToImported(): Promise<{ ok: boolean; error?: string }
   const sql = db();
   try {
     await sql.begin(async (tx) => {
+      await snapshotForUndo(tx, 'load');
       await tx`delete from review_items`;
       await tx`delete from bookings`;
       await tx`delete from vessels`;
@@ -453,14 +463,6 @@ export async function resetToImported(): Promise<{ ok: boolean; error?: string }
           created_at
         from bookings_seed`;
       await tx`insert into review_items select * from review_items_seed`;
-      await insertSampleBookings(tx, todayISO());
-
-      // Choosing new content retires the undo: "undo the clear" after deliberately
-      // loading something else would silently throw that choice away.
-      await tx`delete from review_items_undo`;
-      await tx`delete from bookings_undo`;
-      await tx`delete from vessels_undo`;
-      await tx`delete from clear_undo_meta`;
     });
     return { ok: true };
   } catch (e) {
@@ -484,26 +486,7 @@ export async function clearSchedule(): Promise<{ ok: boolean; error?: string }> 
   const sql = db();
   try {
     await sql.begin(async (tx) => {
-      // One clear is undoable at a time; taking a new snapshot drops the old one.
-      await tx`delete from review_items_undo`;
-      await tx`delete from bookings_undo`;
-      await tx`delete from vessels_undo`;
-
-      await tx`insert into vessels_undo select ${sql.unsafe(VESSEL_COLS)} from vessels`;
-      await tx`insert into bookings_undo select ${sql.unsafe(BOOKING_COLS)} from bookings`;
-      await tx`insert into review_items_undo select ${sql.unsafe(REVIEW_COLS)} from review_items`;
-
-      const [counts] = await tx`
-        select (select count(*)::int from bookings_undo) as bookings,
-               (select count(*)::int from vessels_undo)  as vessels`;
-      await tx`
-        insert into clear_undo_meta (id, taken_at, bookings, vessels)
-        values (1, now(), ${counts.bookings as number}, ${counts.vessels as number})
-        on conflict (id) do update
-          set taken_at = excluded.taken_at,
-              bookings = excluded.bookings,
-              vessels  = excluded.vessels`;
-
+      await snapshotForUndo(tx, 'clear');
       await tx`delete from review_items`;
       await tx`delete from bookings`;
       await tx`delete from vessels`;
@@ -515,19 +498,19 @@ export async function clearSchedule(): Promise<{ ok: boolean; error?: string }> 
 }
 
 /**
- * Put back whatever the last clear removed.
+ * Put back the schedule the last Clear or Load replaced.
  *
- * Restoring replaces the current schedule rather than merging into it, because a clear
- * is an all-or-nothing act and undoing it should land you exactly where you were. The
- * snapshot is consumed on the way out: an undo you can run twice would quietly wipe
- * work done since the first one.
+ * Restoring replaces the current schedule rather than merging into it, because both
+ * actions it undoes are all-or-nothing and undoing one should land you exactly where you
+ * were. The snapshot is consumed on the way out: an undo you can run twice would quietly
+ * wipe work done since the first one.
  */
-export async function undoClear(): Promise<{ ok: boolean; error?: string }> {
+export async function restorePrevious(): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {
     let empty = false;
     await sql.begin(async (tx) => {
-      const [meta] = await tx`select bookings from clear_undo_meta where id = 1`;
+      const [meta] = await tx`select bookings from undo_meta where id = 1`;
       if (!meta) { empty = true; return; }
 
       await tx`delete from review_items`;
@@ -541,23 +524,29 @@ export async function undoClear(): Promise<{ ok: boolean; error?: string }> {
       await tx`delete from review_items_undo`;
       await tx`delete from bookings_undo`;
       await tx`delete from vessels_undo`;
-      await tx`delete from clear_undo_meta`;
+      await tx`delete from undo_meta`;
     });
-    if (empty) return { ok: false, error: 'There is no cleared schedule to put back.' };
+    if (empty) return { ok: false, error: 'There is no previous schedule to put back.' };
     return { ok: true };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };
   }
 }
 
-/** Throw away the snapshot, without restoring it. */
-export async function discardClearUndo(): Promise<void> {
+/**
+ * Throw the snapshot away without restoring it.
+ *
+ * For operator resets — `npm run sample:load` and the test suite's teardown — which put
+ * the live site back to its shipped state and must not leave a "put back" offer behind
+ * pointing at whatever was there before, test bookings included.
+ */
+export async function discardPreviousSchedule(): Promise<void> {
   const sql = db();
   await sql.begin(async (tx) => {
     await tx`delete from review_items_undo`;
     await tx`delete from bookings_undo`;
     await tx`delete from vessels_undo`;
-    await tx`delete from clear_undo_meta`;
+    await tx`delete from undo_meta`;
   });
 }
 

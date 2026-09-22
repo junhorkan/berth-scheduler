@@ -70,10 +70,11 @@ they are the facility, not schedule data.
   rather than hidden.
 - **A booking cannot start in the past.** A berth is not reserved for a day that has
   already gone; the form refuses it.
-- **The board still reaches a year back**, so bookings already recorded stay visible.
-  Viewing history and creating history are different operations. Forward, the window runs
-  three years, and every bound is computed per request — a fixed window once made future
-  bookings saveable but unreachable.
+- **The board reaches back to the earliest booking on the schedule**, so everything
+  recorded stays visible — with the workbook loaded, that is August 1997. Viewing history
+  and creating history are different operations. Forward, the window runs three years,
+  and every bound is computed per request — a fixed window once made future bookings
+  saveable but unreachable.
 
 ## Vessels
 
@@ -93,6 +94,36 @@ they are the facility, not schedule data.
   failing at its one job.
 - **Only vessels are fit-checked.** An event has no length, so "does it fit" is not a
   question that applies.
+
+## Reading the workbook
+
+The sample is a 23-year spreadsheet, and turning it into records meant deciding what its
+cells mean. Each rule below has a visible consequence, and each is locked into a test that
+runs once the workbook is in `data/`. The mechanics are in `docs/DATA-NOTES.md`.
+
+- **A merged cell is one booking, and its width is the dates.** The spreadsheet has no
+  start or end columns; a vessel held a berth for as many days as its cell spans. Losing
+  the merges — which is what exporting to CSV does — turns most multi-day stays into
+  single days and erases the only double-booking in the file.
+- **Day 1 is found, not assumed.** It sits under its real weekday, so it is a different
+  column every month. The offset is inferred from every anchor available and checked
+  against the real calendar; assuming a fixed one would misdate the whole file.
+- **A stated year is trusted only when it is credible.** The 2010 sheet labels two months
+  `2018`. The header wins only when it names the sheet's own year or the previous
+  December; otherwise the sheet's year does, and the anomaly is reported, not buried.
+- **A carried-over December is the same December.** The 2002–2004 sheets each open with
+  the previous December. Those bookings merge with the original rather than doubling it.
+- **A stay that crosses a month end is one stay.** The grid drew it as two bars; 49 of
+  them are stitched back together.
+- **A cell that belongs to no berth is not guessed at.** Twelve names typed over a
+  day-number row become review items with their sheet, row and column.
+- **Four kinds of thing share one cell space.** A vessel, an event and a closure all
+  occupy a berth; a timing note like `ETA 1200` does not, and never becomes a booking.
+  A cell matching none of these is an unreadable cell for a person to decide.
+- **Spelling variants are one vessel.** `Barge SALT DORY` and `Barge Salt Dory` are one
+  hull, and `OS/V` is `OSV`: 446 spellings are 418 vessels.
+- **When the source contradicts itself, both answers are kept.** Three registry entries
+  state one length in the name and another in the notes. Neither is silently chosen.
 
 ## Deliberately not modelled
 

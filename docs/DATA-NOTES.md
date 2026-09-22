@@ -70,7 +70,8 @@ berth, `ETA 1200` does not.
 ## Name variants
 
 `Barge SALT DORY` and `Barge Salt Dory` are one barge. `OS/V` folds into `OSV`.
-Case-folding collapses 484 distinct strings into **418 vessels**.
+Case-folding collapses **446** distinct spellings into **418 vessels**. (This page once
+said 484. No way of counting the file reproduces that; 446 is now locked into a test.)
 
 The registry sheets are self-inconsistent: three vessels state a length in the name and a
 **different** `LOA:` in the notes. Both are stored; neither is silently chosen.
@@ -82,7 +83,8 @@ The registry sheets are self-inconsistent: three vessels state a length in the n
     2,212   source cells read
     2,031   real stays after stitching
       145   cells merged into an existing stay  (49 across a month boundary)
-        7   berths          418 vessels        427 review items
+        7   berths          418 vessels         29 review items
+                  (1 conflict · 9 too long · 19 unreadable cells, 12 of them orphaned)
        20   vessels with a recorded length  ← the whole problem, in one number
         9   physically impossible assignments (6 of them single-day)
         4   blocks that could not be calendar-verified

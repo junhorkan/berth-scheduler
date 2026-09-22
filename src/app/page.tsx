@@ -2,11 +2,11 @@ import Board from '../components/Board';
 import Nav from '../components/Nav';
 import BookingPanel from '../components/BookingPanel';
 import BookingDetail from '../components/BookingDetail';
-import { LoadSampleButton, UndoClearButton } from '../components/SampleData';
+import { LoadSampleButton, RestorePreviousButton } from '../components/SampleData';
 import MonthJump from '../components/MonthJump';
 import {
   getBerths, getBookingsInRange, getSummary, getBookingById, getNearestBookedMonth,
-  getClearUndo,
+  getPreviousSchedule,
 } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import {
@@ -68,7 +68,7 @@ export default async function BoardPage({
     bookings.length > 0 || scheduleIsEmpty ? null : await getNearestBookedMonth(bounds.start);
   // Offered on the empty board as well as on Review: whoever just cleared it is looking
   // at this screen, not at the tab they pressed the button on.
-  const undo = scheduleIsEmpty ? await getClearUndo() : null;
+  const undo = scheduleIsEmpty ? await getPreviousSchedule() : null;
   // A new booking defaults to today when you are on this month, and to the 1st otherwise.
   const newBookingDate = onToday ? todayISO() : bounds.start;
 
@@ -133,7 +133,7 @@ export default async function BoardPage({
                   {undo && (
                     <>
                       {' '}Cleared it by mistake?{' '}
-                      <UndoClearButton bookings={undo.bookings} vessels={undo.vessels} />
+                      <RestorePreviousButton bookings={undo.bookings} vessels={undo.vessels} kind={undo.kind} />
                     </>
                   )}
                 </>

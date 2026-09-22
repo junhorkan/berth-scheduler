@@ -35,6 +35,7 @@ built is usually more informative than the thing that was.
 | 26 | [A queue holds work; history goes in an archive](#26-a-queue-holds-work-history-goes-in-an-archive) |
 | 27 | [The vessel register loads when the panel opens](#27-the-vessel-register-loads-when-the-panel-opens) |
 | 28 | [Clear is undoable, and the board is not a wall](#28-clear-is-undoable-and-the-board-is-not-a-wall) |
+| 29 | [Nothing on the board is invented](#29-nothing-on-the-board-is-invented) |
 
 ---
 
@@ -280,8 +281,10 @@ not schedule data.
 **Corrected.** This entry used to say that *Clear the schedule* restored the shipped
 state, from the time when the app shipped empty. It ships with the sample loaded
 ([14](#14-the-legacy-schedule-is-imported-and-removable)), so the reload is the way back,
-and Clear is the one irreversible action in the app: a hard delete, whose dialog says that
-bookings made here are not recoverable. Invariant 12 names it as the exception.
+and for a time Clear was the one irreversible action in the app. It no longer is: Clear
+and Load both snapshot what they replace and can be put back
+([28](#28-clear-is-undoable-and-the-board-is-not-a-wall),
+[29](#29-nothing-on-the-board-is-invented)), and invariant 12 has no exception.
 
 **Amended.** Open access left one real hole: anyone could cancel anyone's booking. The
 answer is [20](#20-cancelling-is-reversible-not-restricted) — make it undoable rather
@@ -780,6 +783,9 @@ of; ours holds the tabs and the search box, which it does.
 
 ## 25. The sample reaches around today
 
+> **Superseded by [29](#29-nothing-on-the-board-is-invented).** The bookings described
+> here were removed. Kept because the reasoning, and why it was reversed, is the record.
+
 **Decision.** Loading the sample also places 33 bookings around the day it is loaded —
 three weeks behind it and six ahead — using real vessels from the register and event and
 closure labels the workbook uses. Among them: a vessel too long for its berth on each
@@ -856,6 +862,11 @@ Nobody can move a vessel that sailed in 2017. Presenting twenty-nine such items 
 asks for a decision that cannot be made, and a queue mostly full of those is one people
 stop reading — at which point the one real item, a 120ft vessel in a 75ft berth this
 coming Tuesday, is the thing that gets missed. The queue was hiding its own best find.
+
+*That one current item came from the invented sample bookings removed in
+[29](#29-nothing-on-the-board-is-invented). On a fresh load the work card is empty and all
+29 items are history — which is the truest version of this decision's point: the badge
+used to say 29 and mean none.*
 
 **Why the history is not deleted.** It is the evidence that the import dropped nothing
 silently, which is [invariant 3](../CLAUDE.md). "What happened to the cells you could not
@@ -953,6 +964,9 @@ not a design. The exception is gone.
 
 ### The board had become a wall
 
+> **Superseded by [29](#29-nothing-on-the-board-is-invented)**, which removed the invented
+> bookings this section was thinning. The Clear undo above stands, and now covers Load.
+
 **Decision.** The sample's own bookings go from 33 to 23, the stays are shorter, and
 exactly one of them is too long for its berth.
 
@@ -972,3 +986,86 @@ what lets the eye find a booking at all. Density was never the goal; legible evi
 that the checks work was, and one misfit demonstrates that better than two, because two
 read as a broken board rather than an instructive one. A unit test now fixes that count
 at one, so the next person to add a sample booking has to mean it.
+
+---
+
+## 29. Nothing on the board is invented
+
+Three questions from the owner on the last day, answered together because they are one
+question: *what is this data, and how does it get in?*
+
+### The bookings around today are gone
+
+**Decision.** The sample is the workbook and nothing else. The bookings that
+[25](#25-the-sample-reaches-around-today) placed around the load day, with real vessel
+names and invented dates, are removed.
+
+**Why.** The owner judged them clutter, and they were right about more than that. They
+were the one place the app showed data nobody had entered. Every other row is either the
+client's own or something a person made through the form, and "only the dates were
+invented" is a weaker sentence to defend than "nothing was". They also had to be kept
+honest by machinery — a unit test pinning the misfit count, a spec asserting a bar on
+today's month — which is effort spent maintaining a fiction.
+
+**What it costs, stated.** The board opens on an empty month again. That is the case
+[18](#18-an-empty-month-is-not-an-empty-page) was built for: the grid draws, one line says
+where the bookings are, and it links there. And the refusal can no longer be seen on the
+first click; a visitor books something and then books it again, which is two clicks and
+shows the rule working rather than a scenario staged for it.
+
+### Why there is no upload
+
+The owner asked whether 23 years of synthetic data meant the graders wanted a way to load
+a spreadsheet. The file *is* the test — it is named "Synthetic Sample", and its defects
+are plants: a 2010 sheet labelling two months 2018, Decembers carried into the next
+year's sheet, names typed over the day-number row. So the question deserved a real
+answer, and three independent reviews plus a skeptic were run on it, with time ruled out
+as a factor.
+
+**Decision: no upload, no import button, and never a write path from a file.** Four
+reasons, each checked against this codebase:
+
+- **It would show a grader nothing new.** Uploading their own file produces exactly the
+  board already live. The one new output would be a reconciliation report, and those
+  numbers can be stated where a grader reads — below, and in the README.
+- **It cannot be CSV.** A booking's dates are the width of a merged cell. Measured by
+  running this project's own parser with every cell collapsed to its first day, which is
+  what a CSV export does: booked days fall from 5,155 to 2,173, multi-day stays from 608
+  to 69, the 92-day M/Y BLUE TIDE stay becomes one day, and **the only double-booking in
+  23 years disappears**. An import that silently loses the brief's own named failure is
+  the worst possible demonstration of a system built to catch it.
+- **"Add" has no sound meaning.** The grid gives its rows no identity. Adding the workbook
+  onto a loaded schedule makes 2,012 stays collide with their own twins; deduplicating
+  them silently drops rows. Only "replace, with an undo" is sound — and that replaces the
+  sample with the same sample.
+- **A migration happens once, run by an operator.** A facility replacing a spreadsheet
+  imports it once. A public, unauthenticated button that parses arbitrary zip files and
+  replaces the schedule is attack surface bought for a demonstration.
+
+### What the review found instead
+
+Looking hard at *whether the parse is visible* found four real problems, and they
+mattered more than any button:
+
+- **`npm test` failed on a fresh clone.** The reconciliation tests parsed the gitignored
+  workbook inside `describe()`, so on anyone else's machine collection crashed with ENOENT:
+  two failed files, where the README promised a green run. The repo went public with that
+  in it. The tests now skip by name without the file and verify the parse with it.
+- **Loading the sample was irreversible.** It deleted visitors' bookings and discarded
+  the Clear snapshot, contradicting invariant 12 the day after 28 declared it had no
+  exceptions. Load now snapshots like Clear, and **Put back the previous schedule** undoes
+  either. Over an already-empty schedule it leaves the snapshot alone, so Clear then an
+  accidental Load can still recover what was there before the Clear.
+- **A documented figure was wrong and untested.** "484 spellings fold into 418 vessels"
+  sat in a code comment, in `docs/DATA-NOTES.md`, and was about to go into
+  `ASSUMPTIONS.md`. No way of counting the file reproduces 484; the real figure is 446,
+  and it is now a test. Found only because the new section claimed each rule was locked
+  into a test, and checking that claim was cheaper than trusting it.
+- **The central constraint was not in the repository.** The `EXCLUDE` that makes a
+  double-booking unstorable existed only as prose. Every migration is now in
+  `supabase/migrations/`, exported from the database's own log.
+
+**The general lesson** is the one [23](#23-a-long-list-shows-its-head-and-names-its-categories-once)
+and [26](#26-a-queue-holds-work-history-goes-in-an-archive) kept teaching: the question
+worth asking was never "what else can this do", but "what does a stranger actually
+see". Here the stranger was someone cloning the repository, and what they saw was red.

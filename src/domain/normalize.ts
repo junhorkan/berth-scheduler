@@ -78,7 +78,7 @@ export function classifyEntry(raw: string): EntryKind {
  *
  * The source writes the same hull two ways — 'Barge SALT DORY' (41 rows) and
  * 'Barge Salt Dory' (33 rows) are one barge; 'S/V FAR HORIZON' / 'S/V Far Horizon'
- * likewise. Case-folding alone collapses 484 distinct strings to 418.
+ * likewise. Case-folding alone collapses 446 distinct spellings to 418 vessels.
  *
  * Returns both forms: `normalized` is the join key, `display` is what to show.
  * We keep the first-seen display casing rather than title-casing, so we never

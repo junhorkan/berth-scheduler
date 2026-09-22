@@ -84,45 +84,33 @@ test.describe('an empty schedule', () => {
     await expect(page.locator('.bar')).toHaveCount(0);
   });
 
-  test('loading the sample puts a live schedule on the front door', async ({ page }) => {
-    // The reload copies 2,031 bookings and then places the forward ones; ~12s.
+  test('loading the sample brings in 23 years, and the board says where they are', async ({ page }) => {
+    // The reload copies 2,031 bookings from the seed snapshot; about 12s.
     test.setTimeout(120_000);
     page.once('dialog', (d) => d.accept());
     await page.goto('/');
     await page.getByRole('button', { name: /load the sample schedule/i }).click();
 
-    // The board opens on today, and the sample reaches into it: the first berth is
-    // taken from the load day, so the month the board opens to always has a bar.
-    await expect(page.locator('.bar').first()).toBeVisible({ timeout: 60_000 });
-    await expect(page.locator('.boardnote')).toHaveCount(0);
+    // Every booking in the workbook is behind today, so the board's own month is empty —
+    // and it says where the bookings are instead of looking like a failed load.
+    const note = page.locator('.boardnote');
+    await expect(note).toContainText('Nearest bookings', { timeout: 60_000 });
+    await note.getByRole('link').click();
+    await expect(page.locator('.bar').first()).toBeVisible();
 
-    // The form opens onto that taken berth, so the refusal is the first verdict.
-    await page.getByRole('button', { name: '+ New booking' }).click();
-    await expect(page.getByText(/Blocked — berth already occupied/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save booking' })).toBeDisabled();
-    await page.getByRole('button', { name: 'Cancel' }).click();
-
-    // And a booking that does not fit its berth is on the board two days out — which
-    // may be next month, so look where it is rather than only on the front door. The
-    // sample also puts a misfit behind the load day, so this counts at least one
-    // rather than exactly one.
-    const facilityToday = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
-    }).format(new Date());
-    const misfitDay = new Date(Date.parse(`${facilityToday}T00:00:00Z`) + 2 * 86_400_000);
-    await page.goto(`/?y=${misfitDay.getUTCFullYear()}&m=${misfitDay.getUTCMonth() + 1}`);
-    expect(await page.locator('.bar.toolong').count()).toBeGreaterThan(0);
-
-    // The queue asks about the live one only. The one that already sailed is on the
-    // board in red and in the archive below, not in the badge — DECISIONS 26.
+    // What the import found is on Review as history rather than as work: the one real
+    // double-booking in 23 years, kept rather than deleted, and no badge demanding a
+    // decision about a boat that sailed in 2017.
     await page.goto('/review');
-    // Scoped to the work card: this hull was also too long for the same berth in 2010,
-    // so it legitimately appears in the archive as well. That is the point of the split.
-    const work = page.locator('.board:not(.history)');
-    await expect(work.locator('.queue li', { hasText: 'R/V CLEAR TERN' })).toHaveCount(1);
     const history = page.locator('.board.history');
     await expect(history).toBeVisible();
-    await expect(history.locator('.queue li', { hasText: 'R/V CLEAR TERN' })).not.toHaveCount(0);
+    await expect(history.getByText('Utility work on pier face')).toBeVisible();
+    await expect(page.locator('.tabs .count')).toHaveCount(0);
+
+    // The schedule was empty when this ran, having just been cleared. Loading over an
+    // empty schedule must not overwrite the snapshot of what was there before the Clear,
+    // or an accidental Load after a Clear would lose it for good.
+    await expect(page.getByRole('button', { name: /Put back the previous schedule/ })).toBeVisible();
   });
 
   /**
@@ -135,17 +123,7 @@ test.describe('an empty schedule', () => {
     test.setTimeout(120_000);
     page.on('dialog', (d) => d.accept());
 
-    await page.goto('/');
-    await page.getByRole('button', { name: '+ New booking' }).click();
-    await page.getByRole('button', { name: 'Event', exact: true }).click();
-    await page.getByLabel('Description').fill('E2E undo the clear');
-    await page.getByLabel('Berth', { exact: true }).selectOption({ label: 'Inner Channel — 55ft' });
-    const dates = page.locator('input[type="date"]');
-    const start = await dates.first().inputValue();
-    const day = Number(start.slice(8, 10));
-    await dates.nth(1).fill(`${start.slice(0, 8)}${String(Math.min(day + 2, 28)).padStart(2, '0')}`);
-    await page.getByRole('button', { name: 'Save booking' }).click();
-    await expect(page.getByLabel(/E2E undo the clear/)).toBeVisible();
+    await makeEvent(page, 'E2E undo the clear', 'Inner Channel — 55ft');
 
     await page.goto('/review');
     await page.getByRole('button', { name: /Clear the schedule/ }).click();
@@ -159,7 +137,7 @@ test.describe('an empty schedule', () => {
 
     // And the way back is offered where the person is looking — on the empty board,
     // not only on the tab whose button they pressed.
-    const undo = page.getByRole('button', { name: /Undo the clear/ });
+    const undo = page.getByRole('button', { name: /Put back the previous schedule/ });
     await expect(undo).toBeVisible();
     await undo.click();
 
@@ -167,6 +145,59 @@ test.describe('an empty schedule', () => {
 
     // The offer is gone, because the snapshot was consumed. An undo you can run twice
     // would wipe whatever was done after the first one.
-    await expect(page.getByRole('button', { name: /Undo the clear/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Put back the previous schedule/ })).toHaveCount(0);
+  });
+
+  /**
+   * Loading the sample replaces the whole schedule, and it used to be the one action
+   * that could not be taken back: it deleted visitors' bookings outright and threw away
+   * the Clear snapshot as well. It now keeps what it replaced, like Clear does.
+   */
+  test('loading the sample over your work can be put back', async ({ page }) => {
+    test.setTimeout(120_000);
+    page.on('dialog', (d) => d.accept());
+
+    // Its own berth: the previous spec's booking is put back on Inner Channel for the same
+    // dates, and the constraint would — correctly — refuse a second one there.
+    await makeEvent(page, 'E2E keep me', 'South Float East — 90ft');
+
+    await page.goto('/review');
+    await page.getByRole('button', { name: /load the sample schedule/i }).click();
+
+    // The sample has nothing in the current month, so the booking is gone from it.
+    await expect.poll(async () => {
+      await page.goto('/');
+      return page.getByLabel(/E2E keep me/).count();
+    }, { timeout: 60_000 }).toBe(0);
+
+    await page.goto('/review');
+    const putBack = page.getByRole('button', { name: /Put back the previous schedule/ });
+    await expect(putBack).toBeVisible();
+    await expect(page.getByText(/Replaced by the sample/)).toBeVisible();
+    await putBack.click();
+
+    await expect.poll(async () => {
+      await page.goto('/');
+      return page.getByLabel(/E2E keep me/).count();
+    }, { timeout: 60_000 }).toBe(1);
   });
 });
+
+/** An event on the given berth from the form's default date, through the real form. */
+async function makeEvent(page: import('@playwright/test').Page, label: string, berth: string) {
+  await page.goto('/');
+  await page.getByRole('button', { name: '+ New booking' }).click();
+  await page.getByRole('button', { name: 'Event', exact: true }).click();
+  await page.getByLabel('Description').fill(label);
+  // selectOption by value: once dates are set the option text gains "· free" or "· taken".
+  const select = page.getByLabel('Berth', { exact: true });
+  const value = await select.locator('option', { hasText: berth.split(' — ')[0] }).getAttribute('value');
+  await select.selectOption(value ?? '');
+  const dates = page.locator('input[type="date"]');
+  const start = await dates.first().inputValue();
+  const day = Number(start.slice(8, 10));
+  await dates.nth(1).fill(`${start.slice(0, 8)}${String(Math.min(day + 2, 28)).padStart(2, '0')}`);
+  await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Save booking' }).click();
+  await expect(page.getByLabel(new RegExp(label))).toBeVisible();
+}

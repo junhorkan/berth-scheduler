@@ -1,7 +1,18 @@
+import { existsSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { parseWorkbook, monthFromHeader, daysInMonth } from './parseWorkbook';
 
+/**
+ * The reconciliation tests read the client's workbook, which is deliberately not in the
+ * repository: it is their material, and it was scrubbed from history before the repo was
+ * made public. On a fresh clone these blocks are SKIPPED and say so — they used to crash
+ * test collection with ENOENT and turn `npm test` red for anyone who cloned it.
+ *
+ * Put your copy at the path below and they run, verifying the parse against it: 2,212
+ * cells to 2,031 stays, 272 of 272 month blocks, and each of the three source defects.
+ */
 const WORKBOOK = 'data/Dock Schedule - Synthetic Sample.xlsx';
+const HAS_WORKBOOK = existsSync(WORKBOOK);
 
 describe('monthFromHeader — all three header styles in the file', () => {
   it('reads the 1997-2005 style', () => expect(monthFromHeader('AUGUST 1997')).toBe(8));
@@ -17,8 +28,13 @@ describe('daysInMonth', () => {
   it('handles a 30-day month', () => expect(daysInMonth(2010, 11)).toBe(30));
 });
 
-describe('parseWorkbook against the real 23-year workbook', () => {
-  const { entries, report } = parseWorkbook(WORKBOOK);
+describe.skipIf(!HAS_WORKBOOK)(`parseWorkbook against the real 23-year workbook (needs ${WORKBOOK})`, () => {
+  // Vitest still runs a skipped block's body to register its tests, and the nested
+  // blocks below filter `entries` while doing so — so the fallback must be a real, empty
+  // array rather than nothing. `report` is only ever read inside a test, which is skipped.
+  const { entries, report } = HAS_WORKBOOK
+    ? parseWorkbook(WORKBOOK)
+    : ({ entries: [], report: {} } as unknown as ReturnType<typeof parseWorkbook>);
 
   it('scans all 23 year sheets and no others', () => {
     expect(report.sheetsScanned).toHaveLength(23);

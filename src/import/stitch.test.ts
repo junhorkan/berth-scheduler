@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { parseWorkbook } from './parseWorkbook';
 import { stitch } from './stitch';
@@ -105,8 +106,22 @@ describe('stitch — merging rules', () => {
   });
 });
 
-describe('stitch — against the real workbook', () => {
-  const { entries } = parseWorkbook('data/Dock Schedule - Synthetic Sample.xlsx');
+/**
+ * The reconciliation tests read the client's workbook, which is deliberately not in the
+ * repository: it is their material, and it was scrubbed from history before the repo was
+ * made public. On a fresh clone these blocks are SKIPPED and say so — they used to crash
+ * test collection with ENOENT and turn `npm test` red for anyone who cloned it.
+ *
+ * Put your copy at the path below and they run, verifying the parse against it: 2,212
+ * cells to 2,031 stays, 272 of 272 month blocks, and each of the three source defects.
+ */
+const WORKBOOK = 'data/Dock Schedule - Synthetic Sample.xlsx';
+const HAS_WORKBOOK = existsSync(WORKBOOK);
+
+describe.skipIf(!HAS_WORKBOOK)(`stitch — against the real workbook (needs ${WORKBOOK})`, () => {
+  // The body runs even when skipped, and stitch() runs in it, so it gets an empty list
+  // rather than a crash. Nothing below is asserted unless the file is there.
+  const { entries } = HAS_WORKBOOK ? parseWorkbook(WORKBOOK) : { entries: [] };
   const { bookings, stats } = stitch(entries);
 
   it('reconciles: every cell is a booking, an annotation, or unclassified', () => {
@@ -123,6 +138,14 @@ describe('stitch — against the real workbook', () => {
 
   it('finds 49 month-crossing stays that the spreadsheet showed as separate bars', () => {
     expect(stats.monthCrossingMerges).toBe(49);
+  });
+
+  it('folds 446 spellings as typed into those 418 vessels', () => {
+    // 'Barge SALT DORY' and 'Barge Salt Dory' are one hull. The documentation said 484
+    // for years; no way of counting the file reproduces it, and nothing tested it. This
+    // pins the real figure, taken from the cells rather than from the stitched stays.
+    const typed = new Set(entries.filter((e) => e.kind === 'vessel').map((e) => e.text));
+    expect(typed.size).toBe(446);
   });
 
   it('yields 418 distinct vessels after folding name variants', () => {

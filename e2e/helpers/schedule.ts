@@ -7,7 +7,9 @@
  * spec needs a second fixture.
  */
 import postgres from 'postgres';
-import { resetToImported, clearSchedule as clearScheduleInApp } from '../../src/db/mutations';
+import {
+  resetToImported, clearSchedule as clearScheduleInApp, discardPreviousSchedule,
+} from '../../src/db/mutations';
 
 function connect() {
   if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
@@ -154,6 +156,9 @@ export async function restoreSample(): Promise<void> {
   if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
   const res = await resetToImported();
   if (!res.ok) throw new Error(`restoring the sample failed: ${res.error}`);
+  // Loading snapshots what it replaced, which here is the suite's own debris. Leave the
+  // live site with no "put back" offer pointing at test bookings.
+  await discardPreviousSchedule();
   await globalThis.__berthSql?.end();
 }
 

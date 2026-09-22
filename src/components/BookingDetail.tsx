@@ -88,9 +88,7 @@ export default function BookingDetail({
           <dd>
             {booking.source === 'import'
               ? `imported${booking.importSheet ? ` from sheet ${booking.importSheet}, row ${booking.importRow}` : ''}`
-              : booking.source === 'sample'
-                ? 'sample booking, dated from the day the sample was loaded'
-                : 'entered in this system'}
+              : 'entered in this system'}
           </dd>
           {booking.status !== 'active' && (<><dt>Status</dt><dd>{booking.status.replace('_', ' ')}</dd></>)}
         </dl>

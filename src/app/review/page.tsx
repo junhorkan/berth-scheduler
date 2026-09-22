@@ -1,8 +1,8 @@
 import Nav from '../../components/Nav';
 import { ResolveButton } from '../../components/ResolveButton';
-import { LoadSampleButton, ClearScheduleButton, UndoClearButton } from '../../components/SampleData';
+import { LoadSampleButton, ClearScheduleButton, RestorePreviousButton } from '../../components/SampleData';
 import {
-  getReviewItems, getMissingLengthSummary, getRecentlyCancelled, getClearUndo,
+  getReviewItems, getMissingLengthSummary, getRecentlyCancelled, getPreviousSchedule,
 } from '../../db/queries';
 import type { ReviewRow } from '../../db/queries';
 import { groupReviewItems, describeOccurrences } from '../../lib/review';
@@ -63,7 +63,7 @@ function tighten(detail: string): string {
 
 export default async function ReviewPage() {
   const [items, missing, cancelled, undo] = await Promise.all([
-    getReviewItems(), getMissingLengthSummary(), getRecentlyCancelled(), getClearUndo(),
+    getReviewItems(), getMissingLengthSummary(), getRecentlyCancelled(), getPreviousSchedule(),
   ]);
 
   /*
@@ -265,16 +265,17 @@ export default async function ReviewPage() {
         <LoadSampleButton />
         <ClearScheduleButton />
         {undo && (
-          <UndoClearButton
+          <RestorePreviousButton
             bookings={undo.bookings}
             vessels={undo.vessels}
+            kind={undo.kind}
             when={relativeTime(undo.takenAt)}
           />
         )}
         <span className="sub-hint">
-          The sample is 23 years of legacy bookings. Clearing leaves only the seven
-          berths, which are the facility rather than schedule data, and it can be undone
-          until you load something else over it.
+          The sample is the 23-year legacy workbook, as imported. Loading and clearing
+          each replace the whole schedule, and either can be put back afterwards. The
+          seven berths always stay: they are the facility, not schedule data.
         </span>
       </div>
     </main>

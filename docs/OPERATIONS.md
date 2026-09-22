@@ -57,14 +57,16 @@ application reaches the database as the owning role, which RLS does not apply to
 deliberate — there is no client-side database access anywhere in the app, so a policy
 would open a door nothing needs.
 
-Three `*_undo` tables plus `clear_undo_meta` hold whatever the last **Clear the
-schedule** removed. They are written inside the same transaction that empties the live
-tables, and emptied again when the undo is used or when the sample is loaded over it.
-They are snapshots, never a source of truth.
+Three `*_undo` tables plus `undo_meta` hold whatever the last **Clear** or **Load**
+replaced. They are written inside the same transaction that replaces the live tables,
+and emptied when the undo is used. An action over an already-empty schedule leaves them
+alone, so Clear followed by an accidental Load can still put back what was there before
+the Clear. `npm run sample:load` and the test suite's teardown discard them, so a reset
+leaves no "put back" offer pointing at test data. They are snapshots, never a source of
+truth.
 
 Four `*_seed` tables hold the imported workbook exactly as `npm run import` loaded it;
-**Load the sample schedule** and the test suite's teardown both copy from them, then add
-the forward bookings from `src/lib/sample.ts`, dated from the day of the reload. They have
+**Load the sample schedule** and the test suite's teardown both copy from them. They have
 RLS enabled like everything else — it was found disabled on them twice and re-enabled by
 migration, most recently on 2026-09-19 — so check them first if `get_advisors` ever
 reports a table open. It is clean of ERROR-level findings.
@@ -84,15 +86,22 @@ the single most important guarantee in the project. Not worth the trade.
 
 ## Schema
 
-There is no DDL file in the repo; the schema lives in Supabase and is changed through
-migrations. Two are worth knowing about:
+**Every migration is in [`supabase/migrations/`](../supabase/migrations/)**, in the order
+it was applied, exported from the database's own migration log. The exclusion constraint
+is at line 114 of the first one. Three things worth knowing:
 
 - **The berths are defined in a migration**, idempotently, so a database built from
-  nothing has the facility in it. The importer and the sample reload also write them —
-  from the workbook and from `berths_seed` respectively, with the same ids — so the three
-  never disagree.
+  nothing has the facility in it. The sample reload writes them too, from `berths_seed`,
+  with the same ids — verified, all seven — which is what lets an undo after a Load put
+  back bookings that reference them.
 - **`review_items.type` is constrained** to the kinds the app can actually produce.
   Missing lengths are derived at read time, not stored, so that value is not accepted.
+- **No migration creates the `*_seed` tables.** `npm run import` creates them from the
+  live tables after it loads the workbook, and one early migration even drops them, from
+  a period when the sample was removed and later restored. So a database built from
+  migrations alone has the schema and the berths but nothing for **Load the sample** to
+  load until the importer has run once against the workbook. Stated rather than hidden:
+  moving the seed snapshot into a migration would put the client's data in the repo.
 
 ## Environment
 
@@ -144,7 +153,7 @@ one. This has actually happened, and it is the reason to know about it:
 - If a run is interrupted before teardown, put the data back with the **Load the sample
   schedule** button on Review, or `npm run sample:load`, which is the same function
   from the terminal. The teardown calls that function too, so the suite leaves behind
-  exactly what the button would, forward bookings included.
+  exactly what the button would.
 - The proper fix is a second database — a Supabase branch, or a local Postgres for the
   suite — pointed at by `DATABASE_URL` in a test env file. It was not worth the setup
   inside this project's time budget, and this note is the mitigation.

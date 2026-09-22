@@ -4,23 +4,27 @@ Berth reservation management for a marine research facility.
 
 **Live:** https://berth-scheduler.vercel.app
 
-![The board: berths down, days across, and a 120ft vessel drawn breaking out of its 75ft lane](public/board.png)
+![July 2010 from the imported workbook: berths down, days across, and R/V CLEAR TERN, 120ft, drawn breaking out of the 75ft North Pier Face](public/board.png)
 
 Replaces a spreadsheet in which double-bookings were caught by eye and vessel/berth size
 was not checked at all.
 
 ## Try it in sixty seconds
 
-1. **Open the link.** The board opens on today with a live schedule. The red bar
-   breaking out of its lane is a vessel too long for its berth — the bar's height is
-   vessel length ÷ berth length, so a misfit is geometry, not a badge.
-2. **Press + New booking.** The berth it opens onto is already taken today, so the
-   verdict is red and Save is off: the database would refuse the write, and there is no
-   override. Press **Find me a berth**: it proposes a free berth and says why, and for a
-   vessel whose length is on record it picks the smallest one that fits.
-3. **Save it, then click it and cancel it.** Review lists it under *Recently cancelled*
-   and **Restore** puts it back — unless someone took the berth meanwhile, in which
-   case the same constraint refuses the restore and says so.
+Everything on the board is from the workbook you sent. Nothing is invented.
+
+1. **Open [July 2010](https://berth-scheduler.vercel.app/?y=2010&m=7).** The red bar
+   breaking out of North Pier Face is R/V CLEAR TERN, 120ft in a 75ft berth — one of nine
+   physically impossible assignments in your 23 years. A bar's height is vessel length ÷
+   berth length, so a misfit is geometry, not a badge you have to learn.
+2. **Book something, then book it again.** Back on today, press **+ New booking**, type any
+   vessel name and save. Press **+ New booking** again: it opens on the same berth and
+   day, so the verdict is red, Save is off, and it names the booking in the way. The
+   database refuses the write, and there is no override. **Find me a berth** proposes a
+   free one and says why.
+3. **Open Review → From the imported history.** The one double-booking in all 23 years —
+   South Float East, 11 July 2017 — is kept, not deleted. The cells the importer could
+   not read carry their sheet, row and column. **Show on board** takes you to each.
 
 ---
 
@@ -61,18 +65,17 @@ is the central design decision. See `DECISIONS.md`.
   berth closures alike.
 - **Vessels** — the register, ordered by *bookings blocked* rather than alphabetically,
   so the highest-leverage gaps come first. It fills itself: booking a vessel adds it.
-- **Review** — the coordinator's queue: size violations, and a single derived row saying
-  how much of the schedule cannot be fit-checked yet. Clearing the schedule back to the
-  shipped state lives here too.
+- **Review** — the coordinator's queue. What someone can still act on sits on top and
+  is what the nav badge counts; what the import found in bookings that have already
+  ended sits below as history, kept rather than deleted. Loading and clearing the
+  schedule live here too.
 - **The legacy schedule is imported, and removable.** 23 years of bookings are loaded so
-  the conflict and size checks can be tried against real, messy data, and the sample
-  reaches around today: 23 bookings dated from the day it was loaded, behind it as well
-  as ahead, using the register's own vessels, so the board opens on a working dock with
-  a misfit on it rather than on a grid that is blank until this morning. **Clear the schedule** empties it and **Load the sample schedule** puts it
-  back, both on Review — an empty schedule is a supported state, not a broken one, and
-  an empty month names the nearest month that is not and links to it. **Clearing is
-  undoable**: it snapshots what it removes in the same transaction that removes it, so
-  an accidental clear is one button away from being put back.
+  the conflict and size checks can be tried against real, messy data. All of it is
+  before 2020, so the board's own month is empty — and says so, naming the nearest month
+  that is not and linking to it, rather than looking like a failed load. **Clear the
+  schedule** empties it and **Load the sample schedule** puts it back, both on Review.
+  **Both can be undone**: each snapshots what it replaces in the same transaction that
+  replaces it, and **Put back the previous schedule** restores it.
 - **Find** — one box, searching every vessel name, event label and closure note across
   all 276 months at once. Results group by identity, so a vessel with 267 bookings is one
   block and not 267 rows, and each result jumps straight to its own month on the board.
@@ -91,9 +94,26 @@ Only **20 of 418 vessels** have a length recorded anywhere in the source, which 
 evidence behind warning rather than blocking on fit. Among the bookings that *can* be
 checked, **9 are physically impossible** — the worst a 170′ vessel in a 90′ berth.
 
-The workbook itself is not in this repo; place it at `data/` to re-run the import. Three
-source defects had to be handled, each documented in `ASSUMPTIONS.md` and
-`docs/DATA-NOTES.md`.
+The workbook itself is not in this repo — it is your material, and it was scrubbed from
+history before the repository went public. **Place your copy at
+`data/Dock Schedule - Synthetic Sample.xlsx` and `npm test` verifies the parse against it**,
+with no database: the counts above, and each of the three source defects below. Without
+the file those 30 tests are skipped by name rather than failing.
+
+Three source defects had to be handled:
+
+- **The 2002, 2003 and 2004 sheets each open with the previous December.** The year comes
+  from the header, and those bookings merge with the original December rather than
+  duplicating it.
+- **The 2010 sheet labels its last two months `NOVEMBER 2018` and `DECEMBER 2018`.** A
+  stated year is trusted only when credible, so these stay in 2010 and the anomaly is
+  reported.
+- **Two rows on the 2010 sheet have vessel names typed over the day-number row.** Those 12
+  cells belong to no berth, so they are review items with their sheet, row and column,
+  not guesses.
+
+The reasoning behind each is in `ASSUMPTIONS.md` → *Reading the workbook*; the grid
+mechanics are in `docs/DATA-NOTES.md`.
 
 ## Running it locally
 
@@ -104,12 +124,12 @@ npm run dev
 ```
 
 ```bash
-npm test          # 258 unit tests, no database required
-npm run e2e       # 49 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
+npm test          # 223 unit tests with no database; 253 once the workbook is in data/
+npm run e2e       # 50 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean
 npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
-npm run sample:load # put the sample back from the seed snapshot; same code as the Load button
+npm run sample:load # reset the live site to the sample, with no undo left pending
 npm run db:check  # verify connection and that the constraint exists
 ```
 
@@ -125,7 +145,7 @@ src/app/      Next.js routes and components. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
-navigation and search rules are provably correct without a database — 258 unit tests run
+navigation and search rules are provably correct without a database — 223 unit tests run
 in well under a second with no infrastructure at all. The importer and the UI call the
 same functions, so the rule the board shows you is the rule the import applied.
 
@@ -136,6 +156,10 @@ record what was taken, what was measured, and what was left.
 ## Stack
 
 Next.js (App Router) · TypeScript · Postgres on Supabase · Vercel · Vitest · SheetJS.
+
+**The schema is in [`supabase/migrations/`](supabase/migrations/)**, every migration in the
+order it was applied. The constraint the whole design rests on is at
+[line 114 of the first one](supabase/migrations/20260919004821_create_berth_scheduler_schema.sql#L114).
 
 No ORM: the schema's single source of truth is SQL, because the `EXCLUDE` constraint at
 the heart of this design cannot be expressed in any ORM schema DSL, and maintaining the
@@ -148,7 +172,6 @@ booking fills its lane, and none can draw a bar that **overhangs** its row.
   ping keeps it awake. If the site ever errors after a long quiet period, opening the
   Supabase dashboard restores it.
 - **The app is public and unauthenticated by design**, so a reviewer can exercise the
-  conflict check without credentials. Nothing it offers is destructive for long:
-  cancelling a booking is restored from Review, and **Clear the schedule** is undone by
-  a button that appears once it has run. **Load the sample schedule** puts back the
-  state the app ships in.
+  conflict check without credentials. Nothing it offers is destructive for long: a
+  cancelled booking is restored from Review, and **Clear** and **Load** each keep what
+  they replaced, so **Put back the previous schedule** undoes either.

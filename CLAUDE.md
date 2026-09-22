@@ -57,10 +57,10 @@ obeyable.
    the earliest booking; the form refuses a start before today, in the save path as well,
    since `min` only guards the picker. A fixed bound has hidden real bookings three times.
 8. **Empty is supported, and never silent.** The full grid still draws, and one line says
-   where the bookings are. The sample reaches around today, behind it as well as ahead,
-   so the front door is a working dock rather than one of those empty months.
-   → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent) ·
-   [DECISIONS 25](DECISIONS.md#25-the-sample-reaches-into-the-coming-weeks)
+   where the bookings are. Every booking in the sample is before 2020, so the front door
+   is one of those months, and **no booking is ever invented to fill it** — that was tried
+   and removed. → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent) ·
+   [DECISIONS 29](DECISIONS.md#29-nothing-on-the-board-is-invented)
 9. **Explain the tool, never the project.** Three tabs; no About page; `/search` is a
    destination, **not a fourth tab**. Each page's masthead is its own name and one line;
    orientation only on the empty board.
@@ -71,10 +71,10 @@ obeyable.
     not its point size. → [DESIGN](docs/DESIGN.md#11-nothing-outside-the-grid-below-13px)
 12. **Nothing destructive is irreversible.** No accounts, so reversibility is the answer
     rather than a gate. Cancelling is a soft delete restored from Review, and restoring
-    re-runs the constraint, so it can be refused. **Clear** snapshots into the `*_undo`
-    tables inside the same transaction that empties the live ones, so the delete and its
-    undo cannot come apart.
-    → [DECISIONS 20 and 28](DECISIONS.md#20-cancelling-is-reversible-not-restricted)
+    re-runs the constraint, so it can be refused. **Clear and Load** each snapshot into the
+    `*_undo` tables inside the transaction that replaces the schedule, so the replacement
+    and its undo cannot come apart. **An upload is never a write path** — see 29.
+    → [DECISIONS 20, 28 and 29](DECISIONS.md#20-cancelling-is-reversible-not-restricted)
 13. **Never use WHOI's name or marks.** A real institution, a public site, synthetic data.
     → [DECISIONS 21](DECISIONS.md#21-the-facility-is-not-whoi)
 
@@ -82,8 +82,8 @@ obeyable.
 
 ```
 src/domain/   pure rules: conflicts, fit, classification. No DB, no React.
-src/lib/      pure view helpers: nav, bar geometry, search, grouping, berth suggestion,
-              and the sample's forward bookings.
+src/lib/      pure view helpers: nav, bar geometry, search, grouping, berth suggestion.
+supabase/     every migration in order. The EXCLUDE constraint is in the first one.
 src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
 src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.
@@ -96,10 +96,10 @@ scheduler library: none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev         # local dev server
-npm test            # 258 unit tests, no database needed
-npm run e2e         # 49 specs. HITS THE LIVE DB: swaps in a fixture, restores after
+npm test            # 223 without the workbook (30 skip by name); 253 with it in data/
+npm run e2e         # 50 specs. HITS THE LIVE DB: swaps in a fixture, restores after
 npm run import      # reload the workbook (needs data/*.xlsx, gitignored)
-npm run sample:load # the Load button, from the terminal: seed snapshot + forward bookings
+npm run sample:load # reset the live site to the sample, leaving no undo pending
 npm run db:check    # verify the connection and that the constraint exists
 npm run build       # production build
 ```
@@ -112,6 +112,14 @@ Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERAT
 - **Every URL parameter is data from outside; check it before it reaches SQL.** `y` and
   `m` go through `clampMonth`, and `sel` goes through `isBookingId` — without that guard
   a non-uuid reached `where b.id = $1` and the board answered **500**, live.
+- **A test that reads `data/` must skip without it.** The workbook is gitignored and was
+  scrubbed from history, so on a fresh clone it does not exist. Two test files once parsed
+  it inside `describe()` and crashed collection, so `npm test` was red for anyone who
+  cloned the public repo. Use `describe.skipIf(!existsSync(WORKBOOK))`, and remember the
+  skipped block's body still runs: give it an empty array, not nothing.
+- **Never rename or drop something the deployed build reads, in the same step as the code
+  that stops reading it.** Migrations apply to the live database at once; the code takes a
+  deploy. Add a compatibility view, ship, then remove it.
 - `bookings.during` is a **generated** column. `insert ... select *` into `bookings`
   fails; list columns explicitly.
 - **Resolve every date in `America/New_York`, never the server's UTC**, the way
