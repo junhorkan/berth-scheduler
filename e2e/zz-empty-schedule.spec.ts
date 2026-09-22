@@ -108,7 +108,15 @@ test.describe('an empty schedule', () => {
     const history = page.locator('.board.history');
     await expect(history).toBeVisible();
     await expect(history.locator('.histpanel:visible')).toHaveCount(0);
-    await expect(history.getByRole('radio', { name: 'Hide' })).toBeHidden();
+    // Hide takes no space until there is something to close. It stays in the page
+    // rather than being removed, so pressing it cannot take the keyboard's focus with it.
+    expect((await history.locator('.histhide').boundingBox())!.width).toBeLessThan(2);
+    // And the keyboard reaches the switch. A checked radio is a group's only tab stop,
+    // so checking a hidden one to mean "nothing open" skipped every button in it:
+    // tabbing out of the card above has to land on the first category.
+    await page.locator('.qheadlink').focus();
+    await page.keyboard.press('Tab');
+    await expect(history.locator('.histbtn input').first()).toBeFocused();
 
     await history.getByRole('radio', { name: 'Unresolved conflict' }).check();
     await expect(history.getByText('Utility work on pier face')).toBeVisible();

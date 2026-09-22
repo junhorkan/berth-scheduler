@@ -165,12 +165,18 @@ export default async function ReviewPage() {
             <div className="histrow" role="radiogroup" aria-label="History category">
               {historySections.map(({ type }) => (
                 <label key={type} className="histbtn">
-                  <input type="radio" name="hcat" id={`h-${type}`} defaultChecked={false} />
+                  <input type="radio" name="hcat" id={`h-${type}`} />
                   {LABEL[type].title}
                 </label>
               ))}
+              {/*
+                Nothing is checked to begin with, which is what makes the card open
+                closed — and what keeps it reachable. A checked radio is the group's
+                only tab stop, so checking this one, whose label is out of the way until
+                there is something to close, skipped the whole switch on the keyboard.
+              */}
               <label className="histhide">
-                <input type="radio" name="hcat" id="h-none" defaultChecked />
+                <input type="radio" name="hcat" id="h-none" />
                 Hide
               </label>
             </div>

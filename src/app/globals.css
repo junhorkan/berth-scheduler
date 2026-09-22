@@ -527,29 +527,55 @@ a { color: var(--vessel); }
 .histbtn, .histhide { position: relative; cursor: pointer; font-size: 13px; }
 .histbtn {
   font-weight: 600; padding: 6px 12px; border-radius: 9px;
-  border: 1px solid var(--axis); background: var(--surface); color: var(--ink-2);
+  border: 1px solid var(--axis); background: transparent; color: var(--ink-2);
 }
 /* The radio lies under its own label: it keeps the keyboard and the accessible name,
    and never draws a dot beside the button. */
 .histbtn input, .histhide input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
-.histbtn:hover { border-color: var(--ink-2); color: var(--ink); }
+.histbtn:hover { border-color: var(--ink-2); color: var(--ink); background: var(--surface); }
 /* Keyboard only: a mouse click focuses the radio too, and a ring on every click is
    noise. */
 .histbtn:has(input:focus-visible),
 .histhide:has(input:focus-visible) { outline: 2px solid var(--vessel); outline-offset: 2px; }
-/* Open reads as pressed, never as the page's one filled button (invariant 10). */
-.histbtn:has(input:checked) { border-color: var(--ink); color: var(--ink); background: var(--plane); }
-/* A way back to the closed card, so it is a link and not a fourth category. */
-.histhide { color: var(--vessel); padding: 6px 2px; border-radius: 7px; }
+/* Open reads as pressed, never as the page's one filled button (invariant 10). The card
+   is transparent, so its ground IS --plane: the open one has to be the one that lifts
+   off it, or the selection dissolves and the three closed ones stand proud instead. */
+.histbtn:has(input:checked) {
+  background: var(--surface); border-color: var(--ink-2); color: var(--ink); font-weight: 650;
+}
+/* A way back to the closed card, so it is a link and not a fourth category. It has
+   nothing to close until something is open — but `display: none` would delete the very
+   control being pressed, taking the keyboard's focus ring with it. So it is clipped
+   instead, stays focusable, and shows itself while focused, the way a skip link does. */
+.histhide {
+  color: var(--vessel); border-radius: 7px;
+  position: absolute; width: 1px; height: 1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%);
+}
 .histhide:hover { text-decoration: underline; }
-.histswitch:has(#h-none:checked) .histhide,
-.histswitch:not(:has(.histrow input:checked)) .histhide { display: none; }
+.histswitch:has(.histbtn input:checked) .histhide,
+.histhide:has(input:focus-visible) {
+  /* relative, not static: the radio inside is absolutely positioned over its own
+     label, and a static label would hand it the whole page to cover. */
+  position: relative; width: auto; height: auto; padding: 6px 2px; clip-path: none;
+}
 
 .histpanel { display: none; margin-top: 16px; }
 /* One rule per category: the closed set of types in the review queue's LABEL. */
 .histswitch:has(#h-conflict:checked) .histpanel[data-cat='conflict'],
 .histswitch:has(#h-too_long:checked) .histpanel[data-cat='too_long'],
 .histswitch:has(#h-unclassified:checked) .histpanel[data-cat='unclassified'] { display: block; }
+
+/* Where the switch cannot work, the card falls back to what it was: everything drawn,
+   nothing to press. A browser without :has(), and paper, which has no buttons. */
+@supports not selector(:has(*)) {
+  .histrow { display: none; }
+  .histpanel { display: block; }
+}
+@media print {
+  .histrow { display: none; }
+  .histpanel { display: block; }
+}
 .cardtitle {
   margin: 0 0 8px; font-size: 11px; font-weight: 650;
   text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted);

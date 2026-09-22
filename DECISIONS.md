@@ -917,6 +917,27 @@ stays a server component, as the `<details>` folds inside each category already 
 alternative, a client component holding the open category in state, would have moved the
 rows through a props payload to gain nothing a radio does not already do.
 
+**Three things the first version got wrong**, found by reviewing the implementation
+rather than the idea — all of them in the closed state, which is the state nobody looks
+at twice:
+
+- *The keyboard could not reach the switch at all.* "Nothing open" was a fourth radio,
+  checked, whose label was `display: none`. A checked radio is its group's only tab stop,
+  so tabbing past the card above skipped every button in it. Nothing is checked now: the
+  panels' own `display: none` is the closed state, and the first Tab lands on the first
+  category.
+- *Hide deleted itself as it was pressed*, and the focus ring went with it. It is clipped
+  rather than removed, and shows itself while focused, the way a skip link does.
+- *The open button was tinted `--plane`* — which is exactly the ground this transparent
+  card sits on, so the open one dissolved into the card while the three closed ones stood
+  proud. Open is the one that lifts off it now.
+
+**What it costs.** A closed category is `display: none`, so find-in-page cannot see it —
+the same trade every `<details>` on the page already makes, and the reason the buttons
+name every category whether or not it is open. Paper and a browser without `:has()` both
+get the old, fully expanded card: `@media print` and `@supports not selector(:has(*))`
+draw every panel and hide the buttons.
+
 ---
 
 ## 27. The vessel register loads when the panel opens
