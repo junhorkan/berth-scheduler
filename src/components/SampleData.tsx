@@ -88,12 +88,14 @@ export function RestorePreviousButton({
 }: {
   bookings: number;
   vessels: number;
-  kind: 'clear' | 'load';
+  kind: 'clear' | 'load' | 'restore';
   /** Relative, e.g. "4 minutes ago". Rendered by the caller, which has lib/cancelled. */
   when?: string;
 }) {
   const { error, pending, go } = useAction(restorePreviousAction);
-  const how = kind === 'clear' ? 'Cleared' : 'Replaced by the sample';
+  const how = kind === 'clear' ? 'Cleared'
+    : kind === 'load' ? 'Replaced by the sample'
+      : 'Replaced by Put back';
   return (
     <>
       <button
@@ -103,7 +105,7 @@ export function RestorePreviousButton({
           if (!confirm(
             `Put back the ${bookings.toLocaleString()} booking${bookings === 1 ? '' : 's'} and `
             + `${vessels.toLocaleString()} vessel${vessels === 1 ? '' : 's'} that were here before? `
-            + 'This replaces whatever is on the schedule now.',
+            + 'What is on the schedule now is kept, so you can put it back again.',
           )) return;
           go();
         }}

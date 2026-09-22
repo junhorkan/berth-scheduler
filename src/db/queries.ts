@@ -173,15 +173,16 @@ export type PreviousSchedule = {
   takenAt: string;
   bookings: number;
   vessels: number;
-  /** Which action replaced it: Clear, or loading the sample over it. */
-  kind: 'clear' | 'load';
+  /** Which action replaced it: Clear, loading the sample over it, or a Put back. */
+  kind: 'clear' | 'load' | 'restore';
 };
 
 /**
  * The schedule the last Clear or Load replaced, if it can still be put back.
  *
- * Null means there is nothing to undo: nothing has been replaced, or the snapshot was
- * consumed by an undo or discarded by an operator reset. The counts come from the
+ * Null means there is nothing to put back. The policy (src/lib/undo.ts) guarantees the
+ * snapshot is only ever a schedule worth restoring — never an empty one, never the
+ * untouched sample — so when this returns a row, the offer is worth making. The counts come from the
  * snapshot rather than being recomputed, so the button can say what it will restore
  * before anybody presses it.
  */
@@ -194,7 +195,7 @@ export async function getPreviousSchedule(): Promise<PreviousSchedule | null> {
     takenAt: (r.taken_at as Date).toISOString(),
     bookings: r.bookings as number,
     vessels: r.vessels as number,
-    kind: r.kind as 'clear' | 'load',
+    kind: r.kind as 'clear' | 'load' | 'restore',
   };
 }
 

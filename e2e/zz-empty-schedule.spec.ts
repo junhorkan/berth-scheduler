@@ -183,6 +183,47 @@ test.describe('an empty schedule', () => {
   });
 });
 
+/**
+ * The case a reviewer constructed against the first version of Put back: after a Load,
+ * somebody makes new bookings on the sample, then presses Put back. It deleted them,
+ * with nothing to bring them back. Put back is now a swap, so it keeps them.
+ */
+test.describe('putting back', () => {
+  test('is itself undoable: it keeps what it replaces', async ({ page }) => {
+    test.setTimeout(150_000);
+    page.on('dialog', (d) => d.accept());
+
+    // Whatever the earlier specs left is "your work". Load the sample over it.
+    await page.goto('/review');
+    await page.getByRole('button', { name: /load the sample schedule/i }).click();
+    await expect(page.getByRole('button', { name: /Put back the previous schedule/ }))
+      .toBeVisible({ timeout: 60_000 });
+
+    // New work, made on the sample.
+    await makeEvent(page, 'E2E made after the load', 'North Pier East — 240ft');
+
+    // Put back the earlier work. The new booking must be kept, not deleted.
+    await page.goto('/review');
+    await page.getByRole('button', { name: /Put back the previous schedule/ }).click();
+    await expect.poll(async () => {
+      await page.goto('/');
+      return page.getByLabel(/E2E made after the load/).count();
+    }, { timeout: 60_000 }).toBe(0);
+
+    await page.goto('/review');
+    const again = page.getByRole('button', { name: /Put back the previous schedule/ });
+    await expect(again).toBeVisible();
+    await expect(page.getByText(/Replaced by Put back/)).toBeVisible();
+
+    // Pressing it again brings the new booking back.
+    await again.click();
+    await expect.poll(async () => {
+      await page.goto('/');
+      return page.getByLabel(/E2E made after the load/).count();
+    }, { timeout: 60_000 }).toBe(1);
+  });
+});
+
 /** An event on the given berth from the form's default date, through the real form. */
 async function makeEvent(page: import('@playwright/test').Page, label: string, berth: string) {
   await page.goto('/');
