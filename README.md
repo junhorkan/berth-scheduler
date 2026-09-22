@@ -78,8 +78,8 @@ is the central design decision. See `DECISIONS.md`.
   each with its count and its verb, and each drawn at zero rather than deleted: what
   needs a decision, what has no length recorded, what has been cancelled and can be put
   back. Only the first reaches the nav badge. What the import found in bookings that have
-  already ended sits below as history, kept rather than deleted, and loading and clearing
-  the schedule live here too.
+  already ended sits below as history, kept rather than deleted. Loading and clearing the
+  schedule are at the foot.
 - **The legacy schedule is imported, and removable.** 23 years of bookings are loaded so
   the conflict and size checks can be tried against real, messy data. All of it is
   before 2020, so the board's own month is empty — and says so, naming the nearest month

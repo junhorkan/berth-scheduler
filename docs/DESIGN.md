@@ -59,9 +59,9 @@ Building the empty path is what exposed both bugs in invariant 2.
 
 Three tabs: **Board, Vessels, Review**. No About page, no architecture in the product.
 `/search` and `/check` are destinations, **not tabs** — do not add them to the nav, and
-do not delete them for breaking the rule. `/check` is reached from **The schedule** card
-at the foot of Review, beside the schedule it compares against, and the link **says what
-the page does**: a destination with one way in cannot afford a name you have to guess at.
+do not delete them for breaking the rule. `/check` is reached from the sample controls
+at the foot of Review, beside the schedule it compares against, and the link **carries a
+short gloss**: a destination with one way in cannot afford a name you have to guess at.
 
 Orientation is allowed in exactly **one** place: the empty board. Every other explanation
 in the app hangs off something on screen — the legend off a bar, the verdict strip off a
@@ -79,9 +79,14 @@ save, the queue off a problem — and on an empty month none of them render, inc
 - **That line says what the page is FOR, not how it happens to be doing.** Review's read
   *"Nothing on the schedule needs a decision."* — true, and on the front door it argues
   the page should not exist. State belongs in the card, against the row it is the state
-  of, where a count of `0` and a line saying what would fill it are informative rather
-  than dismissive. Vessels is the one page whose line carries a proportion, because
-  *where to start* is the only thing 398 missing lengths leaves you needing.
+  of, where a count of `0` and a few words saying what would fill it are informative
+  rather than dismissive. Vessels is the one page whose line carries a proportion,
+  because *where to start* is the only thing 398 missing lengths leaves you needing.
+- **A row with a count is organisation; a paragraph explaining the row is clutter.** An
+  empty state gets a label, not an essay — *Nothing right now.*, *None missing.* Review
+  was rebuilt twice in an hour, once for being bare and once for the prose that fixed it
+  ([DECISIONS 26](../DECISIONS.md#26-a-queue-holds-work-history-goes-in-an-archive)).
+  Board is one card and a line; Vessels is one card, a row of buttons and a pager.
 
 ## 10. Light only, and one obvious action
 

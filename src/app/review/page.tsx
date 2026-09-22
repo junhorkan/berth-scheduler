@@ -133,10 +133,7 @@ export default async function ReviewPage() {
               Needs a decision
               <span className="qhcount">0</span>
             </h2>
-            <p className="qempty">
-              Nothing right now. Overlapping bookings, vessels too long for their berth,
-              and cells the importer could not read all arrive here.
-            </p>
+            <p className="qempty">Nothing right now.</p>
           </section>
         )}
 
@@ -153,11 +150,8 @@ export default async function ReviewPage() {
               <a className="qlink qheadlink" href="/vessels">Add lengths &rarr;</a>
             )}
           </h2>
-          {missing.vessels === 0 && (
-            // True of a schedule where every length is recorded AND of an empty one.
-            // "Every vessel has a length" is a claim about vessels that may not exist.
-            <p className="qempty">No vessel on the schedule is missing one.</p>
-          )}
+          {/* True of a schedule where every length is recorded AND of an empty one. */}
+          {missing.vessels === 0 && <p className="qempty">None missing.</p>}
         </section>
 
         {/*
@@ -176,10 +170,7 @@ export default async function ReviewPage() {
             <span className="qhcount">{cancelled.length}</span>
           </h2>
           {cancelled.length === 0 ? (
-            <p className="qempty">
-              None. Cancelling a booking on the board removes it from the schedule and
-              lists it here, where it can be put back.
-            </p>
+            <p className="qempty">None. A booking you cancel comes back here.</p>
           ) : (
             <ul className="queue">
               {cancelled.map((c) => (
@@ -216,16 +207,8 @@ export default async function ReviewPage() {
       {historical.length > 0 && (
         <div className="board history">
           <h2 className="cardtitle">History</h2>
-          {/*
-            Every other card on this page says what it holds; this one said only its
-            name, which left "History of what?" to the buttons underneath. One line,
-            and it also says the thing that keeps the card honest: nothing was deleted
-            to put it here.
-          */}
-          <p className="qempty">
-            Problems from bookings that have already ended. Nothing can be done about
-            them now, and nothing was deleted to get them here.
-          </p>
+          {/* Bookings that have already ended — kept, never deleted. */}
+          <p className="qempty">From bookings that have already ended.</p>
           {/*
             Radios and labels, not JavaScript: pressing a button shows that list and
             closes the others, and the page stays a server component like the rest of
@@ -268,16 +251,17 @@ export default async function ReviewPage() {
       )}
 
       {/*
-        The schedule itself, in a card of its own that says so. These replace everything
-        on the board, which is why they are at the foot and not in a header one slip
-        from the button that loads data.
+        The schedule's own controls, at the foot and outside the cards: they replace
+        everything above rather than acting on any one row of it. A third card, with a
+        title and a paragraph, made the page read as three things competing — Board and
+        Vessels are each one card and a line.
 
-        The line under them was "Both can be put back afterwards", which is ambiguous
-        twice over — both *what*, and put back to *what*. Naming the two verbs and what
-        they replace costs six words and removes the guessing. DECISIONS 26.
+        Two short lines, not two paragraphs. The first says what the buttons do, because
+        "Both can be put back afterwards" left both *what* and put back to *what* to be
+        guessed. The second is the only way in to /check, so it says what /check is for
+        in the words that page's own masthead uses. DECISIONS 26.
       */}
-      <div className="board schedule">
-        <h2 className="cardtitle">The schedule</h2>
+      <div className="sampledata">
         <div className="sampleacts">
           <LoadSampleButton />
           <ClearScheduleButton />
@@ -290,27 +274,11 @@ export default async function ReviewPage() {
             />
           )}
         </div>
+        <p className="sub-hint">Both replace every booking, and both can be undone.</p>
         <p className="sub-hint">
-          Loading or clearing replaces every booking and vessel. The seven berths stay,
-          and either one can be undone here afterwards.
+          <a className="qlink" href="/check">Check a workbook &rarr;</a>
+          <span>See what the importer makes of your own schedule file.</span>
         </p>
-
-        {/*
-          A destination, not a tab (invariant 9), and this is the only way in — so the
-          link states what the page does rather than leaving "Check a workbook" to be
-          guessed at. The owner had to ask what it was for, which is the label failing.
-        */}
-        <section className="qsection">
-          <h2 className="qhead muted">
-            Check a workbook
-            <a className="qlink qheadlink" href="/check">Open &rarr;</a>
-          </h2>
-          <p className="qempty">
-            Open your own copy of a schedule spreadsheet and see what the importer makes
-            of it &mdash; how many bookings, which cells it could not read, and whether it
-            matches what is loaded here. Nothing is saved.
-          </p>
-        </section>
       </div>
     </main>
   );

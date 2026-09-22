@@ -98,11 +98,10 @@ test.describe('checking a workbook', () => {
  */
 test('Review is the way in to /check, and says what it is for', async ({ page }) => {
   await page.goto('/review');
-  const card = page.locator('.board.schedule');
-  // The link is named AND explained: "Check a workbook" alone had to be asked about.
-  await expect(card).toContainText('see what the importer makes of it');
-  await expect(card).toContainText('Nothing is saved');
-  await card.getByRole('link', { name: /Open/ }).click();
+  const foot = page.locator('.sampledata');
+  // The link is named AND glossed: "Check a workbook" alone had to be asked about.
+  await expect(foot).toContainText('See what the importer makes of your own schedule file.');
+  await foot.getByRole('link', { name: /Check a workbook/ }).click();
   await expect(page).toHaveURL(/\/check$/);
   await expect(page.locator('h1')).toContainText('Check a workbook');
 });

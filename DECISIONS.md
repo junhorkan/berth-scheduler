@@ -990,22 +990,37 @@ masthead, one stray row, a card of three buttons, and a footer. The page's best 
 the one genuine double-booking in 23 years, kept rather than deleted — was two clicks
 inside a card labelled *History*.
 
-**Decision.** Three cards, and every row in them named, counted and drawn whether or not
-it holds anything.
+**Decision.** Every row named, counted and drawn whether or not it holds anything — and
+**at most one short line under any of them.**
 
 | | |
 |---|---|
-| **Needs a decision** `0` | *Nothing right now.* — and what would arrive here |
+| **Needs a decision** `0` | *Nothing right now.* |
 | **No recorded length** `398` | *Add lengths →* |
-| **Cancelled bookings** `0` | *Cancelling a booking removes it from the schedule and lists it here, where it can be put back.* |
-| **History** | what it holds, and that nothing was deleted to get it there |
-| **The schedule** | Load · Clear · Put back, and the way in to `/check` |
+| **Cancelled bookings** `0` | *None. A booking you cancel comes back here.* |
+| **History** | *From bookings that have already ended.* |
+| *(below the cards)* | Load · Clear · Put back, then two lines: what they do, and the way in to `/check` |
 
-**Why a row that says zero.** A count of `0` beside *Cancelled bookings*, with one line
-saying what would put something there, is the page explaining what it is for. The same
-row deleted is a page that looks broken — and, on this sample, a page that is *always*
-broken. This is [invariant 8](CLAUDE.md#invariants) — empty is supported, and never
-silent — applied to a queue rather than to the board.
+**Why a row that says zero.** A count of `0` beside *Cancelled bookings*, with a few
+words saying what would put something there, is the page explaining what it is for. The
+same row deleted is a page that looks broken — and, on this sample, a page that is
+*always* broken. This is [invariant 8](CLAUDE.md#invariants) — empty is supported, and
+never silent — applied to a queue rather than to the board.
+
+**The first attempt fixed "bare" by writing paragraphs, and earned the opposite
+complaint an hour later:** *"Now review page is way too cluttered. I like the
+organization of the board page and vessels page. There is too much going on in review.
+Too many words and too much stuff going on."* Three cards, four explanatory paragraphs,
+about 90 words of prose. Board is one card and a line; Vessels is one card, a row of
+buttons and a pager, and its only sentence is *Nothing in this category.*
+
+**So the structure was right and the prose was the clutter.** The rows stayed; every
+paragraph under them became three to eight words; **The schedule** lost its card and
+went back to a bordered foot below the others, since those controls replace everything
+above rather than acting on a row of it. The page went from about 170 words to 96,
+counting the nav and the buttons. The lesson is worth keeping: *a row with a count is
+organisation, and a paragraph explaining the row is clutter* — an empty state needs a
+label, not an essay.
 
 **The header states the purpose, not the state.** *"Problems with the schedule, and what
 to do about them."* The old line was true and still argued, on the front door, that the
@@ -1021,19 +1036,15 @@ The page was never the problem; the page not saying so was.
 
 **"Check a workbook" was a label nobody could act on.** The owner had to ask what it did,
 which is the label failing, not the reader. `/check` is a destination with exactly one way
-in, so the link now carries the sentence: *open your own copy of a schedule spreadsheet
-and see what the importer makes of it — how many bookings, which cells it could not read,
-and whether it matches what is loaded here. Nothing is saved.*
+in, so the link carries a gloss — *See what the importer makes of your own schedule file.*
+— in the words that page's own masthead uses, rather than a paragraph of them.
 
 **"Both can be put back afterwards" was ambiguous twice over** — both *what*, and put back
-to *what*. It names the verbs and their blast radius now: *loading or clearing replaces
-every booking and vessel. The seven berths stay, and either one can be undone here
-afterwards.* That is three facts rather than one, which a
-[previous pass](#17-repetition-is-not-information) had cut on the grounds that the
-confirmation dialog already states them. The dialog still does — but a dialog is read
-*after* the decision to click, and a red button nobody dares press is not a safe button,
-it is a dead one. The card has the width for a sentence; the flex row beside the buttons
-never did.
+to *what*. It is *Both replace every booking, and both can be undone.* A
+[previous pass](#17-repetition-is-not-information) had cut this line to almost nothing on
+the grounds that the confirmation dialog states it. The dialog still does — but a dialog
+is read *after* the decision to click, and a red button nobody dares press is not a safe
+button, it is a dead one. Eight words is the price of a usable Clear.
 
 ---
 
