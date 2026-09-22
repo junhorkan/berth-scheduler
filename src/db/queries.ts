@@ -6,6 +6,9 @@ import { db } from './client';
 import type { BookingKind, BookingStatus, BerthCapacityMode } from '../domain/types';
 import { canonicalVesselName } from '../domain/normalize';
 import { isSearchable, likePattern } from '../lib/search';
+import { fingerprint } from '../lib/fingerprint';
+import { todayISO } from '../lib/nav';
+import type { Fingerprint } from '../lib/fingerprint';
 import type { SearchHit } from '../lib/search';
 
 export type BerthRow = {
@@ -169,6 +172,49 @@ export async function getRecentlyCancelled(limit = 8): Promise<CancelledRow[]> {
   }));
 }
 
+export type SampleCounts = { stays: number; vessels: number; reviewItems: number; conflicts: number };
+export type Sample = { counts: SampleCounts; fingerprint: Fingerprint };
+
+/**
+ * What the imported sample holds, for /check to compare a visitor's workbook against:
+ * four totals, and a fingerprint of every stay and vessel (lib/fingerprint), so an edit
+ * that leaves the totals alone — two bookings swapping dates — still shows.
+ *
+ * The seed, not the live schedule: visitors change the live one, but the seed is exactly
+ * what the importer made from the workbook. So a grader's untouched copy should match it
+ * booking for booking, and an edited copy shows where it differs. Null on a database
+ * where no workbook has been imported.
+ */
+export async function getSample(): Promise<Sample | null> {
+  const sql = db();
+  const [{ has }] = await sql`select to_regclass('public.bookings_seed') is not null as has`;
+  if (!has) return null;
+  const [stays, vessels, [r]] = await Promise.all([
+    sql`
+      select br.name as berth, b.kind, b.status, b.label,
+             b.start_date::text as start, b.end_date::text as "end"
+      from bookings_seed b join berths br on br.id = b.berth_id`,
+    sql`select normalized_name as name, length_ft from vessels_seed`,
+    sql`select (select count(*)::int from review_items_seed) as review_items`,
+  ]);
+  if (stays.length === 0) return null;
+  return {
+    counts: {
+      stays: stays.length,
+      vessels: vessels.length,
+      reviewItems: r.review_items as number,
+      conflicts: stays.filter((s) => s.status === 'conflict_unresolved').length,
+    },
+    fingerprint: fingerprint(
+      stays.map((s) => ({
+        berth: s.berth as string, kind: s.kind as string, status: s.status as string,
+        label: s.label as string, start: s.start as string, end: s.end as string,
+      })),
+      vessels.map((v) => ({ name: v.name as string, lengthFt: v.length_ft == null ? null : Number(v.length_ft) })),
+    ),
+  };
+}
+
 export type PreviousSchedule = {
   takenAt: string;
   bookings: number;
@@ -226,11 +272,12 @@ export const getSummary = cache(async function getSummary(): Promise<SystemSumma
       -- Only what somebody can still act on: an item whose booking has not ended.
       -- An item with no booking at all is a cell from an old sheet, so the join drops
       -- it here and the history card below carries it instead. A badge that counts
-      -- 2017 is a badge people learn to ignore.
+      -- 2017 is a badge people learn to ignore. Today is the facility's, not the
+      -- database's UTC date, so the badge and the panel agree after 8pm Eastern.
       (select count(*)::int from review_items r
          join bookings b on b.id = r.booking_id
         where r.resolved_at is null and r.type <> 'missing_length'
-          and b.end_date >= current_date) as open_review,
+          and b.end_date >= ${todayISO()}::date) as open_review,
       (select extract(year from min(start_date))::int from bookings) as first_year,
       (select extract(year from max(start_date))::int from bookings) as last_year`;
   return {
@@ -354,7 +401,7 @@ export async function getReviewItems(limit = 200): Promise<ReviewRow[]> {
     select r.id, r.type, r.raw_text, r.detail, r.vessel_id, r.booking_id,
            b.start_date as booking_start, be.name as berth_name,
            r.import_sheet, r.import_row, r.import_col,
-           (b.end_date >= current_date) as is_current
+           (b.end_date >= ${todayISO()}::date) as is_current
       from review_items r
       left join bookings b on b.id = r.booking_id
       left join berths be on be.id = coalesce(r.berth_id, b.berth_id)

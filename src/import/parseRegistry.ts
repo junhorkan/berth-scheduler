@@ -72,7 +72,26 @@ export function parseRegistryBook(wb: XLSX.WorkBook): RegistryResult {
       return cell && cell.v != null ? String(cell.v).trim() : '';
     };
 
+    /**
+     * A row's LOA notes and operator-looking cells, read once. It used to be re-read for
+     * every vessel name in the row, which a row of a thousand names turns into a million
+     * regex tests on the browser's main thread.
+     */
+    const scanRow = (r: number) => {
+      const loa: { c: number; ft: number }[] = [];
+      const op: { c: number; v: string }[] = [];
+      for (let cc = range.s.c; cc <= range.e.c; cc++) {
+        const v = text(r, cc);
+        if (v === '') continue;
+        const m = v.match(LOA_NOTE);
+        if (m) loa.push({ c: cc, ft: Number(m[1]) });
+        if (OPERATOR_HINT.test(v) && !/@|Cell:|http/i.test(v)) op.push({ c: cc, v });
+      }
+      return { loa, op };
+    };
+
     for (let r = range.s.r; r <= range.e.r; r++) {
+      let row: ReturnType<typeof scanRow> | null = null;
       for (let c = range.s.c; c <= range.e.c; c++) {
         const raw = text(r, c);
         if (raw === '' || raw.length > MAX_CELL) continue;
@@ -85,20 +104,10 @@ export function parseRegistryBook(wb: XLSX.WorkBook): RegistryResult {
         // An LOA note and an operator, but only from the SAME row as the vessel name.
         // Scanning continuation rows would attribute a neighbouring vessel's LOA to
         // this one and manufacture a disagreement that is not in the source.
-        let loaFt: number | null = null;
-        let operator: string | null = null;
-        for (let cc = range.s.c; cc <= range.e.c; cc++) {
-          if (cc === c) continue;
-          const v = text(r, cc);
-          if (v === '') continue;
-          if (loaFt == null) {
-            const loa = v.match(LOA_NOTE);
-            if (loa) loaFt = Number(loa[1]);
-          }
-          if (operator == null && OPERATOR_HINT.test(v) && !/@|Cell:|http/i.test(v)) {
-            operator = v;
-          }
-        }
+        row ??= scanRow(r);
+        // The first of each in the row, other than the name's own cell.
+        const loaFt = row.loa.find((x) => x.c !== c)?.ft ?? null;
+        const operator = row.op.find((x) => x.c !== c)?.v ?? null;
 
         byNormalized.set(canon.normalized, {
           displayName: canon.display,

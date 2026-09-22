@@ -3,7 +3,7 @@
 Reference for anyone touching `src/import/`. **Not needed for UI or database work** —
 this is deliberately out of `CLAUDE.md` so it is not loaded into every session.
 
-Source: `data/Dock Schedule - Synthetic Sample.xlsx`, 28 sheets.
+Source: `data/Dock Schedule - Synthetic Sample.xlsx`, 27 sheets.
 
 ## Sheets
 
@@ -74,7 +74,9 @@ Case-folding collapses **446** distinct spellings into **418 vessels**. (This pa
 said 484. No way of counting the file reproduces that; 446 is now locked into a test.)
 
 The registry sheets are self-inconsistent: three vessels state a length in the name and a
-**different** `LOA:` in the notes. Both are stored; neither is silently chosen.
+**different** `LOA:` in the notes. Neither is silently chosen: the one that is booked,
+`M/Y Western Strand`, is stored with both and fit-checked on the name's length; the two
+never booked are reported and not stored.
 
 ## Verified counts (locked into tests)
 

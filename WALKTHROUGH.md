@@ -92,11 +92,13 @@ about itself.
   so the board opened on a busy month; it read as clutter, and it was the one place the
   app showed data nobody had entered, so it came out. The board now opens on an empty
   month that says where the bookings are.
-- **I didn't build an upload, and I can say why.** Their file is a trap-laden migration,
-  and a button that re-imports it shows a grader the same board they already have. The
-  parse is checkable instead: put the file in `data/` and `npm test` verifies it, with no
-  database. And it can never be CSV — collapsing the merged cells drops 58% of booked days
-  and erases the only double-booking in 23 years. I measured that rather than assumed it.
+- **You can check a workbook, but not upload one, and I can say why.** Their file is a
+  trap-laden migration, and a button that re-imports it would let anyone on a public site
+  replace everyone's schedule. So `/check` runs the importer in the browser on their copy
+  and saves nothing: untouched, it matches the imported sample booking for booking; with
+  a double-booking planted in Excel, it names it and its cell. And it can never be CSV — collapsing the
+  merged cells drops 58% of booked days and erases the only double-booking in 23 years. I
+  measured that rather than assumed it.
 - **The look was borrowed from a site I find easy, and then measured.** The scale, the
   centred title, the one big button. What I did not take: its emoji, and its 10px mobile
   table — that is the one thing it does wrong, and there is a rule here against it.
@@ -111,7 +113,7 @@ about itself.
 
 ---
 
-## A five-minute demo script
+## A six-minute demo script
 
 Show the history first, then create the failure live. Pointing at a violation proves the
 board renders one; watching the system refuse a booking proves the rule is real.
@@ -126,8 +128,10 @@ board renders one; watching the system refuse a booking proves the rule is real.
    arithmetic, not a badge you have to learn, and nothing in the spreadsheet could have
    told you it was there. Almost every other bar is hatched: we don't know that vessel's
    length. That's the real state of their data."*
-3. **Back to today. `+ New booking`, any vessel name, Save.** *"Saving registers the
-   vessel — the register fills through normal use rather than a data-entry project."*
+3. **Back to today. `+ New booking`, type `R/V Long Ketch`, Save.** *"Their busiest vessel,
+   267 bookings, and no length on record — so the fit check says amber, not green. Typing
+   a new name works too: saving registers the vessel, so the register fills through
+   normal use rather than a data-entry project."*
 4. **`+ New booking` again.** It reopens on the same berth and day. *"Red. Save is
    disabled and it names the booking in the way. There is no override, because the
    database itself refuses the write — no code path, race or concurrent request gets
@@ -136,23 +140,30 @@ board renders one; watching the system refuse a booking proves the rule is real.
    that fits, when the length is known. It proposes; I still choose, because the
    coordinator knows things the database doesn't."* Save enables, the length warning stays
    amber. *"One rule is a wall, the other is advice. That asymmetry is the whole design."*
-6. **Clear the schedule on Review, then put it back.** *"Nothing here is destructive for
-   long. Clear and Load both keep what they replaced, in the same transaction that
-   replaces it, so the undo can't be out of step with what it undoes."*
+6. **Clear the schedule on Review, then put it back.** Your booking from step 3 is what
+   makes it worth keeping. *"Nothing here is destructive for long. Clear, Load and Put
+   back each keep what they replace, in the same transaction that replaces it, so the
+   undo can't be out of step with what it undoes. The one thing not kept is the untouched
+   sample, because Load can always make it again."*
 7. **Go to Review.** *"Nothing on the live schedule needs a decision. Everything the
    import couldn't resolve is below, as history — one heading per kind of problem, repeats
    folded — including the one genuine double-booking in 23 years, kept rather than
    deleted. The cells it couldn't read are traceable to sheet, row and column. It's
    history and not work, because nobody can move a boat that sailed in 2017."*
+8. **Open Check a workbook, from the foot of Review, and choose their file.** *"This is
+   the importer, running in your browser on your copy — nothing is uploaded or saved. It
+   says the file matches the sample imported here, booking for booking. Add a second
+   booking to a taken berth in Excel and try again: it names the new double-booking and
+   its cell, and the month that changed."*
 
 ---
 
 ## If you are asked how it was built
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
-> `src/domain` and `src/lib`, which import nothing from the database or the UI — 223 unit
-> tests run in under a second with no infrastructure, and 30 more verify the parse once
-> the workbook is in place. 50 Playwright specs build their own
+> `src/domain` and `src/lib`, which import nothing from the database or the UI — 260 unit
+> tests run in under a second with no infrastructure, and 39 more verify the parse once
+> the workbook is in place. 55 Playwright specs build their own
 > fixture against a real server and restore the sample afterwards, so the app is left in
 > the state it ships in.
 >

@@ -25,7 +25,9 @@ test.describe('an empty schedule', () => {
 
   test('has an empty review queue and no badge', async ({ page }) => {
     await page.goto('/review');
-    await expect(page.getByText('Nothing needs attention.')).toBeVisible();
+    // Said once, under the page's name, and no empty card repeating it.
+    await expect(page.getByText('Nothing on the schedule needs a decision.')).toHaveCount(1);
+    await expect(page.locator('.queue li')).toHaveCount(0);
     // The badge should be absent entirely, not showing a zero.
     await expect(page.locator('.tabs .count')).toHaveCount(0);
   });

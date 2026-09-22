@@ -28,7 +28,7 @@ create table vessels (
   -- Upper-cased join key: folds 'Barge SALT DORY' and 'Barge Salt Dory'
   -- into one hull, and OS/V into OSV.
   normalized_name text not null unique,
-  -- Null for ~97.5% of vessels in the source data. This emptiness is the
+  -- Null for ~95% of vessels in the source data. This emptiness is the
   -- actual problem the system exists to surface.
   length_ft       integer check (length_ft is null or length_ft > 0),
   -- Some registry rows state a length in the name AND a different LOA in the

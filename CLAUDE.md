@@ -61,9 +61,9 @@ obeyable.
    is one of those months, and **no booking is ever invented to fill it** — that was tried
    and removed. → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent) ·
    [DECISIONS 29](DECISIONS.md#29-nothing-on-the-board-is-invented)
-9. **Explain the tool, never the project.** Three tabs; no About page; `/search` is a
-   destination, **not a fourth tab**. Each page's masthead is its own name and one line;
-   orientation only on the empty board.
+9. **Explain the tool, never the project.** Three tabs; no About page; `/search` and
+   `/check` are destinations, **not tabs**. Each page's masthead is its own name and one
+   line; orientation only on the empty board.
    → [DESIGN](docs/DESIGN.md#9-explain-the-tool-never-the-project)
 10. **Light only; one filled button per page; no control that only confirms another.**
     → [DESIGN](docs/DESIGN.md#10-light-only-and-one-obvious-action)
@@ -71,10 +71,11 @@ obeyable.
     not its point size. → [DESIGN](docs/DESIGN.md#11-nothing-outside-the-grid-below-13px)
 12. **Nothing destructive is irreversible.** No accounts, so reversibility is the answer
     rather than a gate. Cancelling is a soft delete restored from Review, and restoring
-    re-runs the constraint, so it can be refused. **Clear and Load** each snapshot into the
-    `*_undo` tables inside the transaction that replaces the schedule, so the replacement
-    and its undo cannot come apart. **An upload is never a write path** — see 29.
-    → [DECISIONS 20, 28 and 29](DECISIONS.md#20-cancelling-is-reversible-not-restricted)
+    re-runs the constraint, so it can be refused. **Clear, Load and Put back** each save
+    what they replace, unless it has nothing to lose (`lib/undo.ts`, tested over every
+    sequence), inside the transaction that replaces it. **An upload is never a write
+    path**: `/check` reads a workbook in the browser and saves nothing.
+    → [DECISIONS 20, 28 and 30](DECISIONS.md#20-cancelling-is-reversible-not-restricted)
 13. **Never use WHOI's name or marks.** A real institution, a public site, synthetic data.
     → [DECISIONS 21](DECISIONS.md#21-the-facility-is-not-whoi)
 
@@ -82,9 +83,12 @@ obeyable.
 
 ```
 src/domain/   pure rules: conflicts, fit, classification. No DB, no React.
-src/lib/      pure view helpers: nav, bar geometry, search, grouping, berth suggestion.
-supabase/     every migration in order. The EXCLUDE constraint is in the first one.
-src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
+src/lib/      pure helpers: nav, bar geometry, search, grouping, berth suggestion, the
+              undo policy.
+supabase/     every migration in order; they replay onto an empty database.
+src/import/   workbook bytes → an import plan (plan.ts), the one interpreter of the file.
+              No node:fs anywhere plan.ts reaches, so the same code runs in the importer
+              and in /check. fromFile.ts is the only Node-only file.
 src/db/       SQL queries and mutations, typed at the boundary.
 src/app/      Next.js routes and components. No business rules.
 ```
@@ -96,9 +100,10 @@ scheduler library: none can draw a bar that overhangs its lane.
 
 ```bash
 npm run dev         # local dev server
-npm test            # 223 without the workbook (30 skip by name); 253 with it in data/
-npm run e2e         # 50 specs. HITS THE LIVE DB: swaps in a fixture, restores after
-npm run import      # reload the workbook (needs data/*.xlsx, gitignored)
+npm test            # 260 without the workbook (39 skip by name); 299 with it in data/
+npm run e2e         # 55 specs. HITS THE LIVE DB: swaps in a fixture, restores after
+npm run import      # replace the schedule with the workbook (needs data/*.xlsx, gitignored)
+npm run import:check # the same parse, printed, with no database
 npm run sample:load # reset the live site to the sample, leaving no undo pending
 npm run db:check    # verify the connection and that the constraint exists
 npm run build       # production build

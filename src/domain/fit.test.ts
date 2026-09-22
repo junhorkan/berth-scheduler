@@ -3,7 +3,7 @@ import { checkFit, barHeightRatio, fitForBooking } from './fit';
 
 describe('checkFit', () => {
   it('returns unverified when the vessel length is unknown', () => {
-    // This is the 97.5% case in the real data. It must never read as "fits".
+    // This is 97% of vessel bookings in the real data. It must never read as "fits".
     const r = checkFit(null, 90);
     expect(r.verdict).toBe('unverified');
     expect(r.overByFt).toBeUndefined();

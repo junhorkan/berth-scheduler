@@ -113,36 +113,28 @@ export default async function ReviewPage() {
             </>}
       />
 
+      {/*
+        The card holds work. When there is none, it is not drawn: the line under the
+        page's name already says so, and an empty card repeating it is noise.
+      */}
+      {(missing.vessels > 0 || currentSections.length > 0) && (
       <div className="board">
+        {/*
+          Not a review item: a length is missing on most vessels, and that is expected
+          (invariant 2). It is here as a pointer to where the work is, with its count,
+          and no sentence explaining the arithmetic — the Vessels page does that.
+        */}
         {missing.vessels > 0 && (
           <section className="qsection">
             <h2 className="qhead muted">
               No recorded length
               <span className="qhcount">{missing.vessels.toLocaleString()}</span>
+              <a className="qlink qheadlink" href="/vessels">Add lengths &rarr;</a>
             </h2>
-            <ul className="queue">
-              <li>
-                <div className="qmain">
-                  <span className="qdetail">
-                    {missing.bookings.toLocaleString()} booking
-                    {missing.bookings === 1 ? '' : 's'} cannot be checked against berth
-                    length until a length is recorded.
-                  </span>
-                </div>
-                <div className="qact">
-                  <a className="btn" href="/vessels">Add lengths</a>
-                </div>
-              </li>
-            </ul>
           </section>
         )}
 
-        {items.length === 0 && missing.vessels === 0 ? (
-          <p className="empty">Nothing needs attention.</p>
-        ) : currentSections.length === 0 ? (
-          <p className="empty">Nothing on the schedule needs a decision.</p>
-        ) : (
-          currentSections.map(({ type, groups: rows }) => {
+        {currentSections.map(({ type, groups: rows }) => {
             const head = rows.slice(0, HEAD);
             const tail = rows.slice(HEAD);
             return (
@@ -172,13 +164,10 @@ export default async function ReviewPage() {
                 )}
               </section>
             );
-          })
-        )}
+          })}
 
-        {items.length >= 200 && (
-          <p className="note">Showing the first 200 open items.</p>
-        )}
       </div>
+      )}
 
       {/*
         Everything the import turned up that nobody can act on any more. It keeps its
@@ -223,6 +212,14 @@ export default async function ReviewPage() {
             );
           })}
         </div>
+      )}
+
+      {/*
+        The query stops at 200 open items, and what it drops can fall in either card, so
+        the note sits below both, and whether or not the work card is drawn.
+      */}
+      {items.length >= 200 && (
+        <p className="note">Showing the first 200 open items.</p>
       )}
 
       {/*
@@ -275,7 +272,9 @@ export default async function ReviewPage() {
         <span className="sub-hint">
           The sample is the 23-year legacy workbook, as imported. Loading and clearing
           each replace the whole schedule, and either can be put back afterwards. The
-          seven berths always stay: they are the facility, not schedule data.
+          seven berths always stay: they are the facility, not schedule data.{' '}
+          <a href="/check">Check a workbook</a> to see what the importer makes of your own
+          copy.
         </span>
       </div>
     </main>
@@ -296,12 +295,23 @@ function Row({ type, group }: { type: string; group: ReviewGroup<ReviewRow> }) {
   // Where it came from in the workbook, but only for the cells nobody could classify —
   // those are the ones you resolve by going and looking at the sheet. A conflict or a
   // misfit is on the board, where the provenance tells you nothing you can act on.
-  const provenance =
-    type === 'unclassified' && group.rows.length === 1 && head.importSheet
-      ? `sheet ${head.importSheet}, row ${head.importRow}, col ${head.importCol}`
-      : null;
-  const meta =
-    type === 'unclassified' ? null : [head.berthName, when].filter(Boolean).join(' · ');
+  // Folded or not, every cell keeps its own sheet, row and column (invariant 3); what it
+  // said about where it sat is stated once when every occurrence says the same.
+  const unread = type === 'unclassified';
+  const sameDetail = group.rows.every((r) => r.detail === head.detail);
+  const cellOf = (r: ReviewRow) =>
+    r.importSheet ? `sheet ${r.importSheet}, row ${r.importRow}, col ${r.importCol}` : null;
+  const cells = unread
+    ? group.rows
+        .map((r) => {
+          const c = cellOf(r);
+          if (sameDetail) return c;
+          return [r.detail && tighten(r.detail), c].filter(Boolean).join(' · ') || null;
+        })
+        .filter((c): c is string => Boolean(c))
+    : [];
+  const detail = unread && !sameDetail ? null : head.detail && tighten(head.detail);
+  const meta = unread ? null : [head.berthName, when].filter(Boolean).join(' · ');
 
   return (
     <li>
@@ -312,13 +322,9 @@ function Row({ type, group }: { type: string; group: ReviewGroup<ReviewRow> }) {
             <span className="qcount">{group.rows.length}&times;</span>
           )}
         </span>
-        {head.detail && (
-          <span className="qdetail">
-            {tighten(head.detail)}
-            {provenance && <> &middot; {provenance}</>}
-          </span>
-        )}
+        {detail && <span className="qdetail">{detail}</span>}
         {meta && <span className="qmeta">{meta}</span>}
+        {cells.map((c, i) => <span key={i} className="qmeta">{c}</span>)}
       </div>
       <div className="qact">
         {head.bookingStart && (

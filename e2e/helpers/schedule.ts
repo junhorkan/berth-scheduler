@@ -146,7 +146,7 @@ export async function seedFixture(): Promise<void> {
 /**
  * Put the sample back, through the app's own reload — the same function the "Load the
  * sample schedule" button calls, so what the suite leaves behind is exactly what the
- * button would, forward bookings included. It used to copy the SQL, which is how the
+ * button would, with no undo left pending. It used to copy the SQL, which is how the
  * two could drift.
  *
  * The suite replaces the schedule with its own fixture, so without this it would

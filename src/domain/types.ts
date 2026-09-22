@@ -37,7 +37,7 @@ export type Berth = {
 export type Vessel = {
   id: string;
   canonicalName: string;
-  /** Null for the ~97.5% of vessels whose length is recorded nowhere in the source. */
+  /** Null for the ~95% of vessels whose length is recorded nowhere in the source. */
   lengthFt: number | null;
 };
 

@@ -55,3 +55,6 @@ data/*.xlsx
 
 # Notes for the project owner about submitting. Not part of the app.
 SUBMISSION.md
+
+# Per-machine Claude Code permissions. launch.json is shared; this is not.
+.claude/settings.local.json

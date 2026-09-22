@@ -9,7 +9,7 @@ Berth reservation management for a marine research facility.
 Replaces a spreadsheet in which double-bookings were caught by eye and vessel/berth size
 was not checked at all.
 
-## Try it in sixty seconds
+## Try it in two minutes
 
 Everything on the board is from the workbook you sent. Nothing is invented.
 
@@ -21,10 +21,16 @@ Everything on the board is from the workbook you sent. Nothing is invented.
    vessel name and save. Press **+ New booking** again: it opens on the same berth and
    day, so the verdict is red, Save is off, and it names the booking in the way. The
    database refuses the write, and there is no override. **Find me a berth** proposes a
-   free one and says why.
+   free one and says why. Cancel your booking when you are done; Review can restore it.
 3. **Open Review → From the imported history.** The one double-booking in all 23 years —
    South Float East, 11 July 2017 — is kept, not deleted. The cells the importer could
-   not read carry their sheet, row and column. **Show on board** takes you to each.
+   not read carry their sheet, row and column. **Show on board** opens a booking where it
+   sits on the board.
+4. **Open [Check a workbook](https://berth-scheduler.vercel.app/check) and choose your copy
+   of the workbook.** Your browser reads it with the importer's own code, uploads nothing,
+   and says whether it matches the sample imported here, booking for booking. Plant a
+   second booking on a taken berth first, and it names the new double-booking and the
+   cell it came from.
 
 ---
 
@@ -37,7 +43,7 @@ a grid — mostly working, but expensive and fragile.
 → Made **structurally impossible**. Postgres enforces it:
 
 ```sql
-EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active')
+EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active' AND exclusive)
 ```
 
 No application code path, race condition or concurrent request can store an overlap.
@@ -77,18 +83,23 @@ is the central design decision. See `DECISIONS.md`.
   **Both can be undone**: each snapshots what it replaces in the same transaction that
   replaces it, and **Put back the previous schedule** restores it.
 - **Find** — one box, searching every vessel name, event label and closure note across
-  all 276 months at once. Results group by identity, so a vessel with 267 bookings is one
+  all 23 years at once. Results group by identity, so a vessel with 267 bookings is one
   block and not 267 rows, and each result jumps straight to its own month on the board.
 
 ## Importing the legacy workbook
 
-`npm run import` parses all 23 sheets and reconciles exactly:
+`npm run import` parses all 23 year sheets and reconciles exactly:
 
 ```
-2,212 source cells → 2,031 stays     (145 cells merged, 49 across a month boundary)
+2,212 source cells = 2,176 occupying a berth + 29 timing notes + 7 unreadable
+2,176 occupying    → 2,031 stays   (145 merged into the stay before, 49 across a month end)
         7 berths · 418 vessels · 29 review items
    272 / 272 month blocks resolved
 ```
+
+`npm run import:check` prints the same reconciliation without touching the database, and
+[/check](https://berth-scheduler.vercel.app/check) runs the same planner in the browser on
+any copy of the workbook — see step 4 above.
 
 Only **20 of 418 vessels** have a length recorded anywhere in the source, which is the
 evidence behind warning rather than blocking on fit. Among the bookings that *can* be
@@ -98,7 +109,7 @@ The workbook itself is not in this repo — it is your material, and it was scru
 history before the repository went public. **Place your copy at
 `data/Dock Schedule - Synthetic Sample.xlsx` and `npm test` verifies the parse against it**,
 with no database: the counts above, and each of the three source defects below. Without
-the file those 30 tests are skipped by name rather than failing.
+the file those 39 tests are skipped by name rather than failing.
 
 Three source defects had to be handled:
 
@@ -124,11 +135,12 @@ npm run dev
 ```
 
 ```bash
-npm test          # 223 unit tests with no database; 253 once the workbook is in data/
-npm run e2e       # 50 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
+npm test          # 260 unit tests with no database; 299 once the workbook is in data/
+npm run e2e       # 55 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean
-npm run import    # reload the workbook (needs data/*.xlsx, gitignored)
+npm run import    # replace the schedule with the workbook (needs data/*.xlsx, gitignored)
+npm run import:check # the same parse and reconciliation, printed, touching nothing
 npm run sample:load # reset the live site to the sample, with no undo left pending
 npm run db:check  # verify connection and that the constraint exists
 ```
@@ -145,7 +157,7 @@ src/app/      Next.js routes and components. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
-navigation and search rules are provably correct without a database — 223 unit tests run
+navigation and search rules are provably correct without a database — 260 unit tests run
 in well under a second with no infrastructure at all. The importer and the UI call the
 same functions, so the rule the board shows you is the rule the import applied.
 

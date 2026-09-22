@@ -58,8 +58,9 @@ Building the empty path is what exposed both bugs in invariant 2.
 ## 9. Explain the tool, never the project
 
 Three tabs: **Board, Vessels, Review**. No About page, no architecture in the product.
-`/search` is a destination, **not a fourth tab** — do not add it to the nav, and do not
-delete it for breaking the rule.
+`/search` and `/check` are destinations, **not tabs** — do not add them to the nav, and
+do not delete them for breaking the rule. `/check` is reached from the sample controls at
+the foot of Review, beside the schedule it compares against.
 
 Orientation is allowed in exactly **one** place: the empty board. Every other explanation
 in the app hangs off something on screen — the legend off a bar, the verdict strip off a

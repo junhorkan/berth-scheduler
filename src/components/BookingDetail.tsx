@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { cancelBookingAction, reassignBookingAction, checkBookingAction } from '../app/actions';
 import type { BerthRow, BookingDetailRow } from '../db/queries';
 import { checkFit } from '../domain/fit';
+import { todayISO } from '../lib/nav';
 
 /**
  * An existing booking: cancel it, or move it to another berth.
@@ -97,7 +98,13 @@ export default function BookingDetail({
           <p className="verdict stop">
             <b>Unresolved conflict from the legacy schedule.</b>{' '}
             {booking.notes ?? 'This booking overlaps another on the same berth.'} It was kept rather
-            than discarded so the history stays true; move or cancel it to resolve.
+            than discarded so the history stays true
+            {/* Telling someone to resolve a stay that has already ended sends them to do
+                work that means nothing (DECISIONS 26). It can still be moved, to correct
+                the record, so this says what it is rather than that nothing can be done. */}
+            {booking.endDate < todayISO()
+              ? `. It ended on ${booking.endDate}, so it is history rather than work.`
+              : '; move or cancel it to resolve.'}
           </p>
         )}
 

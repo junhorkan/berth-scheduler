@@ -15,6 +15,7 @@
  */
 import type * as XLSX from 'xlsx';
 import { readWorkbook } from './workbook';
+import { inspectZip, verifyInflation } from './zipGuard';
 import { parseGrids } from './parseWorkbook';
 import type { ParseReport } from './parseWorkbook';
 import { parseRegistryBook } from './parseRegistry';
@@ -78,7 +79,8 @@ export type Reconciliation = {
   cells: { read: number; occupying: number; timingNotes: number; unreadable: number; marginNotes: number };
   stays: { total: number; cellsMerged: number; acrossMonthEnd: number };
   conflicts: (Cell & { label: string; berth: string; start: string; end: string; overlaps: string })[];
-  tooLong: (Cell & { vessel: string; vesselFt: number; berth: string; berthFt: number; start: string; end: string })[];
+  /** `vesselKey` is the vessel's identity (its normalized name), for folding repeats. */
+  tooLong: (Cell & { vessel: string; vesselKey: string; vesselFt: number; berth: string; berthFt: number; start: string; end: string })[];
   unreadable: (Cell & { text: string; where: string })[];
   vessels: {
     total: number;
@@ -99,8 +101,16 @@ export type ImportPlan = {
   reconciliation: Reconciliation;
 };
 
-/** Bytes to plan. Throws ImportError, with a reason a person can act on. */
-export function planImport(bytes: Uint8Array): ImportPlan {
+/**
+ * Bytes to plan. Rejects with an ImportError, carrying a reason a person can act on.
+ *
+ * The entry point for a file from outside — the importer's and /check's. Async because
+ * every entry is inflated once, natively and bounded, before SheetJS is allowed near it
+ * (zipGuard). The synchronous readers the tests use skip that step; they only ever read
+ * the known workbook.
+ */
+export async function planImport(bytes: Uint8Array): Promise<ImportPlan> {
+  await verifyInflation(bytes, inspectZip(bytes));
   return planFromWorkbook(readWorkbook(bytes));
 }
 
@@ -301,7 +311,7 @@ function reconcile(x: {
       .map((r) => {
         const p = planned[r.bookingIndex!];
         return {
-          ...cellOf(p), vessel: p.label,
+          ...cellOf(p), vessel: p.label, vesselKey: p.normalizedVesselName ?? p.label,
           vesselFt: vessels.find((v) => v.normalized === p.normalizedVesselName)?.lengthFt ?? 0,
           berth: p.berthName, berthFt: p.berthLengthFt ?? 0, start: p.start, end: p.end,
         };

@@ -87,21 +87,24 @@ the single most important guarantee in the project. Not worth the trade.
 ## Schema
 
 **Every migration is in [`supabase/migrations/`](../supabase/migrations/)**, in the order
-it was applied, exported from the database's own migration log. The exclusion constraint
+it was applied, exported from the database's own migration log, and **they replay onto an
+empty database**: all thirteen were run in order against an in-process Postgres (PGlite,
+with `btree_gist`) on 2026-09-22. Three of them had assumed tables that only an import had
+created, and now guard for that; each carries a note saying so. The exclusion constraint
 is at line 114 of the first one. Three things worth knowing:
 
 - **The berths are defined in a migration**, idempotently, so a database built from
-  nothing has the facility in it. The sample reload writes them too, from `berths_seed`,
-  with the same ids — verified, all seven — which is what lets an undo after a Load put
-  back bookings that reference them.
+  nothing has the facility in it. Nothing else writes them: Clear, Load, Put back and the
+  importer all leave the seven rows alone, so their ids never change — which is what lets
+  an undo put back bookings that reference them.
 - **`review_items.type` is constrained** to the kinds the app can actually produce.
   Missing lengths are derived at read time, not stored, so that value is not accepted.
-- **No migration creates the `*_seed` tables.** `npm run import` creates them from the
-  live tables after it loads the workbook, and one early migration even drops them, from
-  a period when the sample was removed and later restored. So a database built from
-  migrations alone has the schema and the berths but nothing for **Load the sample** to
-  load until the importer has run once against the workbook. Stated rather than hidden:
-  moving the seed snapshot into a migration would put the client's data in the repo.
+- **The `*_seed` tables are created empty.** The newest migration makes them, and the
+  `*_undo` tables, real tables with primary keys and row-level security. `npm run import`
+  fills them, in the same transaction that writes the live schedule. So a database built
+  from migrations alone has the schema and the berths but nothing for **Load the sample**
+  to load until the importer has run once against the workbook. Stated rather than
+  hidden: moving the seed rows into a migration would put the club's data in the repo.
 
 ## Environment
 

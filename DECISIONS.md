@@ -36,6 +36,7 @@ built is usually more informative than the thing that was.
 | 27 | [The vessel register loads when the panel opens](#27-the-vessel-register-loads-when-the-panel-opens) |
 | 28 | [Clear is undoable, and the board is not a wall](#28-clear-is-undoable-and-the-board-is-not-a-wall) |
 | 29 | [Nothing on the board is invented](#29-nothing-on-the-board-is-invented) |
+| 30 | [One undo rule, an importer that fails loudly, and a check that writes nothing](#30-one-undo-rule-an-importer-that-fails-loudly-and-a-check-that-writes-nothing) |
 
 ---
 
@@ -44,7 +45,7 @@ built is usually more informative than the thing that was.
 **Decision.** A Postgres exclusion constraint:
 
 ```sql
-EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active')
+EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active' AND exclusive)
 ```
 
 **Why.** The obvious approach is to query for overlaps, then insert if none are found.
@@ -634,9 +635,9 @@ vessel actually fits the berth it has been assigned to"* — assigned, by a pers
 the system choose attacks that one level up: there is less left to verify. But choosing
 outright fails on two things:
 
-- **97.5% of vessels have no recorded length**, so for almost every booking the system
+- **95% of vessels have no recorded length** (398 of 418), so for 97% of vessel bookings the system
   cannot know what fits. Assigning anyway would mean guessing, and
-  [invariant 2](../CLAUDE.md) is that a length is never invented. With no length the
+  [invariant 2](CLAUDE.md) is that a length is never invented. With no length the
   suggester ranks on availability alone and says `fit is not checked` in as many words.
 - **The coordinator knows things the database does not**: shore power, crane reach, which
   float is nearest the lab, who is arriving at 0600. A silent assignment ignoring all of
@@ -661,7 +662,7 @@ regardless, so it would win every time and the suggestion would carry no informa
 stays selectable and labelled `shared, no fit check`.
 
 **Where the logic lives.** `src/lib/suggest.ts`, pure and unit-tested against a fixture
-of berths — no database, no React ([invariant 1](../CLAUDE.md)). The server returns raw
+of berths — no database, no React ([invariant 1](CLAUDE.md)). The server returns raw
 occupancy; the ranking and every word of the wording happen in that module, on the client
 that already holds the berth list and the vessel's length.
 
@@ -869,7 +870,7 @@ coming Tuesday, is the thing that gets missed. The queue was hiding its own best
 used to say 29 and mean none.*
 
 **Why the history is not deleted.** It is the evidence that the import dropped nothing
-silently, which is [invariant 3](../CLAUDE.md). "What happened to the cells you could not
+silently, which is [invariant 3](CLAUDE.md). "What happened to the cells you could not
 parse?" has to have a better answer than "gone". So nothing is removed; only the framing
 changes, and that is the whole fix.
 
@@ -911,7 +912,7 @@ most, and it was the heaviest one for a feature behind a button.
 | Register in the HTML | all 418 | none |
 
 **Why it is safe to arrive late.** A name that matches nothing is a new vessel anyway
-([invariant 2](../CLAUDE.md)), and `createBooking` resolves a known name to its row on
+([invariant 2](CLAUDE.md)), and `createBooking` resolves a known name to its row on
 the server through `findOrCreateVessel`. So while the register is in flight the field
 still accepts anything and a save still lands on the right vessel. What waits is the
 autocomplete list and the *"100ft on record"* line, not the ability to book.
@@ -953,12 +954,15 @@ snapshot back, so the undo can never be out of step with what it is undoing.
 board a second later, not at the tab the button lives on. An undo you have to go and
 find is one people do not find.
 
+> **The rule below is superseded by [30](#30-one-undo-rule-an-importer-that-fails-loudly-and-a-check-that-writes-nothing)**:
+> Put back is now a swap, and Load keeps a snapshot of real work rather than retiring it.
+
 **The snapshot is consumed on use, and retired by loading the sample.** Running undo
 twice would wipe whatever was done after the first one, and undoing a clear *after*
 deliberately loading something else would silently discard that choice. Same rule both
 times: an undo applies to the thing it was taken for.
 
-**What this closes.** [Invariant 12](../CLAUDE.md) used to read *"nothing destructive is
+**What this closes.** [Invariant 12](CLAUDE.md) used to read *"nothing destructive is
 irreversible, except the one thing that says so"*. Saying so in a dialog is a warning,
 not a design. The exception is gone.
 
@@ -1015,6 +1019,9 @@ shows the rule working rather than a scenario staged for it.
 
 ### Why there is no upload
 
+> **Revisited in [30](#30-one-undo-rule-an-importer-that-fails-loudly-and-a-check-that-writes-nothing)**:
+> a read-only check now exists. Never a write path from a file still stands.
+
 The owner asked whether 23 years of synthetic data meant the graders wanted a way to load
 a spreadsheet. The file *is* the test — it is named "Synthetic Sample", and its defects
 are plants: a 2010 sheet labelling two months 2018, Decembers carried into the next
@@ -1031,7 +1038,7 @@ reasons, each checked against this codebase:
 - **It cannot be CSV.** A booking's dates are the width of a merged cell. Measured by
   running this project's own parser with every cell collapsed to its first day, which is
   what a CSV export does: booked days fall from 5,155 to 2,173, multi-day stays from 608
-  to 69, the 92-day M/Y BLUE TIDE stay becomes one day, and **the only double-booking in
+  to 69, the 92-day M/Y BLUE TIDE stay becomes three one-day stays, and **the only double-booking in
   23 years disappears**. An import that silently loses the brief's own named failure is
   the worst possible demonstration of a system built to catch it.
 - **"Add" has no sound meaning.** The grid gives its rows no identity. Adding the workbook
@@ -1069,3 +1076,142 @@ mattered more than any button:
 and [26](#26-a-queue-holds-work-history-goes-in-an-archive) kept teaching: the question
 worth asking was never "what else can this do", but "what does a stranger actually
 see". Here the stranger was someone cloning the repository, and what they saw was red.
+
+---
+
+## 30. One undo rule, an importer that fails loudly, and a check that writes nothing
+
+Everything [29](#29-nothing-on-the-board-is-invented) built was then reviewed
+adversarially, by agents told to break it rather than approve it. They broke three
+things, and one argument changed a decision.
+
+### The undo had a policy, and the policy was wrong
+
+**Decision.** Clear, Load and Put back follow one rule: **an action saves what it
+replaces, unless that has nothing to lose.** A schedule has nothing to lose when no
+booking on it is active, or when it is the untouched sample, which Load can always make
+again. Put back is therefore a swap: press it twice and you are where you started.
+
+**Why one rule.** Every undo bug found was in *which state gets saved when*, not in the
+SQL that moves rows:
+
+- **Put back destroyed work.** After a Load, a visitor could make days of bookings on the
+  sample; one click of Put back from anyone deleted them, with no way back.
+- **Load twice** replaced the snapshot of your work with a snapshot of the sample.
+- **The first Load on a fresh site** offered to "put back 2,031 bookings" — the ones
+  already on screen.
+- **A schedule of only cancelled bookings** counted as content here while the board
+  called it empty, so it could overwrite the snapshot the board was offering.
+- **Two replaces at once** could both snapshot. Each now takes an exclusive lock on the
+  three tables first, with a ten-second timeout.
+
+So the rule lives in `src/lib/undo.ts` as a pure state machine, and
+`src/db/mutations.ts` follows it step for step. Its tests run every sequence of up to six
+actions — Clear, Load, Put back, or an edit — from six starting states: 24,576 runs,
+checking after every step that no replace destroyed a schedule with something to lose,
+and that the snapshot is only ever one worth putting back.
+
+**What it cannot do, stated.** There is one slot. Load over work, edit the sample, Load
+again: the second Load saves the newer work, and the older is gone. Holding both needs a
+history with identity, which a site without accounts does not have. A test pins the
+limit so nobody mistakes it for a bug, or a feature.
+
+### The importer failed silently, or halfway
+
+**Before.** `scripts/import.mts` truncated the berths table, which changed the ids every
+booking and snapshot referenced, and wrote in separate statements with no transaction:
+a failure midway left half a schedule live. A file with no year sheets "succeeded" with
+zero rows. The interpretation itself was top-level script code with no tests.
+
+**Decision.** `src/import/plan.ts` is the one interpreter of the file: bytes in, a plan
+and a reconciliation out, writing nothing, with no `node:fs` anywhere it reaches.
+`writeImportPlan` writes a plan in one transaction, under the undo rule, and never
+touches the berths — it maps the workbook's berths to the facility's by name and refuses
+one the facility does not have. `npm run import:check` prints the reconciliation with no
+database at all.
+
+**Refused, loudly, each with a test:** an empty file; a CSV, with the reason; random
+bytes; a zip that is not a workbook; no sheet named for a year; year sheets with nothing
+placeable; a sheet larger than any schedule. And the ones that were attacks rather
+than mistakes, each measured before it was closed:
+
+- **A zip bomb.** SheetJS inflates every entry eagerly. A 901KB file reached 1.5GB of
+  memory and then returned zero rows without an error. The first guard read the zip's
+  directory and refused a file declaring more than 50MB — and a second review broke it
+  twice. SheetJS sizes its output from each entry's *local* header, not the directory,
+  and treats a stated size of 0 as "grow without limit"; and it finds the directory by a
+  different search, so a record planted in the zip comment showed the guard one
+  directory and SheetJS another. The guard now reads exactly what SheetJS reads, and
+  `planImport` inflates every entry once with the platform's own decompressor first,
+  refusing the file the moment one passes the size it states. That is the only honest
+  answer to a zip bomb, which works by lying about exactly that.
+- **A declared extent.** A 222KB sheet declaring `A1:XFD1048576` took 92 seconds.
+  `nodim` makes SheetJS measure the cells that exist instead, and the sheets' combined
+  extent is capped at 2 million cells: 64 sparse sheets, each within the per-sheet limit,
+  could otherwise buy 320 million cell reads.
+- **Three pieces of worse-than-linear parsing**: two regular expressions with
+  catastrophic backtracking, in the registry and berth parsers, and a registry scan that
+  re-read a whole row for every vessel name in it. All three are linear now.
+
+### A check that writes nothing
+
+**Decision.** `/check` reads a workbook in the visitor's browser, runs the same
+`planImport` the importer runs, and shows its reconciliation: double-bookings,
+misfits, the file's defects, the cells it would not guess at, each with where it sits in
+the workbook, and whether the file matches the sample imported here, booking for booking.
+Nothing is uploaded and nothing is saved. There is no endpoint behind it.
+
+**Booking for booking, not figure for figure.** The first version compared four totals.
+A reviewer swapped two bookings' dates on the 2015 sheet and every total held, so the
+page called a different schedule identical. Now the server hashes every stay in the seed
+— berth, kind, status, name, dates — month by month, and every vessel's name and length
+(`lib/fingerprint.ts`); the browser hashes the file's plan the same way. About 6KB goes
+to the page instead of 2,031 rows, and a difference is named by month: *bookings differ
+in Mar 2015*.
+
+**Why this reverses part of 29.** 29 argued an upload "would show a grader nothing new",
+and for an untouched file that is true: it matches, booking for booking. A skeptic's
+reply won the argument: it is false of an *edited* file. A grader who plants a second
+booking on a taken berth and drops the file in sees the page name the new
+double-booking and the cell it came from — the brief's own named failure, caught in a
+file the grader controls, which no sentence in a README can show. An end-to-end spec does
+exactly that whenever the workbook is present.
+
+**What 29 decided still stands.** Never a write path from a file. Importing from a
+public page with no accounts would let any visitor replace everyone's schedule; that
+stays a job for an operator with the database credentials.
+
+**Why the browser and not the server.** A server endpoint parsing arbitrary zips on a
+public site is attack surface; in the browser, a hostile file can only hurt the tab that
+opened it, and the guards above refuse those anyway. A file's size is checked before its
+bytes are read. The spreadsheet library, about 390KB, is its own chunk, fetched only
+when someone chooses a file.
+
+**Why compare with the seed, not the live schedule.** Visitors change the live one. The
+seed is exactly what the importer made, so it is the claim being checked — and the page
+says "the sample imported here", not "the board", because after a visitor's Clear those
+are different things.
+
+### The migrations did not replay
+
+Three migrations assumed tables only an import had created — the second altered
+`berths_seed`, which no migration made — so the repository could not rebuild its own
+database. They now guard for it, each with a note, and a new migration makes the seed and
+undo tables real tables with primary keys and row-level security. All thirteen replay
+onto an empty in-process Postgres.
+
+### Smaller things verification found
+
+- Review split current work from history by the database's UTC date while the booking
+  panel used the facility's, so for four hours every evening they disagreed. Both use
+  `todayISO()` now.
+- The save path accepted a start date in the past; only the date picker refused it.
+  `createBooking` now refuses it too, as invariant 7 always said it did.
+- The constraint was quoted without `AND exclusive` in four places, including the README.
+- "97.5%" was neither figure: 95% of vessels have no length, and 97% of vessel bookings
+  cannot be fit-checked. The README's reconciliation subtracted from the wrong total;
+  `DATA-NOTES` counted 28 sheets where there are 27.
+- The Vessels page opened on four figures in one sentence. It now says one proportion in
+  words — the first ten rows account for half of the vessel bookings — computed, and
+  rounded down so it never overclaims.
+

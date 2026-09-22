@@ -15,8 +15,8 @@ export const SITE_NAME = 'Harborview Dock Schedule';
  * missed, and a first-time visitor is told what this is before seeing anything else.
  * None of it is a page about the project; invariant 9 holds.
  *
- * `search` is a destination, not a fourth tab: it leaves all three tab links
- * unhighlighted, because the results page belongs to no section of the app.
+ * `search` and `check` are destinations, not tabs: they leave all three tab links
+ * unhighlighted, because neither page belongs to a section of the app.
  */
 export default async function Nav({
   current,
@@ -25,7 +25,7 @@ export default async function Nav({
   actions,
   query = '',
 }: {
-  current: 'board' | 'vessels' | 'review' | 'search';
+  current: 'board' | 'vessels' | 'review' | 'search' | 'check';
   /** The page's own name. The board is the site, so it takes the site's. */
   title?: string;
   /** One line under the title: what the page is for, or what it holds right now. */

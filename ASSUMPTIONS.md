@@ -123,7 +123,9 @@ runs once the workbook is in `data/`. The mechanics are in `docs/DATA-NOTES.md`.
 - **Spelling variants are one vessel.** `Barge SALT DORY` and `Barge Salt Dory` are one
   hull, and `OS/V` is `OSV`: 446 spellings are 418 vessels.
 - **When the source contradicts itself, both answers are kept.** Three registry entries
-  state one length in the name and another in the notes. Neither is silently chosen.
+  state one length in the name and another in the notes. Neither is silently chosen: the
+  one that is booked is stored with both and fit-checked on the name's; the two never
+  booked are reported, not stored.
 
 ## Deliberately not modelled
 

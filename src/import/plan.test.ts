@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import type { ImportPlan, Reconciliation } from './plan';
 import { planImport } from './plan';
 import { readBytes } from './fromFile';
 
@@ -14,8 +15,12 @@ const WORKBOOK = 'data/Dock Schedule - Synthetic Sample.xlsx';
 const HAS_WORKBOOK = existsSync(WORKBOOK);
 
 describe.skipIf(!HAS_WORKBOOK)(`planImport against the real workbook (needs ${WORKBOOK})`, () => {
-  const plan = HAS_WORKBOOK ? planImport(readBytes(WORKBOOK)) : null!;
-  const r = HAS_WORKBOOK ? plan.reconciliation : null!;
+  let plan: ImportPlan;
+  let r: Reconciliation;
+  beforeAll(async () => {
+    plan = await planImport(readBytes(WORKBOOK));
+    r = plan.reconciliation;
+  });
 
   it('reads 2,212 cells and accounts for every one', () => {
     expect(r.cells.read).toBe(2212);

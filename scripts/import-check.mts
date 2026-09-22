@@ -14,7 +14,7 @@ import { formatReconciliation } from '../src/import/report';
 
 const path = process.argv[2] ?? 'data/Dock Schedule - Synthetic Sample.xlsx';
 try {
-  const plan = planImport(readBytes(path));
+  const plan = await planImport(readBytes(path));
   console.log(`\n${path}\n`);
   console.log(formatReconciliation(plan.reconciliation));
   console.log('\nNothing was written.\n');

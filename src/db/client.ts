@@ -4,7 +4,7 @@
  * The schema's single source of truth is the SQL migration, not a TypeScript schema
  * DSL. That is deliberate: the centrepiece of this design is
  *
- *   EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active')
+ *   EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active' AND exclusive)
  *
  * which no ORM schema builder can express. Declaring the schema twice — once in SQL
  * for the constraint and once in TypeScript for an ORM — would create two sources of

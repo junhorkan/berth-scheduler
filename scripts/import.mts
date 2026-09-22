@@ -21,7 +21,7 @@ const { writeImportPlan } = await import('../src/db/mutations');
 const path = process.argv[2] ?? 'data/Dock Schedule - Synthetic Sample.xlsx';
 let plan;
 try {
-  plan = planImport(readBytes(path));
+  plan = await planImport(readBytes(path));
 } catch (e) {
   if (e instanceof ImportError) { console.error(`\nRefused: ${e.message}\nNothing was written.\n`); process.exit(1); }
   throw e;

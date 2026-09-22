@@ -5,7 +5,7 @@
  *
  * A conflict is made impossible by the database. A size mismatch CANNOT be, because
  * the length data to check it mostly does not exist: only 20 of 418 vessels in the
- * source schedule have a recorded length, so 97.5% of bookings are unverifiable.
+ * source schedule have a recorded length, so 97% of vessel bookings cannot be checked.
  * Blocking on unverifiable data would make the tool unusable, so fit WARNS and
  * never blocks — and the warning is what motivates someone to fill the gap in.
  */

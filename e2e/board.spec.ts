@@ -378,9 +378,9 @@ test.describe('undoing a cancellation', () => {
 });
 
 test.describe('the other tabs', () => {
-  test('Vessels lists the biggest data gaps first and states the leverage', async ({ page }) => {
+  test('Vessels lists the biggest data gaps first, and says so in words', async ({ page }) => {
     await page.goto('/vessels');
-    await expect(page.getByText(/vessels have no length on record/)).toBeVisible();
+    await expect(page.getByText(/ha(s|ve) no length on record/)).toBeVisible();
     await expect(page.getByText('M/V Test Drifter')).toBeVisible();
   });
 
@@ -411,7 +411,8 @@ test.describe('the other tabs', () => {
     await page.goto('/review');
     // One section heading, not one row per vessel and no longer a pill saying it twice.
     await expect(page.getByRole('heading', { name: /No recorded length/ })).toHaveCount(1);
-    await expect(page.getByText(/cannot be checked against berth length/)).toBeVisible();
+    // The heading is the whole row: a count and a way to the work, no arithmetic.
+    await expect(page.getByRole('link', { name: /Add lengths/ })).toHaveAttribute('href', '/vessels');
   });
 
   test('folds repeated problems into one row instead of one per booking', async ({ page }) => {

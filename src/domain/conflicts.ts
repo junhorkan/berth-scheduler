@@ -6,7 +6,7 @@
  * user *before* they submit, and so the rule is unit-testable without a database.
  *
  * The two must agree. See db/migrations for the SQL:
- *   EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active')
+ *   EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active' AND exclusive)
  */
 
 import type { Booking, DayRange, Berth } from './types';

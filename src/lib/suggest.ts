@@ -8,7 +8,7 @@
  * It **suggests and explains**; it never assigns. Two reasons, and the second is the one
  * that matters:
  *
- *  - 97.5% of vessels in the source have no recorded length, so for most bookings the
+ *  - 95% of vessels in the source have no recorded length, so for most bookings the
  *    system cannot know whether anything fits. It says so rather than guessing.
  *  - A coordinator knows what the database does not: shore power, crane reach, which
  *    float is nearest the lab, who is arriving at 0600. An assignment that silently
