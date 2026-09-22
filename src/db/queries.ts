@@ -318,7 +318,17 @@ export async function getVessels(): Promise<VesselRow[]> {
            count(b.id)::int as booking_count,
            max(b.end_date) as last_seen
       from vessels v
-      left join bookings b on b.vessel_id = v.id and b.status <> 'cancelled'
+      -- An INNER join, so a hull with nothing on the schedule is not on the register.
+      -- Booking a name registers it (invariant 2), and cancelling that booking used to
+      -- leave the vessel behind reading "0 bookings" — a row in a queue ordered by
+      -- bookings blocked, blocking nothing, that no action could ever remove.
+      --
+      -- The row itself is NOT deleted, because a cancel is a soft delete: restoring the
+      -- booking from Review brings the vessel back, with any length recorded on it. The
+      -- booking typeahead reads getVesselOptions, which is deliberately unfiltered, so
+      -- booking that name again finds the same row rather than making a second one.
+      -- The register shows what is on the schedule; the typeahead remembers everything.
+      join bookings b on b.vessel_id = v.id and b.status <> 'cancelled'
      group by v.id
      order by (v.length_ft is not null), count(b.id) desc, v.canonical_name`;
   return rows.map((r) => ({
@@ -341,6 +351,11 @@ export type VesselOption = { id: string; name: string; lengthFt: number | null }
  * getVessels() joins 418 vessels against every booking and aggregates, which is the
  * right query for the Vessels tab and pure waste on the board — the board discards the
  * counts it pays for. The board renders on every month navigation, so it gets this.
+ *
+ * Unfiltered on purpose, where the register is not: a vessel whose only booking was
+ * cancelled is off the register but must still complete here, so booking that name
+ * again reuses its row — and the length somebody recorded on it — instead of quietly
+ * registering a second hull with the same name.
  */
 export async function getVesselOptions(): Promise<VesselOption[]> {
   const sql = db();

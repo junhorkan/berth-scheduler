@@ -39,8 +39,11 @@ obeyable.
 1. **`src/domain` and `src/lib` import nothing from `db` or `app`.** Pure, and unit-tested
    without infrastructure.
 2. **Never invent a vessel length, and never gate a booking on picking a known vessel.**
-   Booking registers the vessel. The berth suggester **proposes and explains, never
-   assigns**. → [DECISIONS 22](DECISIONS.md#22-the-system-suggests-a-berth-it-never-assigns-one)
+   Booking registers the vessel; **cancelling its last booking unregisters it** — the
+   register INNER JOINs bookings, so a hull with nothing on the schedule is not on it.
+   The row is kept, so a restore brings it back, and `getVesselOptions` stays unfiltered
+   so re-booking that name reuses it. The berth suggester **proposes and explains, never
+   assigns**. → [DECISIONS 22 and 23](DECISIONS.md#22-the-system-suggests-a-berth-it-never-assigns-one)
 3. **Nothing vanishes silently, but repetition is not information.** What the importer
    cannot place becomes a review item carrying its sheet/row/column; missing lengths are
    derived, not stored; identical problems fold with a count (`lib/review.ts`), and

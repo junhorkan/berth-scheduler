@@ -73,8 +73,10 @@ is the central design decision. See `DECISIONS.md`.
   berth closures alike.
 - **Vessels** — the register as a queue, ordered by *bookings blocked* rather than
   alphabetically, so the highest-leverage gaps come first: ten to a page, its two halves
-  on two buttons, and a filter that searches all 418. It fills itself: booking a vessel
-  adds it.
+  on two buttons, and a filter that searches all 418. It fills itself and empties itself:
+  booking a vessel adds it, and cancelling its last booking takes it off — the row is
+  kept, so restoring the booking brings the hull back with whatever length was recorded
+  on it.
 - **Review** — problems with the schedule, and what to do about them. One row per job,
   each with its count and its verb, and each drawn at zero rather than deleted: what
   needs a decision, what has no length recorded, what has been cancelled and can be put

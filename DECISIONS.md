@@ -763,6 +763,36 @@ on one line, with the sheet coordinates folded into it. Each section shows its f
 rows and folds the rest behind *Show the remaining N*, the head-of-list rule above applied
 to the queue, using a native `<details>` so the page stays a server component.
 
+### The register lists what is on the schedule; the typeahead remembers everything
+
+Found by the owner, on the live site: *"when I cancel a vessel that I just added, and it's
+a new one, it is still listed in the vessels page."* True, and there was a hull named
+`Jun Bay` sitting on the live register proving it — booked once, cancelled, and stuck.
+
+**The cause is invariant 2 working, with no matching exit.** Booking a name registers the
+vessel, which is how the register fills itself through ordinary use. Nothing unregistered
+it. `getVessels` LEFT JOINed the bookings, so the hull came back with `0 bookings` and
+`last seen: never` — a row in a queue **ordered by how many bookings each missing length
+blocks**, blocking nothing, that no action on the page could remove.
+
+**The fix is one word: the join is INNER.** A vessel with nothing on the schedule is not
+on the register.
+
+**Why not delete the row.** A cancel is a soft delete ([20](#20-cancelling-is-reversible-not-restricted)),
+so the vessel has to survive to be restored with its booking — including any length
+somebody recorded on it in the meantime. The cancelled booking is on Review the whole
+time, under *Cancelled bookings*, with a button that brings both back. Nothing vanished;
+it moved to the card that holds it.
+
+**And `getVesselOptions` stays unfiltered**, which is the half that makes this safe. The
+booking typeahead still completes a cancelled hull's name, so booking it again reuses that
+row rather than quietly registering a second vessel with the same name and losing its
+length. **The register shows what is on the schedule; the typeahead remembers everything.**
+
+**A count that could not disagree, and now cannot.** Review's *No recorded length* already
+INNER JOINed bookings the same way, so the two pages were one orphan away from reporting
+different numbers for the same thing. They are the same join now.
+
 ---
 
 ## 24. The masthead is the page's name, in the reference site's shape

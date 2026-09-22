@@ -355,6 +355,51 @@ test.describe('undoing a cancellation', () => {
     await cancel(page, 'E2E undo me');   // leave the fixture as it was found
   });
 
+  /*
+    Booking a name registers the vessel, so cancelling that booking has to unregister
+    it — or the register accumulates hulls reading "0 bookings", in a queue ordered by
+    how many bookings each missing length blocks, that no action on the page can clear.
+    The row is kept, not deleted, so the restore brings it back.
+  */
+  test('a vessel booked once and cancelled leaves the register, and comes back with it', async ({ page }) => {
+    const name = 'R/V E2E Ghost';
+    await page.goto(FIXTURE_HREF);
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByLabel('Vessel', { exact: true }).fill(name);
+    await page.getByLabel('Berth', { exact: true }).selectOption({ label: 'North Pier East — 240ft' });
+    const dates = page.locator('input[type="date"]');
+    await dates.first().fill(day(5));
+    await dates.nth(1).fill(day(6));
+    await page.getByRole('button', { name: 'Save booking' }).click();
+    await expect(bar(page, name)).toBeVisible();
+
+    // Booking it is what put it on the register.
+    await page.goto('/vessels');
+    await page.getByLabel('Filter vessels by name').fill('E2E Ghost');
+    await expect(page.locator('.queue li')).toHaveCount(1);
+
+    await cancel(page, name);
+
+    // Nothing of it is on the schedule, so nothing of it is on the register — and it
+    // is not sitting there claiming "0 bookings".
+    await page.goto('/vessels');
+    await page.getByLabel('Filter vessels by name').fill('E2E Ghost');
+    await expect(page.locator('.queue li')).toHaveCount(0);
+
+    // The row was kept, not deleted: putting the booking back brings the hull back.
+    await page.goto('/review');
+    await page.locator('.undo .queue li', { hasText: name })
+      .getByRole('button', { name: 'Restore' }).click();
+    await expect(page.locator('.undo .queue li', { hasText: name })).toHaveCount(0);
+
+    await page.goto('/vessels');
+    await page.getByLabel('Filter vessels by name').fill('E2E Ghost');
+    await expect(page.locator('.queue li')).toHaveCount(1);
+    await expect(page.locator('.queue li')).toContainText('1 booking');
+
+    await cancel(page, name);   // leave the fixture as it was found
+  });
+
   test('refuses to restore into a slot that has been taken since', async ({ page }) => {
     // The point of the whole feature: undo is not a licence to reintroduce a
     // double-booking. The EXCLUDE constraint judges the restore exactly as it judges
