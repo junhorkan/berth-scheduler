@@ -150,10 +150,12 @@ Requires Node 24.
 ## Structure
 
 ```
-src/domain/   PURE business rules. No database, no React. Unit tested.
-src/import/   spreadsheet → domain objects. Depends on domain, never on UI.
-src/db/       SQL queries and mutations, typed at the boundary.
-src/app/      Next.js routes and components. No business rules.
+src/domain/     PURE business rules. No database, no React. Unit tested.
+src/lib/        pure view helpers: navigation, bar geometry, search, grouping, undo policy.
+src/import/     workbook bytes → an import plan. Depends on domain, never on UI.
+src/db/         SQL queries and mutations, typed at the boundary.
+src/app/        Next.js routes and server actions. No business rules.
+src/components/ every component, and every client boundary. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,

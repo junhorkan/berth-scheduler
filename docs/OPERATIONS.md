@@ -91,7 +91,16 @@ it was applied, exported from the database's own migration log, and **they repla
 empty database**: all thirteen were run in order against an in-process Postgres (PGlite,
 with `btree_gist`) on 2026-09-22. Three of them had assumed tables that only an import had
 created, and now guard for that; each carries a note saying so. The exclusion constraint
-is at line 114 of the first one. Three things worth knowing:
+is at line 114 of the first one.
+
+**A file in that directory applies nothing.** There is no migrate command and no local
+database: a migration is applied to the live database out of band — Supabase's SQL editor,
+or the Supabase MCP's `apply_migration`, which assigns its own version timestamp — and the
+directory is the log exported afterwards. So write the SQL, apply it, export it under the
+version the database gave it, and run `npm run db:check`. Remember that it lands on the
+live database at once while the code that needs it takes a deploy.
+
+Three things worth knowing:
 
 - **The berths are defined in a migration**, idempotently, so a database built from
   nothing has the facility in it. Nothing else writes them: Clear, Load, Put back and the

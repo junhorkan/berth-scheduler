@@ -27,12 +27,12 @@ keeping them apart.**
 - **Vessel too long for its berth** is *not* — a length is known only once somebody
   records it, and most never will. Advisory. Amber in the UI. **Never blocks.**
 
-Unifying them into one "validation" forces either blocking on unknowns (the tool becomes
-unusable) or softening the overlap guarantee (the strongest claim here).
+Unifying them into one "validation" costs one or the other — the tool blocks on unknowns,
+or the overlap guarantee softens. → [DECISIONS 2](DECISIONS.md#2-fit-warns-it-never-blocks)
 
 ## Invariants
 
-Breaking any of these looks like an improvement and is not. Each line is the whole rule;
+Breaking any of these looks like an improvement and is not. Each entry is the whole rule;
 the arrow leads to the reasoning and, for the visual ones, to the detail that makes it
 obeyable.
 
@@ -57,9 +57,9 @@ obeyable.
    the earliest booking; the form refuses a start before today, in the save path as well,
    since `min` only guards the picker. A fixed bound has hidden real bookings three times.
 8. **Empty is supported, and never silent.** The full grid still draws, and one line says
-   where the bookings are. Every booking in the sample is before 2020, so the front door
-   is one of those months, and **no booking is ever invented to fill it** — that was tried
-   and removed. → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent) ·
+   where the bookings are. Every booking in the sample ended in 2019, and the board opens
+   on the facility's own month, so the front door is an empty month — and **no booking is
+   ever invented to fill it**, which was tried and removed. → [DESIGN](docs/DESIGN.md#8-empty-is-supported-and-never-silent) ·
    [DECISIONS 29](DECISIONS.md#29-nothing-on-the-board-is-invented)
 9. **Explain the tool, never the project.** Three tabs; no About page; `/search` and
    `/check` are destinations, **not tabs**. Each page's masthead is its own name and one
@@ -82,15 +82,17 @@ obeyable.
 ## Structure
 
 ```
-src/domain/   pure rules: conflicts, fit, classification. No DB, no React.
-src/lib/      pure helpers: nav, bar geometry, search, grouping, berth suggestion, the
-              undo policy.
-supabase/     every migration in order; they replay onto an empty database.
-src/import/   workbook bytes → an import plan (plan.ts), the one interpreter of the file.
-              No node:fs anywhere plan.ts reaches, so the same code runs in the importer
-              and in /check. fromFile.ts is the only Node-only file.
-src/db/       SQL queries and mutations, typed at the boundary.
-src/app/      Next.js routes and components. No business rules.
+src/domain/     pure rules: conflicts, fit, classification. No DB, no React.
+src/lib/        pure helpers, one module per idea — `ls src/lib` is the list, and each
+                has a test beside it. No DB, no React.
+src/import/     workbook bytes → an import plan (plan.ts), the one interpreter of the
+                file. No node:fs anywhere plan.ts reaches, so the same code runs in the
+                importer and in /check; fromFile.ts is the only Node-only file.
+src/db/         SQL queries and mutations, typed at the boundary.
+src/app/        Next.js routes, server actions, globals.css. No business rules.
+src/components/ every component, and every 'use client' boundary. No business rules:
+                they call src/db, src/lib and src/app/actions.
+supabase/       every migration in order; they replay onto an empty database.
 ```
 
 No ORM: `EXCLUDE` cannot be expressed in one and a second schema would drift. No
@@ -99,18 +101,24 @@ scheduler library: none can draw a bar that overhangs its lane.
 ## Commands
 
 ```bash
-npm run dev         # local dev server
-npm test            # 260 without the workbook (39 skip by name); 299 with it in data/
-npm run e2e         # 55 specs. HITS THE LIVE DB: swaps in a fixture, restores after
-npm run import      # replace the schedule with the workbook (needs data/*.xlsx, gitignored)
+npm run dev          # local dev server
+npm test             # unit tests, no database. The workbook-parse tests skip by name
+                     # without data/*.xlsx; the counts live in README
+npm run typecheck    # tsc --noEmit. Safe while dev runs, unlike build
+npm run lint         # eslint
+npm run e2e          # Playwright. HITS THE LIVE DB: swaps in a fixture, restores after
+npm run import       # replace the schedule with the workbook (needs data/*.xlsx, gitignored)
 npm run import:check # the same parse, printed, with no database
-npm run sample:load # reset the live site to the sample, leaving no undo pending
-npm run db:check    # verify the connection and that the constraint exists
-npm run build       # production build
+npm run sample:load  # reset the live site to the sample, leaving no undo pending
+npm run db:check     # verify the connection and that the constraint exists
+npm run build        # production build
 ```
 
-Node 24. `DATABASE_URL` in `.env.local` — see [docs/OPERATIONS.md](docs/OPERATIONS.md).
+Node 24, and **one database — the live site's**. `DATABASE_URL` in `.env.local`; `e2e`,
+`import` and `sample:load` all write to it → [docs/OPERATIONS.md](docs/OPERATIONS.md).
 **Never `npm run build` while `npm run dev` runs** — they contend over `.next` and hang.
+**There is no migrate command**: `supabase/migrations/` is an export of the database's own
+log, not the input to it. → [OPERATIONS](docs/OPERATIONS.md#schema)
 
 ## Gotchas that cost time before
 
