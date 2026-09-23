@@ -56,7 +56,6 @@ data/*.xlsx
 # Notes for the project owner about submitting. Not part of the app.
 SUBMISSION.md
 
-# Per-machine Claude Code permissions. launch.json is shared; this is not.
-.claude/settings.local.json
-# Agent worktrees: separate checkouts of this repo, never part of it.
-.claude/worktrees/
+# Local editor/tooling config. It only points a dev-server preview at `npm run dev`
+# on this machine; nothing in the app, the build or the deploy reads it.
+.claude/
