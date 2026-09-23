@@ -33,16 +33,34 @@ export default async function BoardPage({
   // always reachable. Queried first because every bound below depends on them. Only the
   // floor used to stretch, which left a far-future row visible to the empty-month
   // pointer and unreachable by the navigation it pointed through.
-  const summary = await getSummary();
+  // Checked, not merely present: an id that is not a uuid used to reach SQL and 500
+  // the board. An unknown-but-well-formed id returns null, and says so below.
+  const selectedId = isBookingId(sp.sel) ? sp.sel : undefined;
+  /*
+    The selected booking is fetched HERE, beside the summary, because the month depends
+    on it. It used to be fetched after `clampMonth` had already decided the month, so a
+    link carrying only `?sel=` opened the panel over whatever month the board defaulted
+    to: a sheet describing a booking from July 2019 on an empty September 2026 grid.
+    Every link the app generates carries a matching `y` and `m`, so this was only ever
+    reachable by hand — but a shared or truncated URL is exactly how it would be.
+
+    It costs no extra round trip: it joins a Promise.all with a query already awaited.
+  */
+  const [summary, selected] = await Promise.all([
+    getSummary(),
+    selectedId ? getBookingById(selectedId) : Promise.resolve(null),
+  ]);
   const earliest = summary.firstYear;
   const latest = summary.lastYear;
-  const { year, month } = clampMonth(
-    sp.y ? Number(sp.y) : today.year,
-    sp.m ? Number(sp.m) : today.month,
-    undefined,
-    earliest,
-    latest,
-  );
+  /*
+    An explicit `y`/`m` still wins: someone may be comparing a booking against another
+    month deliberately, and moving the board under them would be the wrong answer. Only
+    a bare `?sel=` takes its month from the booking.
+  */
+  const anchor = selected && !sp.y && !sp.m
+    ? { year: Number(selected.startDate.slice(0, 4)), month: Number(selected.startDate.slice(5, 7)) }
+    : { year: sp.y ? Number(sp.y) : today.year, month: sp.m ? Number(sp.m) : today.month };
+  const { year, month } = clampMonth(anchor.year, anchor.month, undefined, earliest, latest);
 
   const bounds = monthBounds(year, month);
   // The vessel register is deliberately NOT fetched here. The booking panel asks for it
@@ -53,10 +71,6 @@ export default async function BoardPage({
     getBookingsInRange(bounds.start, bounds.end),
   ]);
 
-  // Checked, not merely present: an id that is not a uuid used to reach SQL and 500
-  // the board. An unknown-but-well-formed id already returns null and draws no sheet.
-  const selectedId = isBookingId(sp.sel) ? sp.sel : undefined;
-  const selected = selectedId ? await getBookingById(selectedId) : null;
   const prev = step(year, month, -1, undefined, earliest, latest);
   const next = step(year, month, 1, undefined, earliest, latest);
   const navFirst = firstYear(undefined, earliest);
@@ -167,6 +181,15 @@ export default async function BoardPage({
           </div>
         }
       />
+
+      {/*
+        A link to a booking that is no longer there — shared before someone cancelled it,
+        or mistyped — used to open the board with no panel and no word about why. That is
+        the one thing invariant 8 forbids: empty is supported, and never silent.
+      */}
+      {selectedId && !selected && (
+        <p className="note">No booking matches that link. It may have been cancelled.</p>
+      )}
 
       {selected && (
         <BookingDetail booking={selected} berths={berths} closeHref={monthHref(year, month)} />
