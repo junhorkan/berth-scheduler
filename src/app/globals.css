@@ -134,9 +134,58 @@ a { color: var(--vessel); }
   background: var(--surface); border: 1px solid var(--ring); box-shadow: var(--shadow);
   border-radius: 14px; padding: 16px 16px 18px; overflow-x: auto;
 }
-.gridrow { display: grid; grid-template-columns: 150px minmax(620px, 1fr); }
+/*
+ * The grid is what scrolls sideways — not the card.
+ *
+ * `.board` kept `overflow-x: auto` and the header, the empty-state note and the legend
+ * were inside it, so scrolling to the end of a long month took all of them with it. On a
+ * 375px phone that left the berth-name column and the month controls at -422px: bars
+ * with no labels and no visible way back a month. The card is now the card, and only
+ * this box moves.
+ */
+.boardscroll { overflow-x: auto; }
 
-.dayhead { display: flex; border-bottom: 1px solid var(--axis); }
+/*
+ * Flex, not grid, and that is the whole reason the berth names stay put.
+ *
+ * The board was one grid holding every rail and every lane, and `position: sticky` on a
+ * grid item is confined to its own grid area — a 150px column, so the rail could not
+ * travel and the names scrolled away regardless. A FLEX item's containing block is the
+ * whole row, so the same declaration works. Each berth is now its own row.
+ */
+.gridrow {
+  display: flex;
+  /*
+    And a stated minimum, or the sticky rail travels 143px and stops. A flex container
+    does not grow to fit items that overflow it: the row measured 293px — the scrollport
+    — while holding 770px of rail and lane, and sticky is bounded by its containing
+    block, so the rail could only cross the 143px the row admitted to having.
+
+    150 + 620, the rail and the lane's own floor, written out rather than `max-content`.
+    `max-content` measures the longest berth name UNWRAPPED, which is wider than the
+    150px the rail is given — so it pushed the row past the card and put a scrollbar
+    under a desktop board that had always fitted.
+  */
+  min-width: 770px;
+}
+
+/*
+ * The berth names stay while the days move. Sticky against `.boardscroll`, carrying the
+ * card's background because a transparent rail lets the bars slide under the names.
+ *
+ * `z-index: 8` clears every bar — they are positioned at `auto`, and the highest any
+ * reaches is `.bar.selected` at 6 — while staying under the tooltip at 30, which should
+ * stay readable when it opens over the rail.
+ */
+.rail, .railcorner {
+  flex: 0 0 150px; position: sticky; left: 0; z-index: 8; background: var(--surface);
+}
+
+/* The same flex basis as `.lane`, so the day numbers line up with the bars under them
+   AND the header row measures as wide as a berth row — its `.d` cells are `flex: 1 0 0`,
+   so without this the row's max-content was ~150px and the corner above the berth names
+   could not stay put while they did. */
+.dayhead { display: flex; flex: 1 1 620px; min-width: 620px; border-bottom: 1px solid var(--axis); }
 .dayhead .d {
   flex: 1 0 0; text-align: center; font-family: var(--mono);
   font-size: 10px; color: var(--ink-muted); padding-bottom: 3px;
@@ -155,6 +204,9 @@ a { color: var(--vessel); }
 .rail .pooled { font-family: inherit; font-size: 9px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 
 .lane {
+  /* The old `minmax(620px, 1fr)` column: grows with the card, never narrower than 620px,
+     which is what makes a 31-day month scroll instead of crushing its days to 8px. */
+  flex: 1 1 620px; min-width: 620px;
   position: relative; border-bottom: 1px solid var(--grid);
   background-image: repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px 100%);
   background-size: calc(100% / var(--days)) 100%;
@@ -215,6 +267,8 @@ a { color: var(--vessel); }
 .sw.unknown { background: var(--unknown-fill); border: 1px dashed var(--ink-muted); background-image: repeating-linear-gradient(45deg, transparent 0 3px, var(--unknown-hatch) 3px 4.5px); }
 .sw.toolong { background: var(--critical-fill); border: 1px solid var(--critical); border-top: 2px dashed var(--critical); }
 .sw.closure { background: repeating-linear-gradient(135deg, var(--unknown-fill) 0 5px, var(--unknown-hatch) 5px 6px); border: 1px solid var(--axis); }
+/* The same outline `.bar.unresolved` wears, so the key matches the mark exactly. */
+.sw.unresolved { outline: 2px solid var(--critical); outline-offset: 1px; }
 
 .note { font-size: 13px; color: var(--ink-muted); margin: 10px 0 0; }
 .empty { padding: 32px 0; text-align: center; color: var(--ink-muted); font-size: 14px; }
@@ -501,7 +555,7 @@ a { color: var(--vessel); }
     width the board already scrolls sideways; 108px to 150px moves the scroll width by
     42px on a surface that is already scrolled three times over.
   */
-  .gridrow { grid-template-columns: 150px minmax(620px, 1fr); }
+  .rail, .railcorner { flex-basis: 150px; }
   .boardhead .month { min-width: 0; flex: 1; font-size: 17px; }
   /* The pickers take a row of their own, or they squeeze the month into the arrows. */
   .boardhead .jump { flex-basis: 100%; }

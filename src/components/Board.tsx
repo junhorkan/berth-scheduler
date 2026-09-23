@@ -97,9 +97,17 @@ export default function Board({
     <div className="board">
       {head}
       {bookings.length === 0 && emptyNote}
-      <div className="gridrow" style={{ ['--days' as string]: days }}>
-        {/* day header */}
-        <div />
+      {/*
+        Only the grid scrolls sideways. The month header, the empty-state note and the
+        legend used to sit inside the scrolling box with it, so reaching the end of a
+        31-day month on a phone carried all three off-screen — measured at -422px, which
+        left unlabelled bars and no visible way back a month.
+      */}
+      <div className="boardscroll" style={{ ['--days' as string]: days }}>
+      <div className="gridrow">
+        {/* The corner above the berth names. Sticky with the rail, or the day numbers
+            slide under a transparent gap as the grid scrolls. */}
+        <div className="railcorner" />
         <div className="dayhead">
           {dayNums.map((d, i) => (
             <span
@@ -112,8 +120,9 @@ export default function Board({
             </span>
           ))}
         </div>
+      </div>
 
-        {berths.map((berth) => {
+      {berths.map((berth) => {
           const placed = byBerth.get(berth.id) ?? [];
           const packed = packLanes(placed, (p) => ({ startDay: p.startDay, endDay: p.endDay }));
           const laneCount = Math.max(1, ...packed.map((p) => p.lane + 1));
@@ -134,7 +143,7 @@ export default function Board({
               selectedId={selectedId}
             />
           );
-        })}
+      })}
       </div>
 
       {bookings.length > 0 && <Legend />}
@@ -166,7 +175,7 @@ function BerthLane({
   selectedId?: string;
 }) {
   return (
-    <>
+    <div className="gridrow">
       <div className="rail" style={{ height: rowHeight }}>
         {/*
           The berth's own name, in full. It used to have ` (institution boats)` stripped
@@ -220,7 +229,7 @@ function BerthLane({
           />
         ))}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -337,6 +346,13 @@ function Legend() {
       <div><span className="sw toolong" />Too long: bar breaks out of its lane</div>
       <div><span className="sw event" />Event, not a vessel</div>
       <div><span className="sw closure" />Berth closed</div>
+      {/*
+        The board draws exactly one of these — the single genuine double-booking in 23
+        years — as a red-outlined box, and a one-day bar is too narrow to carry a label.
+        With no swatch, the most interesting row in the whole schedule read as "too
+        long", which it is not, and appeared to belong to the berth below it.
+      */}
+      <div><span className="sw closure unresolved" />Unresolved conflict from the old schedule</div>
       {/*
         The height rule, said once. The legend used to explain only colour and hatching,
         so the most important thing on the board — that a bar's height IS the fit check —
