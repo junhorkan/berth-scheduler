@@ -37,10 +37,16 @@ worth arguing about.
 | 26 *cont.* | [Review's two revisions](#26-continued-reviews-two-revisions) |
 | 37 | [The one sentence in the documentation that was not true](#37-the-one-sentence-in-the-documentation-that-was-not-true) |
 | 38 | [Clear is gone, and two mastheads stopped reporting state](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state) |
+| 39 | [A sticky column the grid could not have](#39-a-sticky-column-the-grid-could-not-have) |
 
 ---
 
 ## 5. No scheduler library; the timeline is hand-rolled CSS Grid
+
+> **The mechanism named here changed in [39](#39-a-sticky-column-the-grid-could-not-have).**
+> The board is a flex row per berth now, not one grid. The decision this entry argues for
+> — no scheduler library, because none can draw a bar that overhangs its lane — is
+> untouched, and is the reason the layout was ours to change at all.
 
 **Decision.** `grid-template-columns: repeat(31, 1fr)` and positioned bars.
 
@@ -1328,3 +1334,41 @@ below it, in the page's own panel: *"The board shows one month at a time; this s
 of them at once."* — where it sits next to the thing it explains, and says why searching all
 of them is worth doing. [17](#17-repetition-is-not-information) applies to a page's own two
 lines as much as to a table's rows.
+
+---
+
+## 39. A sticky column the grid could not have
+
+**The complaint.** On a phone, scrolling to the end of a month carried the berth names off
+with the days. Measured on the live site at 375px: the rail and the month controls both at
+**-422px**. Unlabelled bars, and no visible way back a month.
+
+**The part worth writing down.** The header, the note and the legend were easy — they were
+inside the scrolling box and did not need to be, so the grid got a scroller of its own.
+The rail was not. `position: sticky; left: 0` on it did nothing, and the reason is a rule
+that is easy to read past:
+
+> **A grid item's containing block is its grid area**, and sticky is bounded by its
+> containing block. The rail filled a 150px column, so it had nowhere to travel.
+
+**A flex item's containing block is the whole row.** So each berth became its own flex row
+— [5](#5-no-scheduler-library-the-timeline-is-hand-rolled-css-grid)'s single grid is gone —
+and the same declaration started working. Two measurements kept in the CSS rather than
+lost: a flex container does not grow to fit items that overflow it, so the row measured
+293px while holding 770px of rail and lane and the rail stuck for 143px then gave up; and
+the fix is a stated `min-width: 770px`, not `max-content`, which measures the longest berth
+name UNWRAPPED and put a scrollbar under a desktop board that had always fitted.
+
+**What it cost, found afterwards.** Splitting one grid into eight rows silently changed
+what a selector matched. `.gridrow > .lane:nth-last-child(-n + 2)` had picked out the final
+lane, because the grid's children ran corner, dayhead, rail, lane, rail, lane. With a row
+per berth every lane is its own row's last child, so the exception became the rule and
+every tooltip opened upward — and the guard it exists for, that the scroll box clips
+vertically, was retired in silence. It counts rows now, which is what it always meant.
+
+**And a bug the restructure only exposed.** `.bar:hover` set `filter: brightness(0.96)`.
+`filter` creates a stacking context, which trapped the bar's `::after` tooltip at the bar's
+own level — beneath the next berth row. The row below painted its grid lines over the
+tooltip, so a solid dark box arrived striped. The trap sprang at exactly the wrong moment:
+a tooltip is only shown on hover, and hover was the only time the filter applied, so there
+was no state in which it looked right. The ring alone is the feedback now.

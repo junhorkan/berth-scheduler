@@ -9,7 +9,7 @@ Live at https://berth-scheduler.vercel.app
 |---|---|
 | [README.md](README.md) | Setup, what the app does, how to run it |
 | [DECISIONS.md](DECISIONS.md) | Why something is the way it is — **read before changing a design choice** |
-| [docs/ENGINEERING-LOG.md](docs/ENGINEERING-LOG.md) | The other 24 decision entries, same numbers — build detail, read when one is cited |
+| [docs/ENGINEERING-LOG.md](docs/ENGINEERING-LOG.md) | The other 25 decision entries, same numbers — build detail, read when one is cited |
 | [ASSUMPTIONS.md](ASSUMPTIONS.md) | What was assumed where the brief was silent |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Deploying, keep-warm, DB access posture — **read before deploying or touching the database** |
 | [docs/DESIGN.md](docs/DESIGN.md) | The presentation invariants in full — **read before changing anything visual** |
