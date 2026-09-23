@@ -816,8 +816,12 @@ a { color: var(--vessel); }
   display: flex; align-items: center; gap: 10px;
   margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--grid);
 }
-.pager .navbtn { font: inherit; font-size: 15px; cursor: pointer; }
-.pager .navbtn:disabled { opacity: 0.4; cursor: default; border-color: var(--axis); }
+.pager .navbtn { font-size: 15px; }
+/* Both pagers now render a real `<button disabled>` at their ends, so the font reset and
+   the spent look are no longer scoped to the register's. */
+.navbtn { font: inherit; }
+.navbtn:disabled { opacity: 0.4; cursor: default; border-color: var(--axis); }
+.navbtn:disabled:hover { border-color: var(--axis); }
 .prange { font-family: var(--mono); font-size: 13px; color: var(--ink-muted); }
 .catrow + .queue { margin-top: 14px; }
 

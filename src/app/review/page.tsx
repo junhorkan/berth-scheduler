@@ -24,20 +24,20 @@ export const maxDuration = 60;
  * rather than disappearing into a file nobody opens. That is how "nothing vanishes
  * silently" is honoured inside a tool someone would actually use.
  */
-const LABEL: Record<string, { title: string; blurb: string; tone: string }> = {
+/* Title and tone only. Each entry also carried a `blurb` explaining its category,
+   which nothing rendered: DESIGN 9 says a paragraph explaining a row is clutter, and
+   Review was rebuilt twice for exactly that prose. The removal left its data behind. */
+const LABEL: Record<string, { title: string; tone: string }> = {
   conflict: {
     title: 'Unresolved conflict',
-    blurb: 'Two bookings overlap on one berth. Imported from the legacy schedule, which had no way to express a conflict.',
     tone: 'bad',
   },
   too_long: {
     title: 'Vessel too long for the berth',
-    blurb: 'The recorded vessel length exceeds the berth length.',
     tone: 'bad',
   },
   unclassified: {
     title: 'Could not be read',
-    blurb: 'A cell the importer would not guess at.',
     tone: 'warn',
   },
 };

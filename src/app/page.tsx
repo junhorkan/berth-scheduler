@@ -102,11 +102,32 @@ export default async function BoardPage({
    * screen is one fewer thing to parse. The count strip that used to sit beside it is
    * gone — it said four things the screen already said (ENGINEERING-LOG 24).
    */
+  /*
+    At the calendar's ends `step` returns the month you are already on, because
+    `clampMonth` clamps rather than signalling a refusal. These were links to their own
+    URL: full opacity, focusable, no `aria-disabled`, and pressing one did nothing with
+    no explanation — while the Vessels pager, two pages away and wearing the same
+    `.navbtn` class, disables properly with a real button.
+
+    So this one does too. A DISABLED button is inert static markup and renders fine from
+    a server component; only an enabled one would need a handler, and one is never drawn.
+  */
+  const atFirst = prev.year === year && prev.month === month;
+  const atLast = next.year === year && next.month === month;
+
   const head = (
     <div className="boardhead">
-      <a className="navbtn" href={monthHref(prev.year, prev.month)} aria-label="Previous month">&lsaquo;</a>
+      {atFirst ? (
+        <button className="navbtn" disabled aria-label="Previous month">&lsaquo;</button>
+      ) : (
+        <a className="navbtn" href={monthHref(prev.year, prev.month)} aria-label="Previous month">&lsaquo;</a>
+      )}
       <span className="month">{MONTH_NAMES[month - 1]} {year}</span>
-      <a className="navbtn" href={monthHref(next.year, next.month)} aria-label="Next month">&rsaquo;</a>
+      {atLast ? (
+        <button className="navbtn" disabled aria-label="Next month">&rsaquo;</button>
+      ) : (
+        <a className="navbtn" href={monthHref(next.year, next.month)} aria-label="Next month">&rsaquo;</a>
+      )}
       {!onToday && (
         <a className="navbtn today" href={monthHref(today.year, today.month)}>Today</a>
       )}

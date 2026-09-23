@@ -216,7 +216,7 @@ export const getSummary = cache(async function getSummary(): Promise<SystemSumma
       -- database's UTC date, so the badge and the panel agree after 8pm Eastern.
       (select count(*)::int from review_items r
          join bookings b on b.id = r.booking_id
-        where r.resolved_at is null and r.type <> 'missing_length'
+        where r.resolved_at is null
           and b.end_date >= ${todayISO()}::date) as open_review,
       -- Active only. These two widen the board's navigable window so that nothing
       -- stored is unreachable (lib/nav) — but the board does not draw a cancelled
@@ -361,7 +361,12 @@ export async function getMissingLengthSummary(): Promise<MissingLengthSummary> {
 
 export type ReviewRow = {
   id: string;
-  type: 'conflict' | 'too_long' | 'missing_length' | 'unclassified';
+  /* Three, not four. `missing_length` was retired from the CHECK constraint by
+     migration 20260919162355, so the database cannot hold one — and `LABEL` in
+     review/page.tsx has no entry for it, so rendering one would throw. That was safe
+     only because the page filters to three literals first: by construction rather
+     than by the type. Now the type carries it. */
+  type: 'conflict' | 'too_long' | 'unclassified';
   rawText: string | null;
   detail: string | null;
   vesselId: string | null;
