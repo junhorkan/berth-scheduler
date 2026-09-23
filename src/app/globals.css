@@ -26,22 +26,46 @@
   --plane: #f6f5f2;
   --ink: #17171a;
   --ink-2: #5c5b57;
-  --ink-muted: #94928c;
+  /* Darkened from #94928c, which was 3.11:1 on white and 2.85:1 on the plane — under
+     WCAG AA's 4.5:1 for normal text, and this token carries 27 rules of it. Now 5.00
+     and 4.59. The hue is unchanged; only the lightness moved. */
+  --ink-muted: #726f6a;
   --grid: #ececE6;
   --axis: #dcdad2;
   --ring: rgba(23, 23, 26, 0.07);
 
-  --vessel: #2a78d6;
+  /*
+   * Three mark hues, and three inks that are not the same thing.
+   *
+   * The marks were chosen against each other for separation, including for colour
+   * vision deficiency, so their hues do not move. But a hue that reads well as an 18px
+   * swatch can be unreadable as a 13px sentence, and these were: the amber verdict was
+   * `--event` on `--event-fill` at **2.74:1**, which is the product's own advisory —
+   * the sentence explaining why a booking is allowed but questionable — rendered
+   * barely legible. The red verdict was 4.19:1.
+   *
+   * So text gets its own darker sibling and the bars keep the validated hue. Blue is
+   * the exception that moves outright: it is the link colour, the focus ring and the
+   * fill behind the page's one white-on-colour button, which was 4.42:1.
+   *
+   * Every value here was computed against `--surface`, `--plane` and its own fill, and
+   * the lowest of the nine is 4.58.
+   */
+  --vessel: #226cc5;
   --vessel-fill: #e8f1fc;
   --event: #c98500;
   --event-fill: #fbf1dd;
+  /* Text-only. The bar stays `--event`. */
+  --event-ink: #946200;
   --critical: #d03b3b;
   --critical-fill: #fbeceb;
+  /* Text-only. The bar's outline stays `--critical`. */
+  --critical-ink: #c33030;
   --unknown-fill: #e9e8e3;
   --unknown-hatch: #c3c2b7;
 
   /* The title and the one filled button share the vessel blue: one accent, one job. */
-  --brand: #2a78d6;
+  --brand: #226cc5;
   /* Cards float on a soft shadow rather than sit inside a hairline. */
   --shadow: 0 1px 2px rgba(23, 23, 26, 0.04), 0 6px 22px rgba(23, 23, 26, 0.06);
 
@@ -228,7 +252,9 @@ a { color: var(--vessel); }
 .bar .ft { font-family: var(--mono); font-size: 9px; opacity: 0.85; flex: none; }
 
 .bar.vessel { background: var(--vessel-fill); border: 1px solid var(--vessel); color: var(--vessel); }
-.bar.event  { background: var(--event-fill);  border: 1px solid var(--event);  color: var(--event); }
+/* Fill and border keep the validated mark hue; only the LABEL darkens, because a
+   10px name on the fill was 2.74:1. Now 4.67. */
+.bar.event  { background: var(--event-fill);  border: 1px solid var(--event);  color: var(--event-ink); }
 
 /* Unknown length: texture is the accessibility channel, so identity never rests on
    colour. The bar is deliberately a fixed modest height — we must not imply a size. */
@@ -241,7 +267,7 @@ a { color: var(--vessel); }
      whatever sits above it. Solid fill hid that booking's label entirely — the misfit
      must be impossible to miss, and it must not cost you the booking next door. */
   background: rgba(208, 59, 59, 0.09); border: 1px solid var(--critical);
-  border-top: 2px dashed var(--critical); color: var(--critical);
+  border-top: 2px dashed var(--critical); color: var(--critical-ink);
   font-weight: 650; z-index: 3;
 }
 /* The measurement keeps a solid backing, or it sits unreadable over another bar. */
@@ -293,7 +319,7 @@ a { color: var(--vessel); }
 .flag {
   display: inline-block; margin-left: 8px; font-size: 11px;
   text-transform: uppercase; letter-spacing: 0.04em;
-  color: var(--event); border: 1px solid var(--event); border-radius: 8px; padding: 0 6px;
+  color: var(--event-ink); border: 1px solid var(--event); border-radius: 8px; padding: 0 6px;
 }
 
 .lenwrap { display: inline-flex; align-items: center; gap: 6px; }
@@ -312,7 +338,7 @@ a { color: var(--vessel); }
 .unit { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); }
 .hint { font-size: 13px; color: var(--ink-muted); }
 .hint.ok { color: var(--vessel); }
-.hint.bad { color: var(--critical); }
+.hint.bad { color: var(--critical-ink); }
 
 .btn {
   font: inherit; font-size: 14px; font-weight: 600; padding: 8px 14px; cursor: pointer;
@@ -321,7 +347,7 @@ a { color: var(--vessel); }
   display: inline-flex; align-items: center;
 }
 .btn:hover { border-color: var(--ink-2); }
-.btn.danger { border-color: var(--critical); color: var(--critical); }
+.btn.danger { border-color: var(--critical); color: var(--critical-ink); }
 .btn:disabled { opacity: 0.55; cursor: default; }
 
 /* ----------------------------------------------------------- review queue */
@@ -376,8 +402,26 @@ a { color: var(--vessel); }
 
 .field { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 11px; }
 .field > label { width: 78px; flex: none; font-size: 13px; color: var(--ink-muted); padding-top: 8px; }
+/*
+ * `width: 100%` as well as `flex: 1`, because half these controls are not flex items.
+ *
+ * `.field` is the flex row, but several controls sit inside a plain wrapper `div` —
+ * the vessel typeahead needs one for its datalist, the berth select for its live
+ * occupancy line. Inside a `display: block` parent, `flex: 1` is simply ignored, and
+ * each control fell back to its intrinsic width: the vessel input to `size=20`, 164px,
+ * clipping its own placeholder to "Start typing a ves"; the berth select to its longest
+ * option, 499px inside a 419px sheet. Measured at **186px of horizontal scroll inside
+ * the booking panel** — the flow behind the page's one filled button.
+ *
+ * The rule already declared this intent and only failed to apply it; the comment below
+ * warns about exactly this escape for the textarea, and the select was doing it.
+ *
+ * `width` does not disturb the real flex children: for a flex item, `flex-basis: 0`
+ * beats `width` for the main size, so the date inputs and the textarea are unchanged.
+ * `box-sizing: border-box` is global, so the padding is absorbed rather than added.
+ */
 .field input, .field select, .field textarea {
-  font: inherit; font-size: 14px; padding: 7px 10px; flex: 1; min-width: 0;
+  font: inherit; font-size: 14px; padding: 7px 10px; flex: 1; width: 100%; min-width: 0;
   border: 1px solid var(--axis); border-radius: 8px;
   background: var(--surface); color: var(--ink);
 }
@@ -415,9 +459,9 @@ a { color: var(--vessel); }
 }
 .verdict.idle { color: var(--ink-muted); }
 /* Red is a wall: the database will refuse the write. */
-.verdict.stop { background: var(--critical-fill); border-left-color: var(--critical); color: var(--critical); }
+.verdict.stop { background: var(--critical-fill); border-left-color: var(--critical); color: var(--critical-ink); }
 /* Amber advises and never blocks. */
-.verdict.warn { background: var(--event-fill); border-left-color: var(--event); color: var(--event); }
+.verdict.warn { background: var(--event-fill); border-left-color: var(--event); color: var(--event-ink); }
 .verdict.clear { background: var(--vessel-fill); border-left-color: var(--vessel); color: var(--vessel); }
 
 .actions { display: flex; gap: 8px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
@@ -522,7 +566,7 @@ a { color: var(--vessel); }
   color: var(--ink-muted);
 }
 .skind.vessel { color: var(--vessel); border-color: var(--vessel); }
-.skind.event { color: var(--event); border-color: var(--event); }
+.skind.event { color: var(--event-ink); border-color: var(--event); }
 
 .tbl.shits td { padding: 6px 8px 6px 0; font-size: 13px; }
 .tbl.shits tr:last-child td { border-bottom: 0; }
@@ -783,7 +827,7 @@ a { color: var(--vessel); }
 }
 .restorewrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 /* The refusal is the interesting outcome, so it is stated, not swallowed. */
-.restoreerr { font-size: 13px; color: var(--critical); max-width: 230px; text-align: right; }
+.restoreerr { font-size: 13px; color: var(--critical-ink); max-width: 230px; text-align: right; }
 
 /* ---- Suggest a berth: the system proposes and explains; the person confirms ---- */
 
@@ -811,8 +855,8 @@ a { color: var(--vessel); }
   font-size: 12px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--ink-2);
 }
-.qhead.bad { color: var(--critical); }
-.qhead.warn { color: var(--event); }
+.qhead.bad { color: var(--critical-ink); }
+.qhead.warn { color: var(--event-ink); }
 .qhead.muted { color: var(--ink-muted); }
 /* A pointer elsewhere, on the heading's own line: the heading is the whole row. */
 .qheadlink { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500; }
@@ -842,5 +886,5 @@ a { color: var(--vessel); }
 .lenask .sub-hint { margin-top: 0; flex-basis: 100%; }
 
 /* A destructive control that fails silently is worse than one that fails loudly. */
-.actionerr { font-size: 13px; color: var(--critical); max-width: 340px; }
+.actionerr { font-size: 13px; color: var(--critical-ink); max-width: 340px; }
 
