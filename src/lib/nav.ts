@@ -58,9 +58,25 @@ export function firstYear(now?: Date, earliestBookingYear?: number | null): numb
   return earliestBookingYear == null ? idle : Math.min(idle, earliestBookingYear);
 }
 
-/** The furthest year that can be navigated to or booked. */
-export function lastYear(now?: Date): number {
-  return currentMonth(now).year + YEARS_AHEAD;
+/**
+ * The furthest NAVIGABLE year.
+ *
+ * The mirror of `firstYear`, and it was missing the half that matters. That function's
+ * comment claims deriving the bound from the data "ends the whole class" of bookings
+ * stored where the board cannot reach them — and then this one took no booking data at
+ * all, so the class was only half ended.
+ *
+ * What that costs, observed: a booking dated 2099 made the empty-month pointer say
+ * "Nearest bookings: January 2099", and following it clamped to December 2029, which is
+ * also empty, which pointed at January 2099 again. A loop on the front door, around a
+ * row the board could not draw.
+ *
+ * Booking is a separate question — see `lastBookableISO`, which deliberately does NOT
+ * stretch. The same asymmetry as the floor: 1997 is reachable and unbookable.
+ */
+export function lastYear(now?: Date, latestBookingYear?: number | null): number {
+  const idle = currentMonth(now).year + YEARS_AHEAD;
+  return latestBookingYear == null ? idle : Math.max(idle, latestBookingYear);
 }
 
 /**
@@ -73,12 +89,18 @@ export function firstBookableISO(now?: Date): string {
   return todayISO(now);
 }
 
+/**
+ * The latest date a booking can be MADE for — a fixed horizon, never stretched by the
+ * data. Otherwise one booking in 2099 would raise the ceiling for every booking after
+ * it, and the window would ratchet open one mistake at a time.
+ */
 export function lastBookableISO(now?: Date): string {
-  return `${lastYear(now)}-12-31`;
+  return `${currentMonth(now).year + YEARS_AHEAD}-12-31`;
 }
 
 export function clampMonth(
-  year: number, month: number, now?: Date, earliestBookingYear?: number | null,
+  year: number, month: number, now?: Date,
+  earliestBookingYear?: number | null, latestBookingYear?: number | null,
 ): { year: number; month: number } {
   const fallback = currentMonth(now);
   let y = Number.isFinite(year) ? Math.trunc(year) : fallback.year;
@@ -88,15 +110,16 @@ export function clampMonth(
   if (m > 12) { m = 1; y += 1; }
   const min = firstYear(now, earliestBookingYear);
   if (y < min) return { year: min, month: 1 };
-  const max = lastYear(now);
+  const max = lastYear(now, latestBookingYear);
   if (y > max) return { year: max, month: 12 };
   return { year: y, month: m };
 }
 
 export function step(
-  year: number, month: number, delta: number, now?: Date, earliestBookingYear?: number | null,
+  year: number, month: number, delta: number, now?: Date,
+  earliestBookingYear?: number | null, latestBookingYear?: number | null,
 ) {
-  return clampMonth(year, month + delta, now, earliestBookingYear);
+  return clampMonth(year, month + delta, now, earliestBookingYear, latestBookingYear);
 }
 
 /**

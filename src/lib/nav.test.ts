@@ -134,3 +134,31 @@ describe('isBookingId', () => {
     expect(isBookingId(null)).toBe(false);
   });
 });
+
+/*
+  The ceiling is the half of invariant 7 that was missing. `firstYear`'s own comment
+  claimed deriving the bound from the data "ends the whole class" of bookings stored
+  where the board cannot reach them — and `lastYear` took no booking data, so a row
+  dated 2099 was named by the empty-month pointer and unreachable through the link.
+*/
+describe('the navigable ceiling stretches to cover what is stored', () => {
+  it('is the idle horizon when nothing is booked beyond it', () => {
+    expect(lastYear(NOW, null)).toBe(2026 + YEARS_AHEAD);
+    expect(lastYear(NOW, 2019)).toBe(2026 + YEARS_AHEAD);
+  });
+
+  it('stretches to a booking stored past the horizon', () => {
+    expect(lastYear(NOW, 2099)).toBe(2099);
+  });
+
+  it('lets the board navigate to that year instead of clamping short of it', () => {
+    expect(clampMonth(2099, 1, NOW, null, 2099)).toEqual({ year: 2099, month: 1 });
+    // Without the booking, the same URL still clamps.
+    expect(clampMonth(2099, 1, NOW, null, null)).toEqual({ year: 2026 + YEARS_AHEAD, month: 12 });
+  });
+
+  it('does NOT let one far-future booking raise what may be booked', () => {
+    // Otherwise the window ratchets open one mistake at a time.
+    expect(lastBookableISO(NOW)).toBe(`${2026 + YEARS_AHEAD}-12-31`);
+  });
+});

@@ -69,3 +69,29 @@ describe('checkMove', () => {
     })).toEqual({ ok: true });
   });
 });
+
+describe('checkMove ceiling', () => {
+  const CEILING = '2029-12-31';
+
+  it('refuses a move past the furthest bookable date', () => {
+    const res = checkMove({
+      currentStart: '2026-10-01', start: '2030-01-01', end: '2030-01-02',
+      today: TODAY, ceiling: CEILING,
+    });
+    expect(res.ok).toBe(false);
+    expect(res).toMatchObject({ error: expect.stringContaining('2029') });
+  });
+
+  it('allows a move that ends exactly on the ceiling', () => {
+    expect(checkMove({
+      currentStart: '2026-10-01', start: '2029-12-30', end: CEILING,
+      today: TODAY, ceiling: CEILING,
+    })).toEqual({ ok: true });
+  });
+
+  it('applies no ceiling when none is given', () => {
+    expect(checkMove({
+      currentStart: '2026-10-01', start: '2099-01-01', end: '2099-01-02', today: TODAY,
+    })).toEqual({ ok: true });
+  });
+});

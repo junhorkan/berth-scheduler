@@ -118,7 +118,7 @@ The workbook itself is not in this repo — it is your material, and it was scru
 history before the repository went public. **Place your copy at
 `data/Dock Schedule - Synthetic Sample.xlsx` and `npm test` verifies the parse against it**,
 with no database: the counts above, and each of the three source defects below. Without
-the file those 39 tests are skipped by name rather than failing.
+the file those 40 tests are skipped by name rather than failing.
 
 Three source defects had to be handled:
 
@@ -148,8 +148,8 @@ npm run dev
 ```
 
 ```bash
-npm test          # 260 unit tests with no database; 299 once the workbook is in data/
-npm run e2e       # 56 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
+npm test          # 272 unit tests with no database; 312 once the workbook is in data/
+npm run e2e       # 62 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean
 npm run import    # replace the schedule with the workbook (needs data/*.xlsx, gitignored)
@@ -172,7 +172,7 @@ src/components/ every component, and every client boundary. No business rules.
 ```
 
 `src/domain` and `src/lib` import nothing from `db` or `app`, so the conflict, fit,
-navigation and search rules are provably correct without a database — 260 unit tests run
+navigation and search rules are provably correct without a database — 272 unit tests run
 in well under a second with no infrastructure at all. The importer and the UI call the
 same functions, so the rule the board shows you is the rule the import applied.
 

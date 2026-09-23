@@ -38,6 +38,9 @@ built is usually more informative than the thing that was.
 | 29 | [Nothing on the board is invented](#29-nothing-on-the-board-is-invented) |
 | 30 | [One undo rule, an importer that fails loudly, and a check that writes nothing](#30-one-undo-rule-an-importer-that-fails-loudly-and-a-check-that-writes-nothing) |
 | 31 | [373 cells the importer was dropping in silence](#31-373-cells-the-importer-was-dropping-in-silence) |
+| 32 | [A move changes a span, not only a berth](#32-a-move-changes-a-span-not-only-a-berth) |
+| 33 | [The drawn bar is the data; the target you press is not](#33-the-drawn-bar-is-the-data-the-target-you-press-is-not) |
+| 34 | [A dry run for a step the product does not have](#34-a-dry-run-for-a-step-the-product-does-not-have) |
 
 ---
 

@@ -32,15 +32,19 @@ export default async function BoardPage({
 }) {
   const sp = await searchParams;
   const today = currentMonth();
-  // The schedule's own earliest booking widens the window, so anything stored is
-  // always reachable. Queried first because every bound below depends on it.
+  // The schedule's own first and last booking widen the window, so anything stored is
+  // always reachable. Queried first because every bound below depends on them. Only the
+  // floor used to stretch, which left a far-future row visible to the empty-month
+  // pointer and unreachable by the navigation it pointed through.
   const summary = await getSummary();
   const earliest = summary.firstYear;
+  const latest = summary.lastYear;
   const { year, month } = clampMonth(
     sp.y ? Number(sp.y) : today.year,
     sp.m ? Number(sp.m) : today.month,
     undefined,
     earliest,
+    latest,
   );
 
   const bounds = monthBounds(year, month);
@@ -56,10 +60,11 @@ export default async function BoardPage({
   // the board. An unknown-but-well-formed id already returns null and draws no sheet.
   const selectedId = isBookingId(sp.sel) ? sp.sel : undefined;
   const selected = selectedId ? await getBookingById(selectedId) : null;
-  const prev = step(year, month, -1, undefined, earliest);
-  const next = step(year, month, 1, undefined, earliest);
+  const prev = step(year, month, -1, undefined, earliest, latest);
+  const next = step(year, month, 1, undefined, earliest, latest);
   const navFirst = firstYear(undefined, earliest);
-  const years = Array.from({ length: lastYear() - navFirst + 1 }, (_, i) => navFirst + i);
+  const navLast = lastYear(undefined, latest);
+  const years = Array.from({ length: navLast - navFirst + 1 }, (_, i) => navFirst + i);
   const onToday = isCurrentMonth(year, month);
   const scheduleIsEmpty = summary.bookings === 0;
   // A month with nothing in it is a fair answer, but on its own it is indistinguishable
@@ -69,8 +74,18 @@ export default async function BoardPage({
   // Offered on the empty board as well as on Review: whoever just cleared it is looking
   // at this screen, not at the tab they pressed the button on.
   const undo = scheduleIsEmpty ? await getPreviousSchedule() : null;
-  // A new booking defaults to today when you are on this month, and to the 1st otherwise.
-  const newBookingDate = onToday ? todayISO() : bounds.start;
+  /*
+    A new booking defaults to the 1st of the month on screen — unless that has passed,
+    in which case it defaults to today.
+
+    Without the second half, the page's one filled button opened a form that could not
+    be saved. Every booking in the sample is from 1997–2019, so the natural path through
+    this app is *browse to a month with bars, then try booking one* — and that opened
+    the sheet dated 2010-07-01, with Save disabled and a green "Berth is clear for these
+    dates" sitting above a caption refusing it. The form explained itself, which is not
+    the same as working.
+  */
+  const newBookingDate = bounds.start > todayISO() ? bounds.start : todayISO();
 
   /**
    * The month navigation, drawn inside the board card as its header rather than in a

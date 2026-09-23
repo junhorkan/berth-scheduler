@@ -233,8 +233,15 @@ export const getSummary = cache(async function getSummary(): Promise<SystemSumma
          join bookings b on b.id = r.booking_id
         where r.resolved_at is null and r.type <> 'missing_length'
           and b.end_date >= ${todayISO()}::date) as open_review,
-      (select extract(year from min(start_date))::int from bookings) as first_year,
-      (select extract(year from max(start_date))::int from bookings) as last_year`;
+      -- Active only. These two widen the board's navigable window so that nothing
+      -- stored is unreachable (lib/nav) — but the board does not draw a cancelled
+      -- booking, so one of those must not stretch the window to a year holding
+      -- nothing. A single cancelled row dated 2099 would otherwise put 103 years in
+      -- the jump menu and leave every one of them empty.
+      (select extract(year from min(start_date))::int
+         from bookings where status <> 'cancelled') as first_year,
+      (select extract(year from max(start_date))::int
+         from bookings where status <> 'cancelled') as last_year`;
   return {
     berths: r.berths as number,
     vessels: r.vessels as number,

@@ -14,7 +14,7 @@ import { canonicalVesselName } from '../domain/normalize';
 import type { Booking, BookingKind } from '../domain/types';
 import { nothingToLose } from '../lib/undo';
 import type { Schedule } from '../lib/undo';
-import { todayISO } from '../lib/nav';
+import { todayISO, lastBookableISO } from '../lib/nav';
 import { checkMove } from '../domain/move';
 import type { ImportPlan } from '../import/plan';
 import { randomUUID } from 'node:crypto';
@@ -187,11 +187,22 @@ export async function createBooking(input: {
   end: string;
   notes?: string | null;
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  // The form refuses a past start too, but that only stops people using the form: the
-  // action behind it is a public endpoint. This is the check for anything that calls it
-  // directly, which the form's `min` and its disabled Save button cannot be.
+  // The form refuses these too, but that only stops people using the form: the action
+  // behind it is a public endpoint. This is the check for anything that calls it
+  // directly, which the form's `min`/`max` and its disabled Save button cannot be.
   if (input.start < todayISO()) {
     return { ok: false, error: 'A berth cannot be reserved for a day that has already passed.' };
+  }
+  // Without a ceiling a booking can be stored past the board's furthest navigable
+  // month, where nothing can reach it: the empty-month pointer names its year, and
+  // following the link clamps back short of it, which is a loop around a row you
+  // cannot open. `lastYear` now stretches to cover such a row if one already exists;
+  // this is what stops another being made. Invariant 7.
+  if (input.end > lastBookableISO()) {
+    return {
+      ok: false,
+      error: `The schedule only takes bookings up to ${lastBookableISO().slice(0, 4)}.`,
+    };
   }
   const sql = db();
   try {
@@ -362,7 +373,8 @@ export async function moveBooking(
     if (!row) return { ok: false, error: 'That booking no longer exists.' };
 
     const verdict = checkMove({
-      currentStart: String(row.start_date), start: to.start, end: to.end, today: todayISO(),
+      currentStart: String(row.start_date), start: to.start, end: to.end,
+      today: todayISO(), ceiling: lastBookableISO(),
     });
     if (!verdict.ok) return { ok: false, error: verdict.error };
 

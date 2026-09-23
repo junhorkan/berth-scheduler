@@ -777,3 +777,35 @@ test.describe('the register links to the last booking', () => {
     await expect(page.getByLabel('End date')).toHaveValue(new RegExp(`^${year}-`));
   });
 });
+
+/**
+ * The page's one filled button has to open a form that can be saved.
+ *
+ * Every booking in the sample is from 1997–2019, so the natural path through this app
+ * is *browse to a month with bars, then try booking one*. That opened the sheet dated
+ * to the 1st of the month on screen — in the past, Save disabled, with a green "Berth
+ * is clear for these dates" above a caption refusing it. The form explained itself,
+ * which is not the same as working.
+ */
+test.describe('the new-booking sheet opens usable', () => {
+  test('defaults to today when the month on screen has already passed', async ({ page }) => {
+    await page.goto('/?y=2010&m=7');
+    await page.getByRole('button', { name: '+ New booking' }).click();
+
+    const start = page.locator('.panel-sheet input[type="date"]').first();
+    const today = await page.evaluate(() => new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date()));
+
+    await expect(start).toHaveValue(today);
+    // Never the reason Save is off, whatever else is.
+    await expect(page.locator('.panel-sheet')).not.toContainText('already passed');
+  });
+
+  test('keeps the month you are on when that month is still ahead', async ({ page }) => {
+    await page.goto(FIXTURE_HREF);           // three months ahead
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await expect(page.locator('.panel-sheet input[type="date"]').first())
+      .toHaveValue(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-01`);
+  });
+});

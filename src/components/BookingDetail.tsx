@@ -5,7 +5,7 @@ import { cancelBookingAction, moveBookingAction, checkBookingAction } from '../a
 import type { BerthRow, BookingDetailRow } from '../db/queries';
 import { checkFit } from '../domain/fit';
 import { checkMove } from '../domain/move';
-import { todayISO } from '../lib/nav';
+import { todayISO, lastBookableISO } from '../lib/nav';
 
 /**
  * An existing booking: cancel it, or move it — to another berth, to other dates, or
@@ -47,7 +47,10 @@ export default function BookingDetail({
   // reject. A booking already in the past is a record being corrected, so it has no
   // floor; one that has not started yet cannot be dragged behind today.
   const today = todayISO();
-  const legal = checkMove({ currentStart: booking.startDate, start: startDate, end: endDate, today });
+  const ceiling = lastBookableISO();
+  const legal = checkMove({
+    currentStart: booking.startDate, start: startDate, end: endDate, today, ceiling,
+  });
   const floor = booking.startDate >= today ? today : undefined;
 
   function doCancel() {
@@ -148,7 +151,7 @@ export default function BookingDetail({
               leaving "to" stranded at the end of a line on a narrow panel. */}
           <div className="span">
             <input
-              id="mvs" type="date" value={startDate} min={floor}
+              id="mvs" type="date" value={startDate} min={floor} max={ceiling}
               aria-label="Start date"
               onChange={(e) => {
                 setStartDate(e.target.value);
@@ -159,7 +162,7 @@ export default function BookingDetail({
             />
             <span className="to">to</span>
             <input
-              id="mve" type="date" value={endDate} min={startDate || floor}
+              id="mve" type="date" value={endDate} min={startDate || floor} max={ceiling}
               aria-label="End date"
               onChange={(e) => { setEndDate(e.target.value); setError(null); }}
             />

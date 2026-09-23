@@ -31,11 +31,19 @@ export function checkMove(input: {
   end: string;
   /** The facility's today, in America/New_York (`lib/nav`), never the server's UTC. */
   today: string;
+  /** The furthest bookable date (`lastBookableISO`). Omitted, no ceiling is applied. */
+  ceiling?: string;
 }): MoveCheck {
-  const { currentStart, start, end, today } = input;
+  const { currentStart, start, end, today, ceiling } = input;
 
   if (!start || !end) return { ok: false, error: 'A booking needs both a start and an end date.' };
   if (end < start) return { ok: false, error: 'The end date cannot be before the start date.' };
+
+  // A move must not push a booking past the board's reach either — the same hole
+  // createBooking had, on the other write path. Invariant 7.
+  if (ceiling && end > ceiling) {
+    return { ok: false, error: `The schedule only takes bookings up to ${ceiling.slice(0, 4)}.` };
+  }
 
   // Only a booking that has not started yet is held to the scheduling floor.
   if (currentStart >= today && start < today) {

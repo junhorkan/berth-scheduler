@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   checkBookingAction, createBookingAction, berthOccupancyAction, vesselOptionsAction,
 } from '../app/actions';
@@ -37,6 +38,7 @@ export default function BookingPanel({
   minDate: string;
   maxDate: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   /**
    * The register, fetched the first time this panel opens.
@@ -161,13 +163,17 @@ export default function BookingPanel({
         berthId, vesselId, kind, label: effectiveLabel, start, end,
       });
       if (res.ok) {
-        setOpen(false);
-        setCheck(null);
-        setVesselName('');
-        setLabel('');
-      } else {
-        setSaveError(res.error);
+        /*
+          Go to the booking, rather than closing onto whatever month was behind the
+          sheet. The default date is now today whenever the month on screen has passed,
+          so a booking made while browsing 2010 lands in a month the board is not
+          showing — and "saved, and nothing appeared" is indistinguishable from failure.
+          Landing on it with its panel open also confirms what was written.
+        */
+        router.push(`/?y=${start.slice(0, 4)}&m=${Number(start.slice(5, 7))}&sel=${res.id}`);
+        return;
       }
+      setSaveError(res.error);
     });
   }
 
