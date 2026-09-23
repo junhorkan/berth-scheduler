@@ -320,11 +320,11 @@ function Row({ type, group }: { type: string; group: ReviewGroup<ReviewRow> }) {
         .map((r) => {
           const c = cellOf(r);
           if (sameDetail) return c;
-          return [r.detail && tighten(r.detail), c].filter(Boolean).join(' · ') || null;
+          return [r.detail && tighten(r.detail, type), c].filter(Boolean).join(' · ') || null;
         })
         .filter((c): c is string => Boolean(c))
     : [];
-  const detail = unread && !sameDetail ? null : head.detail && tighten(head.detail);
+  const detail = unread && !sameDetail ? null : head.detail && tighten(head.detail, type);
   const meta = unread ? null : [head.berthName, when].filter(Boolean).join(' · ');
 
   return (

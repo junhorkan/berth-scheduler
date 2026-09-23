@@ -129,30 +129,30 @@ describe.skipIf(!HAS_WORKBOOK)(`stitch — against the real workbook (needs ${WO
       .toBe(entries.length);
   });
 
-  it('collapses 2,176 occupancy cells into 2,031 real stays', () => {
-    expect(stats.occupancyCells).toBe(2176);
-    expect(bookings).toHaveLength(2031);
+  it('collapses 2,191 occupancy cells into 2,040 real stays', () => {
+    expect(stats.occupancyCells).toBe(2191);
+    expect(bookings).toHaveLength(2040);
     // bookings + merged cells must equal the cells we started from
     expect(bookings.length + stats.cellsMerged).toBe(stats.occupancyCells);
   });
 
-  it('finds 49 month-crossing stays that the spreadsheet showed as separate bars', () => {
-    expect(stats.monthCrossingMerges).toBe(49);
+  it('finds 54 month-crossing stays that the spreadsheet showed as separate bars', () => {
+    expect(stats.monthCrossingMerges).toBe(54);
   });
 
-  it('folds 446 spellings as typed into those 418 vessels', () => {
+  it('folds 447 spellings as typed into those 419 vessels', () => {
     // 'Barge SALT DORY' and 'Barge Salt Dory' are one hull. The documentation said 484
     // for years; no way of counting the file reproduces it, and nothing tested it. This
     // pins the real figure, taken from the cells rather than from the stitched stays.
     const typed = new Set(entries.filter((e) => e.kind === 'vessel').map((e) => e.text));
-    expect(typed.size).toBe(446);
+    expect(typed.size).toBe(447);
   });
 
-  it('yields 418 distinct vessels after folding name variants', () => {
+  it('yields 419 distinct vessels after folding name variants', () => {
     const names = new Set(
       bookings.filter((b) => b.normalizedVesselName).map((b) => b.normalizedVesselName),
     );
-    expect(names.size).toBe(418);
+    expect(names.size).toBe(419);
   });
 
   it('dates every booking inside 1997-2019, with no year pushed into the future', () => {
@@ -181,7 +181,7 @@ describe.skipIf(!HAS_WORKBOOK)(`stitch — against the real workbook (needs ${WO
     const long = bookings.filter(
       (b) => (Date.parse(b.end) - Date.parse(b.start)) / 86_400_000 + 1 > 31,
     );
-    expect(long).toHaveLength(11);
+    expect(long).toHaveLength(13);
     // A 92-day stay must be evidenced by more than one cell, or it is an over-merge.
     for (const b of long) expect(b.provenance.length).toBeGreaterThan(1);
   });

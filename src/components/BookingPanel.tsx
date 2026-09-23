@@ -11,6 +11,7 @@ import type { BookingKind } from '../domain/types';
 import { cleanNotes } from '../domain/edit';
 import { describeChoices, suggestBerth } from '../lib/suggest';
 import { parseLengthFt } from '../lib/length';
+import { canonicalVesselName } from '../domain/normalize';
 import { formatSpanFull } from '../lib/search';
 import type { Occupancy } from '../lib/suggest';
 
@@ -62,6 +63,8 @@ export default function BookingPanel({
    * is the autocomplete list and the recorded length, not the ability to book.
    */
   const [vessels, setVessels] = useState<VesselOption[] | null>(null);
+  /** Bumped after a save, so the register is refetched rather than trusted forever. */
+  const [registerKey, setRegisterKey] = useState(0);
   const [kind, setKind] = useState<BookingKind>('vessel');
   const [berthId, setBerthId] = useState(berths[0]?.id ?? '');
   const [vesselName, setVesselName] = useState('');
@@ -77,14 +80,16 @@ export default function BookingPanel({
   const [notes, setNotes] = useState('');
   const [start, setStart] = useState(defaultDate);
   const [end, setEnd] = useState(defaultDate);
-  const [check, setCheck] = useState<CheckResult | null>(null);
-  const [occupancy, setOccupancy] = useState<Record<string, Occupancy[]> | null>(null);
+  const [rawCheck, setCheck] = useState<CheckResult | null>(null);
+  const [rawOccupancy, setOccupancy] = useState<Record<string, Occupancy[]> | null>(null);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
+    // `registerKey` in the deps and `vessels` cleared on a bump, so this refires once
+    // per save rather than only on the first open.
     if (!open || vessels !== null) return;
     let live = true;
     vesselOptionsAction()
@@ -93,9 +98,45 @@ export default function BookingPanel({
       // a name nobody knows, which is a supported path.
       .catch(() => { if (live) setVessels([]); });
     return () => { live = false; };
-  }, [open, vessels]);
+  }, [open, vessels, registerKey]);
 
-  const vessel = vessels?.find((v) => v.name.toLowerCase() === vesselName.trim().toLowerCase());
+  /*
+    Matched the way the SERVER matches, which is the whole point of this line.
+
+    It compared lowercased trimmed text. `findOrCreateVessel` resolves the same name
+    through `canonicalVesselName`, which also normalises to NFC, strips the zero-width
+    family, collapses runs of whitespace and folds `OS/V` into `OSV` — so the client
+    under-matched and called a name new that the server would link to an existing hull.
+
+    That is not cosmetic. Type `R/V  Wild Ledge` with one extra space and the panel
+    showed no fit line, offered the optional Length box, and on entering 40 asserted in
+    green "Vessel is 40ft in a 55ft berth" — while the save linked it to the 120ft hull,
+    threw the typed 40 away (the write is `where length_ft is null`), and drew a bar
+    overflowing its lane. The screen made a positive claim about the opposite of what
+    was stored. `OS/V AMBER REEF` does it too, and `normalize.ts` names that spelling as
+    one the workbook actually contains.
+
+    It also suppressed the one-hull-two-berths advisory, since a null vesselId skips
+    that query entirely.
+  */
+  /*
+    A verdict is only shown while the inputs it judged are still on the form.
+
+    Derived, not cleared in an effect — which is both what the lint rule wants and the
+    stronger guarantee, because there is no path that can forget to do it. Clearing the
+    end date used to leave the last answer standing: a green "Berth is clear for these
+    dates" about dates the form no longer held, with Save enabled and no caption under
+    it, since every reason in the list reads false against an empty string. No request
+    fires on that path, so nothing would ever have corrected it.
+  */
+  const inputsReady = Boolean(berthId && start && end);
+  const check = inputsReady ? rawCheck : null;
+  const occupancy = inputsReady ? rawOccupancy : null;
+
+  const typedKey = canonicalVesselName(vesselName).normalized;
+  const vessel = typedKey === ''
+    ? undefined
+    : vessels?.find((v) => canonicalVesselName(v.name).normalized === typedKey);
   const vesselId = kind === 'vessel' ? vessel?.id ?? null : null;
   const effectiveLabel = kind === 'vessel' ? vessel?.name ?? vesselName.trim() : label.trim();
 
@@ -115,8 +156,23 @@ export default function BookingPanel({
   // but the user would have been told the opposite of the truth right up to the click.
   const generation = useRef(0);
   useEffect(() => {
-    if (!open || !berthId || !start || !end) return;
+    /*
+      The counter is bumped BEFORE the early return, and the verdict is cleared with it.
+
+      It used to return first, so clearing the end date left the last verdict on screen —
+      a green "Berth is clear for these dates" about dates the form no longer held — with
+      Save enabled and no caption under it, because every reason in the list reads false
+      against an empty string (`'' > maxDate` is false, and `blocked` follows the stale
+      check). No request fires on that path, so nothing ever corrected it.
+
+      Bumping here also invalidates a check already in flight when the sheet closes, which
+      otherwise landed on a closed panel and repopulated it.
+    */
     const mine = ++generation.current;
+    // Bumped before the return, so a check in flight when the sheet closes — or when a
+    // date is cleared — cannot land and repopulate the panel. What is DISPLAYED while
+    // the inputs are incomplete is handled by `inputsReady` above, not here.
+    if (!open || !berthId || !start || !end) return;
     const t = setTimeout(async () => {
       // Set inside the timer, not the effect body: a synchronous setState in an effect
       // cascades a render, and the "Checking…" line is only read before the first
@@ -254,10 +310,23 @@ export default function BookingPanel({
           return;
         }
         setOpen(false);
+        /*
+          The counter goes up with the reset, or the reset does not hold: a check that
+          was in flight when Save was pressed still matched its own generation and
+          repopulated `check` and `occupancy` afterwards, with the pre-save verdict and
+          occupancy that does not include the booking just made.
+        */
+        generation.current++;
         setCheck(null);
         setVesselName('');
         setLabel('');
         setNotes('');
+        // A vessel booked in this session is on the register now, and the panel's copy
+        // was fetched once and never refreshed — so reopening it called that hull new
+        // again, which suppressed both its recorded length and the booked-elsewhere
+        // warning. Bumping the key refetches.
+        setVessels(null);
+        setRegisterKey((k) => k + 1);
         /*
           Every field that describes the LAST vessel, not the next one. A typed length
           left behind is the worst of them: reopening the sheet for a different hull

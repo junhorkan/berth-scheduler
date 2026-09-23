@@ -106,9 +106,14 @@ export function describeOccurrences(group: ReviewGroup<Groupable>): string | nul
  * on the live schedule is still `Vessel is 100' but the berth is 55'`. Normalising here
  * fixes old rows and new ones together.
  */
-export function tighten(detail: string): string {
+export function tighten(detail: string, type?: string): string {
   return detail
-    .replace(/\s*\(\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}\)\s*$/, '')
+    // ...except on a conflict, where that trailing span belongs to the OTHER booking.
+    // The meta line below states THIS booking's dates, so stripping it left
+    // "overlaps OSV AMBER REEF" with no way to learn when the vessel it clashes with
+    // is there — on the one genuine double-booking in 23 years, the row this queue
+    // exists for.
+    .replace(type === 'conflict' ? /(?!)/ : /\s*\(\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}\)\s*$/, '')
     .replace(
       /^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})(?=\s|$)/,
       (_all, start: string, end: string) => formatSpanFull(start, end),

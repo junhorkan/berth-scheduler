@@ -132,6 +132,16 @@ export function headerMonthYear(raw: string): { month: number; year: number | nu
 function cellText(sheet: XLSX.WorkSheet, r: number, c: number): string {
   const cell = sheet[XLSX.utils.encode_cell({ r, c })] as XLSX.CellObject | undefined;
   if (!cell || cell.v == null) return '';
+  /*
+    An error cell carries a NUMBER, not its text. SheetJS gives #REF! as
+    { t: 'e', v: 23 }, so String(cell.v) was "23" — and every Excel error code is one or
+    two digits (#REF! 23, #N/A 42, #NAME? 29, #VALUE! 15, #DIV/0! 7), which is exactly
+    the shape this parser reads as a day number. One sitting in a weekday strip would
+    have voted on where day 1 is.
+
+    This workbook has no error cells; the next one is not promised to be so tidy.
+  */
+  if (cell.t === 'e') return '';
   return String(cell.v).trim();
 }
 
@@ -376,7 +386,7 @@ export function parseGrids(wb: XLSX.WorkBook): { entries: RawEntry[]; report: Pa
         report.blocksWithoutDayStrip.push(`${sheetName}/${month}`);
         continue;
       }
-      const { colToDay, gridRows, calendarVerified } = found;
+      const { dayOneCol, colToDay, gridRows, calendarVerified } = found;
       const maxDayCol = Math.max(...colToDay.keys());
       if (!calendarVerified) report.blocksWithUnverifiedCalendar.push(`${sheetName}/${month}`);
 
@@ -413,14 +423,38 @@ export function parseGrids(wb: XLSX.WorkBook): { entries: RawEntry[]; report: Pa
           const text = cellText(sheet, r, c);
           if (text === '') continue;
 
-          const startDay = colToDay.get(c);
+          const mergeEndCol = mergeEndByStart.get(`${r}:${c}`);
+
+          /*
+            A bar drawn from the left edge of the grid still means the month it crosses.
+
+            The day strip does not start at column 2. January 2011 begins on a Saturday,
+            so its `1` sits at column 6 and columns 2–5 are blank space beside the berth
+            name. Whoever kept the sheet dragged the bar from that edge: the merge runs
+            c2..c36, which is the whole of January.
+
+            This read the START column, found no day for it, and dropped the cell with
+            `marginCells++` — an integer that nothing prints and no test asserts. Fifteen
+            merges in the file do this, and they are not small: two of them are entire
+            months of `R/V GOLDEN COMPASS` on North Pier West, one an entire December of
+            `M/V Salt Tern` on Inner Channel. 233 booked days, and the board showed those
+            berths free for months the source says were full — which is the one thing
+            this product exists to prevent.
+
+            So a merge that reaches the strip starts at the strip. A cell that never
+            reaches it is a genuine margin note, and now says so with its sheet, row and
+            column instead of incrementing a counter (invariant 3).
+          */
+          const reachesStrip = mergeEndCol != null && mergeEndCol >= dayOneCol;
+          const startCol = colToDay.has(c) ? c : (reachesStrip ? dayOneCol : c);
+
+          const startDay = colToDay.get(startCol);
           if (startDay == null) {
-            // Outside the day strip: a margin note, not a booking.
             report.marginCells++;
+            report.unattributedCells.push({ sheet: sheetName, row: r + 1, col: c + 1, text });
             continue;
           }
 
-          const mergeEndCol = mergeEndByStart.get(`${r}:${c}`);
           const endDay =
             mergeEndCol != null
               ? (colToDay.get(Math.min(mergeEndCol, maxDayCol)) ?? startDay)
