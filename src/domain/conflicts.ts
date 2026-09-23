@@ -7,6 +7,10 @@
  *
  * The two must agree. See db/migrations for the SQL:
  *   EXCLUDE USING gist (berth_id WITH =, during WITH &&) WHERE (status = 'active' AND exclusive)
+ *
+ * `findVesselClashes` at the foot of the file is the one soft rule kept in this module
+ * rather than in fit.ts, because it is about overlapping days and reads off the same
+ * `overlaps`. It has no constraint behind it, on purpose; its own comment says why.
  */
 
 import type { Booking, DayRange, Berth } from './types';
@@ -21,6 +25,20 @@ import type { Booking, DayRange, Berth } from './types';
  */
 export function overlaps(a: DayRange, b: DayRange): boolean {
   return a.start <= b.end && b.start <= a.end;
+}
+
+/**
+ * The days two ranges both cover, or null when they never meet.
+ *
+ * Lexicographic min/max is correct for ISO dates, for the reason DayRange is a string
+ * in the first place: no Date, so no UTC to shift the answer by a day.
+ */
+export function sharedRange(a: DayRange, b: DayRange): DayRange | null {
+  if (!overlaps(a, b)) return null;
+  return {
+    start: a.start > b.start ? a.start : b.start,
+    end: a.end < b.end ? a.end : b.end,
+  };
 }
 
 /** Inclusive day count of a range. Jul 13–16 is 4 days, not 3. */
@@ -65,6 +83,56 @@ export function findConflicts(
       other.status === 'active' &&
       overlaps(candidate.range, other.range),
   );
+}
+
+/** The same hull found on another berth over some of the same days. */
+export type VesselClash = {
+  booking: Booking;
+  /** The days both bookings cover. */
+  shared: DayRange;
+  /** Length of `shared`. One day is plausibly a berth shift that morning; two is not. */
+  sharedDays: number;
+};
+
+/**
+ * Where else is this hull booked while it is here?
+ *
+ * ADVISORY — amber, never blocking — and this is the awkward case for the split the
+ * whole design rests on (DECISIONS 2). Unlike fit, this IS decidable: the dates are
+ * always known, so the instinct is a second EXCLUDE on (vessel_id, during). The source
+ * schedule forbids it. Twelve of its rows already put one hull at two berths on the
+ * same day — four of them over two whole days, eight sharing exactly one, which is what
+ * a same-day berth shift looks like in a workbook that records only whole days. A
+ * constraint would abort `npm run import` on those rows and roll back all 2,031, so the
+ * history the project promises to keep could not be loaded at all. Decidable, but
+ * already present: therefore it warns.
+ *
+ * Same berth is deliberately NOT reported here. That is the hard conflict — red,
+ * refused by the exclusion constraint — and saying it twice in two colours would blur
+ * the one distinction the UI exists to make.
+ *
+ * A pooled berth is not exempt, although findConflicts exempts it: the question is how
+ * many places one hull is in, not how many hulls a berth holds.
+ *
+ * Events and closures carry no vessel, so they fall out on identity alone.
+ */
+export function findVesselClashes(
+  candidate: Pick<Booking, 'berthId' | 'vesselId' | 'range'> & Partial<Pick<Booking, 'id'>>,
+  existing: readonly Booking[],
+): VesselClash[] {
+  if (!candidate.vesselId) return [];
+
+  const clashes: VesselClash[] = [];
+  for (const other of existing) {
+    if (other.id === candidate.id) continue;
+    if (other.vesselId !== candidate.vesselId) continue;
+    if (other.berthId === candidate.berthId) continue;
+    if (other.status !== 'active') continue;
+    const shared = sharedRange(candidate.range, other.range);
+    if (!shared) continue;
+    clashes.push({ booking: other, shared, sharedDays: rangeLengthDays(shared) });
+  }
+  return clashes;
 }
 
 /** True when the candidate can be saved as 'active'. */

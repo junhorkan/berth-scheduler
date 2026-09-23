@@ -8,6 +8,7 @@ import {
 import type { BerthRow, VesselOption } from '../db/queries';
 import type { CheckResult } from '../db/mutations';
 import type { BookingKind } from '../domain/types';
+import { cleanNotes } from '../domain/edit';
 import { describeChoices, suggestBerth } from '../lib/suggest';
 import { parseLengthFt } from '../lib/length';
 import type { Occupancy } from '../lib/suggest';
@@ -23,6 +24,9 @@ import type { Occupancy } from '../lib/suggest';
  *          Save is disabled. There is no override.
  *   AMBER  a fit problem. Advisory only, and never blocks — because 97% of vessels
  *          have no recorded length, so blocking on it would make the tool unusable.
+ *   AMBER  the same hull booked at another berth over these days. Also advisory, for a
+ *          different reason: the imported schedule already contains twelve of them
+ *          (domain/conflicts.findVesselClashes).
  *
  * The caption under Save always names which condition disabled it.
  */
@@ -69,6 +73,7 @@ export default function BookingPanel({
    */
   const [lengthInput, setLengthInput] = useState('');
   const [label, setLabel] = useState('');
+  const [notes, setNotes] = useState('');
   const [start, setStart] = useState(defaultDate);
   const [end, setEnd] = useState(defaultDate);
   const [check, setCheck] = useState<CheckResult | null>(null);
@@ -222,7 +227,7 @@ export default function BookingPanel({
     startTransition(async () => {
       const res = await createBookingAction({
         berthId, vesselId, kind, label: effectiveLabel, start, end,
-        vesselLengthFt: typedLength,
+        notes: cleanNotes(notes), vesselLengthFt: typedLength,
       });
       if (res.ok) {
         /*
@@ -246,6 +251,7 @@ export default function BookingPanel({
         setCheck(null);
         setVesselName('');
         setLabel('');
+        setNotes('');
         return;
       }
       setSaveError(res.error);
@@ -391,6 +397,18 @@ export default function BookingPanel({
           </div>
         </div>
 
+        {/* What the coordinator knows and the schedule cannot hold: shore power, crane
+            reach, who is arriving at 0600 (DECISIONS 22). The column, the query boundary
+            and this action's parameter all already carried it; nothing wrote to it. */}
+        <div className="field">
+          <label htmlFor="n">Note</label>
+          <textarea
+            id="n" rows={3} value={notes}
+            placeholder="Optional — anything the schedule cannot hold"
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+
         <Verdict check={check} checking={checking} kind={kind} />
 
         {saveError && <p className="verdict stop" style={{ marginTop: 8 }}>{saveError}</p>}
@@ -431,6 +449,35 @@ function Verdict({
       ) : (
         <p className="verdict clear"><b>Berth is clear</b> for these dates.</p>
       )}
+
+      {/*
+        One line per clash rather than one folded line with a count: each is a different
+        pair of berths on different days, so they are distinct questions — the same
+        reason review never folds conflicts (lib/review).
+
+        The two wordings are the feature. A single shared day is exactly how a berth
+        shift looks in a schedule that records whole days, so it is put as a question;
+        two days is a statement, because no shift explains it.
+      */}
+      {check.vesselClashes.map((c) => (
+        <p className="verdict warn" key={c.id}>
+          {c.sharedDays === 1 ? (
+            <>
+              <b>Check — moving berth on {c.sharedStart}?</b>{' '}
+              This vessel is also booked at {c.berthName}, {c.startDate} to {c.endDate}, and{' '}
+              {c.sharedStart} is the only day the two share. If it is not a shift between
+              berths that day, one of the two is wrong.
+            </>
+          ) : (
+            <>
+              <b>Warning — this vessel is booked elsewhere.</b>{' '}
+              It is also at {c.berthName}, {c.startDate} to {c.endDate} — {c.sharedDays} days
+              in common, and one hull cannot be in two places.
+            </>
+          )}{' '}
+          This does not stop you saving.
+        </p>
+      ))}
 
       {kind === 'vessel' && check.fit && check.fit.verdict !== 'fits' && (
         <p className="verdict warn">

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { overlaps, findConflicts, rangeLengthDays, isValidRange, isBookable } from './conflicts';
+import {
+  overlaps, findConflicts, rangeLengthDays, isValidRange, isBookable, sharedRange,
+  findVesselClashes,
+} from './conflicts';
 import type { Booking, Berth } from './types';
 
 const exclusive: Pick<Berth, 'id' | 'capacityMode'> = { id: 'sfe', capacityMode: 'exclusive' };
@@ -137,12 +140,117 @@ describe('findConflicts', () => {
   });
 });
 
+describe('sharedRange', () => {
+  it('is the later start and the earlier end', () => {
+    expect(sharedRange({ start: '2010-07-10', end: '2010-07-20' }, { start: '2010-07-15', end: '2010-07-25' }))
+      .toEqual({ start: '2010-07-15', end: '2010-07-20' });
+  });
+
+  it('is the inner range when one contains the other', () => {
+    expect(sharedRange({ start: '2010-07-01', end: '2010-07-31' }, { start: '2010-07-10', end: '2010-07-11' }))
+      .toEqual({ start: '2010-07-10', end: '2010-07-11' });
+  });
+
+  it('is null for merely adjacent ranges', () => {
+    expect(sharedRange({ start: '2010-07-10', end: '2010-07-11' }, { start: '2010-07-12', end: '2010-07-13' }))
+      .toBeNull();
+  });
+});
+
+describe('findVesselClashes — one hull, two berths', () => {
+  // The candidate is the same vessel as the fixture's default, at a DIFFERENT berth.
+  const elsewhere = { vesselId: 'v1', berthId: 'npw', range: { start: '2010-07-10', end: '2010-07-12' } };
+
+  it('reports nothing when the dates do not meet', () => {
+    const existing = [booking({ id: 'a', range: { start: '2010-07-20', end: '2010-07-22' } })];
+    expect(findVesselClashes(elsewhere, existing)).toEqual([]);
+  });
+
+  it('reports a single shared day, and counts it as 1', () => {
+    // The eight-of-twelve case in the source schedule: plausibly a berth shift that day,
+    // which is why the count is returned rather than just the fact of an overlap.
+    const existing = [booking({ id: 'shift', range: { start: '2010-07-12', end: '2010-07-15' } })];
+    const found = findVesselClashes(elsewhere, existing);
+    expect(found.map((c) => c.booking.id)).toEqual(['shift']);
+    expect(found[0].sharedDays).toBe(1);
+    expect(found[0].shared).toEqual({ start: '2010-07-12', end: '2010-07-12' });
+  });
+
+  it('counts a two-day overlap, which no berth shift explains', () => {
+    // The four-of-twelve case: one hull in two places for two whole days.
+    const existing = [booking({ id: 'real', range: { start: '2010-07-11', end: '2010-07-14' } })];
+    const found = findVesselClashes(elsewhere, existing);
+    expect(found[0].sharedDays).toBe(2);
+    expect(found[0].shared).toEqual({ start: '2010-07-11', end: '2010-07-12' });
+  });
+
+  it('does NOT report the same berth — that is the hard conflict, red and unstorable', () => {
+    const existing = [booking({ id: 'same-berth', berthId: 'sfe' })];
+    const candidate = { vesselId: 'v1', berthId: 'sfe', range: { start: '2010-07-10', end: '2010-07-12' } };
+    expect(findVesselClashes(candidate, existing)).toEqual([]);
+    // ...and the hard check does report it, so nothing goes unsaid.
+    expect(findConflicts(candidate, existing, exclusive).map((b) => b.id)).toEqual(['same-berth']);
+  });
+
+  it('ignores a cancelled booking — the hull is not there', () => {
+    const existing = [booking({ id: 'gone', berthId: 'sfe', status: 'cancelled' })];
+    expect(findVesselClashes(elsewhere, existing)).toEqual([]);
+  });
+
+  it('ignores an imported conflict_unresolved row for the same reason findConflicts does', () => {
+    const existing = [booking({ id: 'legacy', status: 'conflict_unresolved' })];
+    expect(findVesselClashes(elsewhere, existing)).toEqual([]);
+  });
+
+  it('ignores a booking with no vessel — a closure is not a hull in two places', () => {
+    const existing = [booking({ id: 'closed', kind: 'closure', vesselId: null, label: 'Float rebuild' })];
+    expect(findVesselClashes(elsewhere, existing)).toEqual([]);
+  });
+
+  it('reports nothing for a candidate with no vessel, however the dates fall', () => {
+    const existing = [booking({ id: 'a' })];
+    expect(findVesselClashes({ vesselId: null, berthId: 'npw', range: { start: '2010-07-10', end: '2010-07-12' } }, existing))
+      .toEqual([]);
+  });
+
+  it('ignores a different hull on another berth', () => {
+    const existing = [booking({ id: 'other-hull', vesselId: 'v2' })];
+    expect(findVesselClashes(elsewhere, existing)).toEqual([]);
+  });
+
+  it('honours excludeBookingId, so moving a booking does not clash with itself', () => {
+    // Moving 'self' from sfe to npw: the row being moved is still in the table.
+    const self = booking({ id: 'self' });
+    const candidate = { id: 'self', vesselId: 'v1', berthId: 'npw', range: { start: '2010-07-10', end: '2010-07-12' } };
+    expect(findVesselClashes(candidate, [self])).toEqual([]);
+  });
+
+  it('does not exempt a pooled berth — one hull cannot also be in the slips', () => {
+    const existing = [booking({ id: 'slip', berthId: 'slips' })];
+    expect(findVesselClashes(elsewhere, existing).map((c) => c.booking.id)).toEqual(['slip']);
+  });
+
+  it('reports every clash, each with its own day count', () => {
+    const existing = [
+      booking({ id: 'a', berthId: 'npe', range: { start: '2010-07-12', end: '2010-07-20' } }),
+      booking({ id: 'b', berthId: 'slips', range: { start: '2010-07-09', end: '2010-07-11' } }),
+    ];
+    expect(findVesselClashes(elsewhere, existing).map((c) => [c.booking.id, c.sharedDays]))
+      .toEqual([['a', 1], ['b', 2]]);
+  });
+});
+
 describe('isBookable', () => {
   it('is false when a conflict exists', () => {
     expect(isBookable({ berthId: 'sfe', range: { start: '2010-07-11', end: '2010-07-11' } }, [booking()], exclusive)).toBe(false);
   });
   it('is false for an invalid range even with no conflicts', () => {
     expect(isBookable({ berthId: 'sfe', range: { start: '2010-07-20', end: '2010-07-01' } }, [], exclusive)).toBe(false);
+  });
+  it('is true when the same hull is booked at ANOTHER berth over the same days', () => {
+    // The clash is advisory. Nothing about it may reach the gate on Save (DECISIONS 2).
+    const existing = [booking({ id: 'elsewhere', berthId: 'npw' })];
+    expect(isBookable({ berthId: 'sfe', range: { start: '2010-07-10', end: '2010-07-12' } }, existing, exclusive)).toBe(true);
   });
   it('is true on a clear berth with a valid range', () => {
     expect(isBookable({ berthId: 'sfe', range: { start: '2010-07-20', end: '2010-07-22' } }, [booking()], exclusive)).toBe(true);

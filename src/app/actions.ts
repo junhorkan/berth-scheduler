@@ -83,15 +83,24 @@ export async function restoreBookingAction(id: string) {
   return res;
 }
 
-/** Move a booking to another berth, to other dates, or both. */
-export async function moveBookingAction(
+/** Change a booking's berth, dates, name, kind or note — whichever the panel changed. */
+export async function updateBookingAction(
   id: string,
-  to: { berthId: string; start: string; end: string },
+  to: {
+    berthId: string;
+    start: string;
+    end: string;
+    label: string;
+    kind: BookingKind;
+    notes: string | null;
+  },
 ) {
-  const res = await m.moveBooking(id, to);
+  const res = await m.updateBooking(id, to);
   revalidatePath('/');
-  // A move re-runs the fit check, so the queue and its badge can both change.
+  // It re-runs the fit check, so the queue and its badge can both change; a rename can
+  // also move a hull on or off the register, which the Vessels tab lists.
   revalidatePath('/review');
+  revalidatePath('/vessels');
   return res;
 }
 

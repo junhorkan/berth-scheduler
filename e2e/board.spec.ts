@@ -520,7 +520,7 @@ test.describe('the queue agrees with the board', () => {
     await earlyTern(page).click();
     // Options follow berth display order: North Pier West, Face, East, ...
     await page.getByLabel('Berth', { exact: true }).selectOption({ index: toIndex });
-    await page.getByRole('button', { name: 'Move booking' }).click();
+    await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByRole('dialog', { name: 'Booking', exact: true })).toHaveCount(0);
   }
 
@@ -589,14 +589,18 @@ test.describe('the queue agrees with the board', () => {
 });
 
 /**
- * A move changes a berth, a span, or both.
+ * Correcting a booking: a berth, a span, or what it says.
  *
  * Dates matter as much as berths — a vessel arriving two days late is the everyday
  * edit — and the guarantee has to hold on this path too: `during` is generated from
  * the two dates, so moving into an occupied span is refused by the same constraint
  * that refuses an insert. These prove it, and that the fixture is left as it was found.
+ *
+ * The label, the kind and the note are the same write, for the same reason: fixing a
+ * mistyped name by cancelling and rebooking loses the row, its provenance and its review
+ * items, which is the trade this panel exists not to make.
  */
-test.describe('moving a booking in time', () => {
+test.describe('correcting a booking', () => {
   const day = (d: number) =>
     `${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   const bar = (page: import('@playwright/test').Page, label: string) =>
@@ -616,7 +620,7 @@ test.describe('moving a booking in time', () => {
   async function move(page: import('@playwright/test').Page, from: number, to: number) {
     await page.getByLabel('Start date').fill(day(from));
     await page.getByLabel('End date').fill(day(to));
-    await page.getByRole('button', { name: 'Move booking' }).click();
+    await page.getByRole('button', { name: 'Save changes' }).click();
   }
 
   async function bookEvent(page: import('@playwright/test').Page, label: string, from: number, to: number) {
@@ -645,7 +649,7 @@ test.describe('moving a booking in time', () => {
 
     await open(page, 'E2E slipping tide');
     // Nothing has changed yet, so there is nothing to save.
-    await expect(page.getByRole('button', { name: 'Move booking' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
 
     await move(page, 7, 8);
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -690,9 +694,50 @@ test.describe('moving a booking in time', () => {
     await page.getByLabel('Start date').fill(facilityDaysAgo(1));
 
     await expect(page.locator('.verdict.stop')).toContainText('cannot be moved into the past');
-    await expect(page.getByRole('button', { name: 'Move booking' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
 
     await remove(page, 'E2E time traveller');
+  });
+
+  test('corrects the description and writes a note, on the same row', async ({ page }) => {
+    // The `notes` column existed from the first migration and nothing ever wrote to it,
+    // so this is the first spec that can read one back.
+    await bookEvent(page, 'E2E mistyped sail day', 16, 17);
+
+    await open(page, 'E2E mistyped sail day');
+    // Untouched, there is nothing to save — the button is not a no-op.
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+
+    await page.getByLabel('Description', { exact: true }).fill('E2E community sail day');
+    await page.getByLabel('Note', { exact: true }).fill('Crane booked 0600; shore power on the east cleat');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    // One row, renamed — not a cancelled row beside a new one.
+    await page.goto(FIXTURE_HREF);
+    await expect(bar(page, 'E2E mistyped sail day')).toHaveCount(0);
+    await expect(bar(page, 'E2E community sail day')).toHaveCount(1);
+    await bar(page, 'E2E community sail day').click();
+    await expect(page.getByLabel('Note', { exact: true })).toHaveValue(/Crane booked 0600/);
+    // A note is a note, not a finding: it must not be dressed as a verdict.
+    await expect(page.locator('.verdict.stop')).toHaveCount(0);
+
+    await remove(page, 'E2E community sail day');
+  });
+
+  test('refuses a vessel booking with no vessel named, in those words', async ({ page }) => {
+    // `vessel_required_for_vessel_kind` would refuse this as a CHECK violation, whose
+    // shared wording talks about dates. The refusal has to name the empty field instead.
+    await bookEvent(page, 'E2E unnamed hull', 18, 19);
+    await open(page, 'E2E unnamed hull');
+
+    await page.getByRole('button', { name: 'Vessel', exact: true }).click();
+    await page.getByLabel('Vessel', { exact: true }).fill('');
+
+    await expect(page.locator('.verdict.stop')).toContainText('Name the vessel');
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+
+    await remove(page, 'E2E unnamed hull');
   });
 });
 
@@ -833,7 +878,7 @@ test.describe('correcting a booking that has already happened', () => {
     await berth.selectOption(
       (await berth.locator('option', { hasText: 'South Float West' }).getAttribute('value')) ?? '',
     );
-    await page.getByRole('button', { name: 'Move booking' }).click();
+    await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await page.goto(PAST_HREF);
@@ -847,7 +892,7 @@ test.describe('correcting a booking that has already happened', () => {
     await back.selectOption(
       (await back.locator('option', { hasText: 'North Pier East' }).getAttribute('value')) ?? '',
     );
-    await page.getByRole('button', { name: 'Move booking' }).click();
+    await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
@@ -861,7 +906,7 @@ test.describe('correcting a booking that has already happened', () => {
     await page.getByLabel('End date').fill(`${start.slice(0, 8)}14`);
     // No floor on a record being corrected: the picker must not fight it either.
     await expect(page.getByLabel('Start date')).not.toHaveAttribute('min', /.+/);
-    await page.getByRole('button', { name: 'Move booking' }).click();
+    await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await page.goto(PAST_HREF);
@@ -870,7 +915,7 @@ test.describe('correcting a booking that has already happened', () => {
 
     await page.getByLabel('Start date').fill(start);
     await page.getByLabel('End date').fill(`${start.slice(0, 8)}08`);
-    await page.getByRole('button', { name: 'Move booking' }).click();
+    await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 });

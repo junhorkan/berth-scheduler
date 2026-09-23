@@ -8,7 +8,7 @@
  */
 import type postgres from 'postgres';
 import { db } from './client';
-import { findConflicts, isValidRange } from '../domain/conflicts';
+import { findConflicts, findVesselClashes, isValidRange } from '../domain/conflicts';
 import { checkFit, type FitResult } from '../domain/fit';
 import { canonicalVesselName } from '../domain/normalize';
 import type { Booking, BookingKind } from '../domain/types';
@@ -16,6 +16,7 @@ import { nothingToLose } from '../lib/undo';
 import type { Schedule } from '../lib/undo';
 import { todayISO, lastBookableISO } from '../lib/nav';
 import { checkMove } from '../domain/move';
+import { checkEdit, cleanNotes, vesselLinkFor } from '../domain/edit';
 import type { ImportPlan } from '../import/plan';
 import { randomUUID } from 'node:crypto';
 
@@ -51,6 +52,21 @@ export type CheckResult = {
   conflicts: { id: string; label: string; startDate: string; endDate: string }[];
   /** Advisory only. Never blocks. */
   fit: FitResult | null;
+  /**
+   * Advisory only, and never blocking for the reason in domain/conflicts: the same hull
+   * booked at a DIFFERENT berth over these days. The berth's name is carried because
+   * the domain knows berths by id only, and a warning that names an id helps nobody.
+   */
+  vesselClashes: {
+    id: string;
+    berthName: string;
+    startDate: string;
+    endDate: string;
+    /** One day reads as a berth shift; two or more cannot. The wording turns on this. */
+    sharedDays: number;
+    /** The first day both cover — the day itself when there is only one. */
+    sharedStart: string;
+  }[];
   /** Why Save is disabled, or null when it is not. */
   blockedBecause: string | null;
 };
@@ -65,6 +81,47 @@ function vesselLengthQuery(
   return sql`select length_ft from vessels where id = ${vesselId}` as unknown as Promise<
     { length_ft: number | null }[]
   >;
+}
+
+/** A same-vessel booking on some other berth, with that berth's name for the wording. */
+type ElsewhereRow = {
+  id: string;
+  berth_id: string;
+  vessel_id: string | null;
+  kind: BookingKind;
+  label: string;
+  start_date: Date;
+  end_date: Date;
+  berth_name: string;
+};
+
+/**
+ * The same hull's other engagements over these days.
+ *
+ * `berth_id <>` leaves out this berth on purpose: an overlap there is the hard conflict,
+ * which the query above already finds and the constraint already refuses. Events and
+ * closures have no vessel, so there is nothing to ask about and no query to run.
+ */
+function vesselElsewhereQuery(
+  sql: ReturnType<typeof db>,
+  kind: BookingKind,
+  vesselId: string | null,
+  berthId: string,
+  start: string,
+  end: string,
+): Promise<ElsewhereRow[]> {
+  if (kind !== 'vessel' || !vesselId) return Promise.resolve([]);
+  return sql`
+    select b.id, b.berth_id, b.vessel_id, b.kind, b.label, b.start_date, b.end_date,
+           be.name as berth_name
+      from bookings b
+      join berths be on be.id = b.berth_id
+     where b.vessel_id = ${vesselId}
+       and b.berth_id <> ${berthId}
+       and b.status = 'active'
+       and b.start_date <= ${end}::date
+       and b.end_date   >= ${start}::date
+     order by b.start_date` as unknown as Promise<ElsewhereRow[]>;
 }
 
 /**
@@ -96,13 +153,14 @@ export async function checkBooking(input: {
       bookable: false,
       conflicts: [],
       fit: null,
+      vesselClashes: [],
       blockedBecause: 'The end date must not be before the start date.',
     };
   }
 
-  // These three lookups are independent of each other, and this runs on every debounced
+  // These four lookups are independent of each other, and this runs on every debounced
   // keystroke against a pooler that is a network hop away, so serialising them is felt.
-  const [berthRows, rows, vesselRows] = await Promise.all([
+  const [berthRows, rows, vesselRows, elsewhereRows] = await Promise.all([
     sql`select id, length_ft, capacity_mode from berths where id = ${input.berthId}`,
     sql`
       select id, berth_id, vessel_id, kind, status, label, start_date, end_date
@@ -112,11 +170,14 @@ export async function checkBooking(input: {
          and start_date <= ${input.end}::date
          and end_date   >= ${input.start}::date`,
     vesselLengthQuery(sql, input.kind, input.vesselId),
+    vesselElsewhereQuery(sql, input.kind, input.vesselId, input.berthId, input.start, input.end),
   ]);
 
   const berth = berthRows[0];
   if (!berth) {
-    return { bookable: false, conflicts: [], fit: null, blockedBecause: 'Unknown berth.' };
+    return {
+      bookable: false, conflicts: [], fit: null, vesselClashes: [], blockedBecause: 'Unknown berth.',
+    };
   }
 
   const existing: Booking[] = rows.map((r) => ({
@@ -150,7 +211,41 @@ export async function checkBooking(input: {
     }
   }
 
+  const elsewhere: Booking[] = elsewhereRows.map((r) => ({
+    id: r.id,
+    berthId: r.berth_id,
+    vesselId: r.vessel_id,
+    kind: r.kind,
+    status: 'active',
+    label: r.label,
+    range: {
+      start: r.start_date.toISOString().slice(0, 10),
+      end: r.end_date.toISOString().slice(0, 10),
+    },
+  }));
+  const berthNameOf = new Map(elsewhereRows.map((r) => [r.id, r.berth_name]));
+  const vesselClashes = findVesselClashes(
+    {
+      id: input.excludeBookingId,
+      berthId: input.berthId,
+      vesselId: input.vesselId,
+      range: { start: input.start, end: input.end },
+    },
+    elsewhere,
+  ).map((c) => ({
+    id: c.booking.id,
+    // The other booking's own label is left out: for a vessel booking it is the hull's
+    // name, which both panels have already said on screen before this line is reached.
+    berthName: berthNameOf.get(c.booking.id) ?? '',
+    startDate: c.booking.range.start,
+    endDate: c.booking.range.end,
+    sharedDays: c.sharedDays,
+    sharedStart: c.shared.start,
+  }));
+
   return {
+    // `vesselClashes` is absent from this line on purpose. It is advisory, and a hull in
+    // two places is a question for a person, not a refusal from a form (DECISIONS 2).
     bookable: conflicts.length === 0,
     conflicts: conflicts.map((c) => ({
       id: c.id,
@@ -159,6 +254,7 @@ export async function checkBooking(input: {
       endDate: c.range.end,
     })),
     fit,
+    vesselClashes,
     blockedBecause:
       conflicts.length > 0
         ? `${conflicts[0].label} already holds this berth ${conflicts[0].range.start} to ${conflicts[0].range.end}.`
@@ -244,7 +340,7 @@ export async function createBooking(input: {
       const [row] = await tx`
         insert into bookings (berth_id, vessel_id, kind, status, label, start_date, end_date, notes, source)
         values (${input.berthId}, ${vesselId}, ${input.kind}, 'active', ${input.label},
-                ${input.start}, ${input.end}, ${input.notes ?? null}, 'manual')
+                ${input.start}, ${input.end}, ${cleanNotes(input.notes)}, 'manual')
         returning id`;
       id = row.id as string;
 
@@ -387,31 +483,45 @@ async function refreshTooLongItems(
 }
 
 /**
- * Move a booking: to a different berth, to different dates, or both.
+ * Update a booking: its berth, its dates, what it is called, what kind of thing it is,
+ * and the coordinator's note — any of them, in one transaction.
  *
  * The conflict check is the constraint, re-run by the update itself — `during` is a
  * generated column, so changing either date re-evaluates the exclusion exactly as
  * changing the berth does. Moving into an occupied slot is refused by the database on
  * this path for the same reason it is refused on an insert, and there is no override.
  *
- * Dates matter as much as berths and cost nothing extra to support: the alternative
- * was cancel-and-rebook, which loses the row's identity, its import provenance and the
- * review items hanging off it, and leaves two bookings where the facility has one.
+ * Everything here exists for the same reason the dates do: the alternative is
+ * cancel-and-rebook, which loses the row's identity, its import provenance
+ * (`imported from sheet 2010, row 75` becomes `entered in this system`) and the review
+ * items hanging off it, and leaves two bookings where the facility has one. That trade
+ * was refused for a mistyped date; a mistyped vessel name is the same trade.
  *
  * The fit check is re-run here for the queue: the stored too-long item named the old
- * berth and the old span, and left alone it would keep reporting a problem the board no
- * longer shows — or miss the one the move just created.
+ * berth, the old span and the old vessel, and left alone it would keep reporting a
+ * problem the board no longer shows — or miss the one this write just created. A booking
+ * that has stopped being a vessel loses its item outright, since nothing is being
+ * measured any more.
  */
-export async function moveBooking(
+export async function updateBooking(
   id: string,
-  to: { berthId: string; start: string; end: string },
+  to: {
+    berthId: string;
+    start: string;
+    end: string;
+    label: string;
+    kind: BookingKind;
+    notes: string | null;
+  },
 ): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {
-    // Where it sits now decides whether this is scheduling or correcting the record,
-    // so the rule needs the stored start — and this is the check for anything calling
-    // the action directly, which the panel's disabled button cannot be.
-    const [row] = await sql`select start_date::text from bookings where id = ${id}`;
+    // Where it sits now decides whether this is scheduling or correcting the record, and
+    // what it is linked to now decides whether the name has to be re-resolved — so the
+    // rules need the stored row, and this is the check for anything calling the action
+    // directly, which the panel's disabled button cannot be.
+    const [row] = await sql`
+      select start_date::text, kind, label, vessel_id from bookings where id = ${id}`;
     if (!row) return { ok: false, error: 'That booking no longer exists.' };
 
     /*
@@ -433,10 +543,34 @@ export async function moveBooking(
     });
     if (!verdict.ok) return { ok: false, error: verdict.error };
 
+    const named = checkEdit({ kind: to.kind, label: to.label });
+    if (!named.ok) return { ok: false, error: named.error };
+
+    const link = vesselLinkFor(
+      {
+        kind: row.kind as BookingKind,
+        label: row.label as string,
+        vesselId: row.vessel_id as string | null,
+      },
+      { kind: to.kind, label: to.label },
+    );
+
     await sql.begin(async (tx) => {
+      // Inside the transaction, through the same function the create path uses, so a
+      // renamed booking joins the hull it names — or registers it — and never ends up
+      // pointing at the vessel it used to be. A hull left with no bookings drops off the
+      // register on its own: it INNER JOINs bookings (invariant 2), and its row stays,
+      // so the name still completes and a correction back finds it again.
+      const vesselId =
+        link.action === 'clear' ? null
+          : link.action === 'resolve' ? await findOrCreateVessel(tx, link.name)
+            : (row.vessel_id as string | null);
+
       await tx`
         update bookings
-           set berth_id = ${to.berthId}, start_date = ${to.start}, end_date = ${to.end}
+           set berth_id = ${to.berthId}, start_date = ${to.start}, end_date = ${to.end},
+               label = ${to.label.trim()}, kind = ${to.kind}, notes = ${cleanNotes(to.notes)},
+               vessel_id = ${vesselId}
          where id = ${id}`;
       await refreshTooLongItems(tx, { bookingId: id });
     });
@@ -797,6 +931,14 @@ function describeDbError(e: unknown): string {
     return 'That berth is already occupied for part of those dates. The database refused the booking.';
   }
   if (err.code === '23514') {
+    // Two CHECK constraints guard this table and they are about different things, so the
+    // class alone cannot name the problem: `end_not_before_start` is the dates, and
+    // `vessel_required_for_vessel_kind` is a vessel booking with nothing to link to,
+    // reachable now that the kind is editable. Reporting the second as a date problem
+    // would send someone to fix the one field that is right.
+    if (err.constraint_name === 'vessel_required_for_vessel_kind') {
+      return 'A vessel booking has to name a vessel. The database refused the change.';
+    }
     return 'Those dates are not valid for a booking.';
   }
   if (err.code === '22000') {

@@ -317,12 +317,17 @@ a { color: var(--vessel); }
 
 .field { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 11px; }
 .field > label { width: 78px; flex: none; font-size: 13px; color: var(--ink-muted); padding-top: 8px; }
-.field input, .field select {
+.field input, .field select, .field textarea {
   font: inherit; font-size: 14px; padding: 7px 10px; flex: 1; min-width: 0;
   border: 1px solid var(--axis); border-radius: 8px;
   background: var(--surface); color: var(--ink);
 }
-.field input:focus, .field select:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
+/* A note is prose, so it wraps and it grows downwards only: a textarea that can be
+   dragged wider escapes the 78px label column and the sheet itself. */
+.field textarea { resize: vertical; line-height: 1.45; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: 2px solid var(--vessel); outline-offset: 1px;
+}
 /* Two date inputs on one row, with the word between them rather than a second label. */
 .field.dates { align-items: baseline; }
 .field.dates .span { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; }
