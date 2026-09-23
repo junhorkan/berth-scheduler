@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   normalizeQuery, isSearchable, escapeLike, likePattern, groupHits, MIN_QUERY_LENGTH,
-  formatSpan, hitHref,
+  formatSpan, formatSpanFull, hitHref,
 } from './search';
 import type { SearchHit } from './search';
 
@@ -155,6 +155,41 @@ describe('formatSpan', () => {
   it('reads the date from the string, so it never shifts by timezone', () => {
     expect(formatSpan('2010-01-01', '2010-01-01')).toBe('Jan 1');
     expect(formatSpan('2010-12-31', '2010-12-31')).toBe('Dec 31');
+  });
+});
+
+/*
+  Review spans 23 years with nothing beside a row to say which one, so it needs the
+  year that /search leaves to its own column. A sibling rather than a change to
+  formatSpan: the search table and the berth suggester both read the shorter form.
+*/
+describe('formatSpanFull', () => {
+  it('states the year on a single day', () => {
+    expect(formatSpanFull('2017-07-11', '2017-07-11')).toBe('Jul 11 2017');
+  });
+  it('states the year once within one month', () => {
+    expect(formatSpanFull('2010-07-06', '2010-07-19')).toBe('Jul 6 – 19 2010');
+  });
+  it('states the year once across a month boundary', () => {
+    expect(formatSpanFull('2010-06-28', '2010-07-03')).toBe('Jun 28 – Jul 3 2010');
+  });
+  // The one case a single trailing year would get wrong.
+  it('states both years across a year boundary', () => {
+    expect(formatSpanFull('2004-12-28', '2005-01-04')).toBe('Dec 28 2004 – Jan 4 2005');
+  });
+  it('keeps a leap day, reading the string rather than a Date', () => {
+    expect(formatSpanFull('2004-02-29', '2004-02-29')).toBe('Feb 29 2004');
+    expect(formatSpanFull('2004-02-27', '2004-02-29')).toBe('Feb 27 – 29 2004');
+  });
+  // The whole point: no row on Review may read as an ISO date.
+  it('never reproduces the ISO form', () => {
+    for (const [a, b] of [
+      ['1997-08-01', '1997-08-01'],
+      ['2006-02-04', '2006-10-20'],
+      ['2019-12-31', '2020-01-01'],
+    ]) {
+      expect(formatSpanFull(a, b)).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    }
   });
 });
 

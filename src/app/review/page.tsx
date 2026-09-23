@@ -2,8 +2,9 @@ import Nav from '../../components/Nav';
 import { ResolveButton } from '../../components/ResolveButton';
 import { getReviewItems, getMissingLengthSummary, getRecentlyCancelled } from '../../db/queries';
 import type { ReviewRow } from '../../db/queries';
-import { groupReviewItems, describeOccurrences } from '../../lib/review';
+import { groupReviewItems, describeOccurrences, tighten } from '../../lib/review';
 import type { ReviewGroup } from '../../lib/review';
+import { formatSpanFull } from '../../lib/search';
 import { relativeTime } from '../../lib/cancelled';
 import { RestoreButton } from '../../components/RestoreButton';
 
@@ -49,25 +50,8 @@ const LABEL: Record<string, { title: string; tone: string }> = {
  */
 const HEAD = 5;
 
-/**
- * Two display-only repairs to a stored sentence. The text in the database is left
- * exactly as the importer wrote it.
- *
- * It ends with the span in brackets — `... over by 45ft. (2006-02-04..2006-02-04)` —
- * which the meta line underneath already states.
- *
- * And it spells feet with an apostrophe, because that is what the importer wrote when
- * these rows were created. The app says `ft` everywhere now, and `refreshTooLongItems`
- * writes `ft` — but only for rows it rebuilds, so the sentence a visitor actually reads
- * on the live schedule is still `Vessel is 100' but the berth is 55'`. Normalising here
- * fixes old rows and new ones together without rewriting anybody's data.
- */
-function tighten(detail: string): string {
-  return detail
-    .replace(/\s*\(\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}\)\s*$/, '')
-    // Only after a number, so an apostrophe in a vessel's name is left alone.
-    .replace(/(\d)'/g, '$1ft');
-}
+/* `tighten` — the display-only repairs to a stored sentence — moved to lib/review.ts:
+   it is regex on prose, and prose is worth a test. It stays display-only there. */
 
 export default async function ReviewPage() {
   const [items, missing, cancelled] = await Promise.all([
@@ -186,7 +170,7 @@ export default async function ReviewPage() {
                   <div className="qmain">
                     <span className="qtext">{c.label}</span>
                     <span className="qdetail">
-                      {c.berthName} &middot; {c.startDate} to {c.endDate}
+                      {c.berthName} &middot; {formatSpanFull(c.startDate, c.endDate)}
                     </span>
                     <span className="qmeta">Cancelled {relativeTime(c.cancelledAt)}</span>
                   </div>

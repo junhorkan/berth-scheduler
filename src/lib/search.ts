@@ -146,6 +146,25 @@ export function formatSpan(startDate: string, endDate: string): string {
   return `${from} – ${monthAbbr(endMonth)} ${Number(endDay)}`;
 }
 
+/**
+ * The same span with its year: `Jul 11 2017`, `Jul 6 – 19 2010`, `Dec 28 2004 – Jan 4 2005`.
+ *
+ * `/search` can leave the year off because its table states it in a column of its own.
+ * Review cannot: its rows run from 1997 to 2019 with nothing around them to say which
+ * year is meant, so an undated `Jul 11` there is a question, not an answer.
+ *
+ * It delegates to `formatSpan` rather than re-deriving the month and day, so the two
+ * cannot drift; the year is stated once when the span stays inside it, and on both
+ * sides when it does not — `Dec 28 – Jan 4` is the one case where a single trailing
+ * year would be wrong.
+ */
+export function formatSpanFull(startDate: string, endDate: string): string {
+  const startYear = startDate.slice(0, 4);
+  const endYear = endDate.slice(0, 4);
+  if (startYear === endYear) return `${formatSpan(startDate, endDate)} ${startYear}`;
+  return `${formatSpan(startDate, startDate)} ${startYear} – ${formatSpan(endDate, endDate)} ${endYear}`;
+}
+
 function monthAbbr(month: string): string {
   return MONTH_NAMES[Number(month) - 1].slice(0, 3);
 }

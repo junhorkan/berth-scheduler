@@ -8,6 +8,7 @@
  *
  * Pure: no database, no React.
  */
+import { formatSpanFull } from './search';
 
 /** The fields of a review row this module needs. Structural, so `db` stays out of `lib`. */
 export type Groupable = {
@@ -68,10 +69,59 @@ export function groupReviewItems<T extends Groupable>(rows: T[]): ReviewGroup<T>
   return [...byKey.values()];
 }
 
-/** Where a group of occurrences happened, for the line under the headline. */
+/**
+ * Where a group of occurrences happened, for the line under the headline.
+ *
+ * A row carries its booking's start and no end, so a single occurrence is one date —
+ * `Jul 11 2017` — and never a span it cannot know the far side of. Several occurrences
+ * are first start to last start, which is a range of bookings rather than one stay, so
+ * the count leads and the dates follow it.
+ */
 export function describeOccurrences(group: ReviewGroup<Groupable>): string | null {
   const dated = group.rows.map((r) => r.bookingStart).filter((d): d is string => Boolean(d));
   if (dated.length === 0) return null;
-  if (dated.length === 1) return dated[0];
-  return `${dated.length} bookings, ${dated[0]} to ${dated[dated.length - 1]}`;
+  if (dated.length === 1) return formatSpanFull(dated[0], dated[0]);
+  return `${dated.length} bookings, ${formatSpanFull(dated[0], dated[dated.length - 1])}`;
+}
+
+/**
+ * Display-only repairs to a sentence the importer stored. The text in the database is
+ * left exactly as it was written; nothing here rewrites anybody's data.
+ *
+ * Three of them, all of them prose the app has since outgrown:
+ *
+ * It ends with the span in brackets — `... over by 45ft. (2006-02-04..2006-02-04)` —
+ * which the meta line underneath already states.
+ *
+ * A conflict *begins* with one — `2017-07-11..2017-07-11 on South Float East overlaps
+ * OSV AMBER REEF` — and an unreadable cell carries a year-month and a day number,
+ * `In North Pier West, 2001-06 day 16`. Both are the only ISO dates left in the
+ * product; they become the span and the date the rest of the site would write. The
+ * berth stays: the meta line repeats it, but dropping words out of the middle of a
+ * stored sentence is a bigger claim than restating its dates.
+ *
+ * And it spells feet with an apostrophe, because that is what the importer wrote when
+ * these rows were created. The app says `ft` everywhere now, and `refreshTooLongItems`
+ * writes `ft` — but only for rows it rebuilds, so the sentence a visitor actually reads
+ * on the live schedule is still `Vessel is 100' but the berth is 55'`. Normalising here
+ * fixes old rows and new ones together.
+ */
+export function tighten(detail: string): string {
+  return detail
+    .replace(/\s*\(\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}\)\s*$/, '')
+    .replace(
+      /^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})(?=\s|$)/,
+      (_all, start: string, end: string) => formatSpanFull(start, end),
+    )
+    // `2001-06 day 16` is a year-month and a day number, never a span: the importer
+    // knows which cell it read and not how long the stay was.
+    .replace(
+      /\b(\d{4})-(\d{2}) day (\d{1,2})\b/,
+      (_all, year: string, month: string, day: string) => {
+        const iso = `${year}-${month}-${day.padStart(2, '0')}`;
+        return formatSpanFull(iso, iso);
+      },
+    )
+    // Only after a number, so an apostrophe in a vessel's name is left alone.
+    .replace(/(\d)'/g, '$1ft');
 }

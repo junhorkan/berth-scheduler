@@ -494,8 +494,11 @@ test.describe('the other tabs', () => {
     // Rows on screen are fewer than the occurrences behind them.
     const rowCount = await rows.count();
     expect(rowCount).toBeGreaterThan(0);
-    await expect(page.getByText(/bookings, \d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}/).first())
-      .toBeVisible();
+    // And it says where they are in words, not in the form the database stores:
+    // `2 bookings, Sep 3 – 12 2026`, or with both years when the two cross one.
+    await expect(
+      page.getByText(/bookings, [A-Z][a-z]{2} \d{1,2}( \d{4})? – ([A-Z][a-z]{2} )?\d{1,2} \d{4}/).first(),
+    ).toBeVisible();
   });
 
   test('every open review item offers an action', async ({ page }) => {

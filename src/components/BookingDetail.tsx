@@ -12,6 +12,7 @@ import type { BookingKind } from '../domain/types';
 import { RestoreButton } from './RestoreButton';
 import { hasEnded, ENDED_REFUSAL } from '../domain/record';
 import { todayISO, lastBookableISO } from '../lib/nav';
+import { formatSpanFull } from '../lib/search';
 
 /**
  * An existing booking: cancel it, or correct it — the berth, the dates, the name, what
@@ -147,7 +148,7 @@ export default function BookingDetail({
     // Say it is reversible BEFORE the click, not after: the reassurance is worthless
     // to someone deciding whether to press the button if they only find it afterwards.
     if (!confirm(
-      `Cancel "${booking.label}" (${booking.startDate} to ${booking.endDate})? `
+      `Cancel "${booking.label}" (${formatSpanFull(booking.startDate, booking.endDate)})? `
       + 'The berth becomes free. You can restore it from Review.',
     )) return;
     setError(null);
@@ -271,7 +272,7 @@ export default function BookingDetail({
                 work that means nothing (DECISIONS 26) — and it can no longer be moved
                 either, so this says what it is rather than naming an action. */}
             {ended
-              ? `. It ended on ${booking.endDate}, so it is history rather than work.`
+              ? `. It ended ${formatSpanFull(booking.endDate, booking.endDate)}, so it is history rather than work.`
               : '; move or cancel it to resolve.'}
           </p>
         )}
@@ -290,7 +291,7 @@ export default function BookingDetail({
             <dd>
               {booking.startDate === booking.endDate
                 ? booking.startDate
-                : `${booking.startDate} to ${booking.endDate}`}
+                : formatSpanFull(booking.startDate, booking.endDate)}
             </dd>
             <dt>Kind</dt>
             <dd>{booking.kind === 'vessel' ? 'Vessel' : booking.kind === 'event' ? 'Event' : 'Closure'}</dd>
@@ -446,14 +447,14 @@ export default function BookingDetail({
             {c.sharedDays === 1 ? (
               <>
                 <b>Check — moving berth on {c.sharedStart}?</b>{' '}
-                This vessel is also booked at {c.berthName}, {c.startDate} to {c.endDate}, and{' '}
+                This vessel is also booked at {c.berthName}, {formatSpanFull(c.startDate, c.endDate)}, and{' '}
                 {c.sharedStart} is the only day the two share. If it is not a shift between
                 berths that day, one of the two is wrong.
               </>
             ) : (
               <>
                 <b>Warning — this vessel is booked elsewhere.</b>{' '}
-                It is also at {c.berthName}, {c.startDate} to {c.endDate} — {c.sharedDays} days
+                It is also at {c.berthName}, {formatSpanFull(c.startDate, c.endDate)} — {c.sharedDays} days
                 in common, and one hull cannot be in two places.
               </>
             )}{' '}

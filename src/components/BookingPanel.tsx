@@ -11,6 +11,7 @@ import type { BookingKind } from '../domain/types';
 import { cleanNotes } from '../domain/edit';
 import { describeChoices, suggestBerth } from '../lib/suggest';
 import { parseLengthFt } from '../lib/length';
+import { formatSpanFull } from '../lib/search';
 import type { Occupancy } from '../lib/suggest';
 
 /**
@@ -468,7 +469,7 @@ function Verdict({
       {check.conflicts.length > 0 ? (
         <p className="verdict stop">
           <b>Blocked — berth already occupied.</b>{' '}
-          {check.conflicts.map((c) => `${c.label} holds it ${c.startDate} to ${c.endDate}`).join('; ')}.
+          {check.conflicts.map((c) => `${c.label} holds it ${formatSpanFull(c.startDate, c.endDate)}`).join('; ')}.
           The database will refuse this write.
         </p>
       ) : (
@@ -489,14 +490,14 @@ function Verdict({
           {c.sharedDays === 1 ? (
             <>
               <b>Check — moving berth on {c.sharedStart}?</b>{' '}
-              This vessel is also booked at {c.berthName}, {c.startDate} to {c.endDate}, and{' '}
+              This vessel is also booked at {c.berthName}, {formatSpanFull(c.startDate, c.endDate)}, and{' '}
               {c.sharedStart} is the only day the two share. If it is not a shift between
               berths that day, one of the two is wrong.
             </>
           ) : (
             <>
               <b>Warning — this vessel is booked elsewhere.</b>{' '}
-              It is also at {c.berthName}, {c.startDate} to {c.endDate} — {c.sharedDays} days
+              It is also at {c.berthName}, {formatSpanFull(c.startDate, c.endDate)} — {c.sharedDays} days
               in common, and one hull cannot be in two places.
             </>
           )}{' '}
