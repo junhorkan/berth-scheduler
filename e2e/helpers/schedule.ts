@@ -4,11 +4,13 @@
  * One fixture month holding every state the board can draw: a vessel that fits, one
  * that does not, a single-day violation, an unknown length, an event, a closure, and
  * a stay crossing into the next month. Small enough to read, complete enough that no
- * spec needs a second fixture.
+ * spec needs a second fixture — plus one row in the month BEHIND, because a booking
+ * that has ended is read-only and nothing future-dated can prove that (see PAST).
  */
 import postgres from 'postgres';
 import {
-  resetToImported, clearSchedule as clearScheduleInApp, discardPreviousSchedule,
+  resetToImported, clearSchedule as clearScheduleInApp, restorePrevious,
+  discardPreviousSchedule,
 } from '../../src/db/mutations';
 
 function connect() {
@@ -32,6 +34,9 @@ function todayAtFacility(): { year: number; month: number } {
  * past is refused" silently starts asserting that today is refused, which it is not. It
  * passes all afternoon and fails in the evening. Two specs have now written this by hand;
  * it lives here so the third does not.
+ *
+ * `facilityDaysAgo(0)` is the facility's today, which is what a spec about the boundary
+ * between work and record needs: a booking ending today has NOT ended.
  */
 export function facilityDaysAgo(n: number): string {
   const iso = new Intl.DateTimeFormat('en-CA', {
@@ -39,6 +44,21 @@ export function facilityDaysAgo(n: number): string {
   }).format(new Date());
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * N days after an ISO date, rolling into the next month rather than clamping.
+ *
+ * The specs that book from the form's default date — today — used to write their end as
+ * `min(day + 2, 28)`, which on the 29th of a month produces an end BEFORE the start: an
+ * illegal span, a disabled Save, and a spec that fails three days in thirty for a reason
+ * nothing on screen explains. Arithmetic in UTC on a date-only string, like
+ * `facilityDaysAgo`, because the input is already the facility's own date.
+ */
+export function isoPlusDays(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
 
@@ -68,12 +88,21 @@ const FOLLOWING = monthsAhead(4);
  * past booking looked like one that had not started yet and none of them could be
  * moved. 62 specs, all green.
  *
- * So this row is seeded rather than booked, and exists to be EDITED, not created.
+ * So this row is seeded rather than booked. Its purpose has since inverted: a booking
+ * that has ended is the record, and the product no longer offers to change it
+ * (`src/domain/record.ts`). It exists to be REFUSED — the one row in the fixture that
+ * proves the panel drops its form, states the rule, and offers nothing but Close. Every
+ * one of the 2,031 imported bookings is in the same position, so this is a stand-in for
+ * the whole sample, small enough to assert exactly.
+ *
+ * Its berth and span are exported because the read-only panel states them, and a spec
+ * that reads them back is also the assertion that nothing edited the row.
  */
 const PAST = monthsAhead(-1);
 
 export const PAST_HREF = `/?y=${PAST.year}&m=${PAST.month}`;
 export const PAST_LABEL = 'R/V Test Ghost of Last Month';
+export const PAST_BERTH = 'North Pier East';
 
 export const FIXTURE_YEAR = FIXTURE.year;
 export const FIXTURE_MONTH = FIXTURE.month;
@@ -84,6 +113,10 @@ export const EMPTY_MONTH_HREF = `/?y=${monthsAhead(8).year}&m=${monthsAhead(8).m
 
 const d = (day: number, which = FIXTURE) =>
   `${which.year}-${String(which.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+/** The seeded past booking's span, which its read-only panel states back. */
+export const PAST_START = d(6, PAST);
+export const PAST_END = d(8, PAST);
 
 /** Vessels the fixture books, with the lengths that make the fit check say something. */
 const VESSELS = [
@@ -129,8 +162,8 @@ const BOOKINGS: Row[] = [
   { vessel: 'OSV Test Osprey', berth: 'North Pier East', kind: 'vessel',
     label: 'OSV Test Osprey', start: d(20), end: d(23) },
   // Last month. Seeded, never booked — see PAST above.
-  { vessel: 'R/V Test Harbor', berth: 'North Pier East', kind: 'vessel',
-    label: PAST_LABEL, start: d(6, PAST), end: d(8, PAST) },
+  { vessel: 'R/V Test Harbor', berth: PAST_BERTH, kind: 'vessel',
+    label: PAST_LABEL, start: PAST_START, end: PAST_END },
   // Small craft slips is pooled, so these coexist without tripping the conflict check.
   ...Array.from({ length: REGULAR_BOOKING_COUNT }, (_, i) => ({
     vessel: 'R/V Test Regular',
@@ -181,34 +214,69 @@ export async function seedFixture(): Promise<void> {
   }
 }
 
-/**
- * Put the sample back, through the app's own reload — the same function the "Restore the
- * original schedule" button calls, so what the suite leaves behind is exactly what the
- * button would, with no undo left pending. It used to copy the SQL, which is how the
- * two could drift.
+/*
+ * The three schedule replacements, reached the only way that is left.
  *
- * The suite replaces the schedule with its own fixture, so without this it would
- * leave the deployed database empty — the sample is what the live site serves.
+ * None of them is a UI action any more: replacing everyone's schedule from a public page
+ * with no accounts should not be one press away, so Clear and Load and Put back are the
+ * command line's (`npm run sample:load`, `npm run import`, `npm run put:back`) and these
+ * helpers'. The mutations are unchanged, and the specs below still reach every state the
+ * buttons reached — what is gone is only the press, which no visitor can perform.
+ */
+
+/**
+ * Put the sample back — the state the live site serves.
+ *
+ * The suite replaces the schedule with its own fixture, so without this it would leave
+ * the deployed database empty.
  */
 export async function restoreSample(): Promise<void> {
   if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
   const res = await resetToImported();
   if (!res.ok) throw new Error(`restoring the sample failed: ${res.error}`);
   // Restoring snapshots what it replaced, which here is the suite's own debris. Leave the
-  // live site with no "put back" offer pointing at test bookings.
+  // live site with no snapshot held that points at test bookings.
   await discardPreviousSchedule();
   await globalThis.__berthSql?.end();
 }
 
-/**
- * An empty schedule with the berths intact — what a fresh facility would see.
- *
- * No button does this any more, so this helper is the `clearSchedule` mutation's only
- * caller. It still snapshots what it removes, which is what lets the specs assert the
- * "Put back the previous schedule" offer an empty schedule carries.
- */
+/** An empty schedule with the berths intact — what a fresh facility would see. */
 export async function clearSchedule(): Promise<void> {
   if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
   const res = await clearScheduleInApp();
   if (!res.ok) throw new Error(`clearing the schedule failed: ${res.error}`);
+}
+
+/** Replace the schedule with the imported sample, exactly as `npm run sample:load` does. */
+export async function loadSample(): Promise<void> {
+  if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
+  const res = await resetToImported();
+  if (!res.ok) throw new Error(`loading the sample failed: ${res.error}`);
+}
+
+/** Put back whatever the last replacement displaced, as `npm run put:back` does. */
+export async function putBackSchedule(): Promise<void> {
+  if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
+  const res = await restorePrevious();
+  if (!res.ok) throw new Error(`putting the schedule back failed: ${res.error}`);
+}
+
+/**
+ * Which action took the snapshot that is held right now, or null if none is.
+ *
+ * This was readable on the page — the Review footer named it, and a spec read it there to
+ * prove a Load over an empty schedule had not overwritten the snapshot of what was there
+ * before. The footer is gone with the buttons, and `npm run put:back` is the only reader
+ * left, so the specs read the slot itself. The rule it is checking belongs to the
+ * mutations (`src/lib/undo.ts`), never to a caption, which is why it survives its own
+ * caption's removal.
+ */
+export async function heldSnapshotKind(): Promise<string | null> {
+  const sql = connect();
+  try {
+    const [row] = await sql`select kind from undo_meta where id = 1`;
+    return row ? (row.kind as string) : null;
+  } finally {
+    await sql.end();
+  }
 }

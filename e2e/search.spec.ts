@@ -8,8 +8,11 @@ import { REGULAR_BOOKING_COUNT } from './helpers/schedule';
 
 test.describe('finding a booking', () => {
   test('finds a vessel from the masthead and jumps to it on the board', async ({ page }) => {
+    // The box names all three searchable kinds. It used to say "vessel or event", so it
+    // omitted the third kind /search's own panel lists — and a box that omits closures is
+    // one nobody tries a closure in.
     await page.goto('/');
-    await page.getByRole('searchbox', { name: /find a vessel or event/i }).fill('test harbor');
+    await page.getByRole('searchbox', { name: /find a vessel, event or closure/i }).fill('test harbor');
     await page.getByRole('button', { name: 'Find' }).click();
 
     await expect(page.locator('.shead b', { hasText: 'R/V Test Harbor' })).toBeVisible();
@@ -68,7 +71,7 @@ test.describe('finding a booking', () => {
 
   test('keeps the query in the box so it can be refined', async ({ page }) => {
     await page.goto('/search?q=test+harbor');
-    await expect(page.getByRole('searchbox', { name: /find a vessel or event/i }))
+    await expect(page.getByRole('searchbox', { name: /find a vessel, event or closure/i }))
       .toHaveValue('test harbor');
   });
 
@@ -87,7 +90,7 @@ test.describe('finding a booking', () => {
     for (const path of ['/', '/vessels', '/review']) {
       await page.goto(path);
       await expect(
-        page.getByRole('searchbox', { name: /find a vessel or event/i }),
+        page.getByRole('searchbox', { name: /find a vessel, event or closure/i }),
         `search box on ${path}`,
       ).toBeVisible();
     }

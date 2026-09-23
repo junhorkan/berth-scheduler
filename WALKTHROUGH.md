@@ -129,7 +129,7 @@ board renders one; watching the system refuse a booking proves the rule is real.
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
 > `src/domain` and `src/lib`, which import nothing from the database or the UI: 312 unit tests
 > run in about half a second with no infrastructure, and 40 more verify the parse of their
-> workbook once it is in `data/`. 69 Playwright specs build their own fixture against a real
+> workbook once it is in `data/`. 70 Playwright specs build their own fixture against a real
 > server and restore the sample afterwards, so the app is left in the state it ships in.
 >
 > I used Claude to write it. The work that mattered was deciding what it should do, and

@@ -1,8 +1,13 @@
 import { test, expect } from '@playwright/test';
 import {
   FIXTURE_YEAR, FIXTURE_MONTH, FIXTURE_HREF, NEXT_MONTH_HREF, EMPTY_MONTH_HREF,
-  PAST_HREF, PAST_LABEL, facilityDaysAgo,
+  PAST_HREF, PAST_LABEL, PAST_BERTH, PAST_START, PAST_END,
+  REGULAR_BOOKING_COUNT, facilityDaysAgo,
 } from './helpers/schedule';
+// The refusal is imported, not retyped: the panel and the write path read it from here
+// too (src/domain/record.ts), so a reworded rule cannot leave a spec asserting the old
+// sentence — or, worse, passing because it asserted a paraphrase of it.
+import { ENDED_REFUSAL } from '../src/domain/record';
 
 /**
  * The board is the product. These assert the two things it exists to do:
@@ -66,6 +71,9 @@ test.describe('the board', () => {
     await expect(rules).toBeVisible();
     await expect(rules).toContainText('too long for that berth');
     await expect(rules).toContainText('cannot be saved');
+    // The board's own statement of the rule the panel enforces (src/domain/record.ts):
+    // a bar you can edit and a bar you cannot look identical, so the orientation says so.
+    await expect(rules).toContainText('has ended is the record');
 
     // And it is orientation, not decoration: the moment the month has work in it, the
     // board speaks for itself and this must be gone.
@@ -219,9 +227,11 @@ test.describe('creating a booking', () => {
     await dates.nth(1).fill(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-26`);
 
     const berth = page.getByLabel('Berth', { exact: true });
-    // How far short, not merely that it is short.
+    // How far over, not merely that it does not fit — and framed from the vessel, like
+    // every other surface: the panel's "over by 55ft" and the bar's "145ft in 90ft berth".
+    // This option used to read "115ft too short", which described the berth instead.
     await expect(berth.locator('option', { hasText: 'Inner Channel' }))
-      .toHaveText(/115ft too short/);
+      .toHaveText(/free, vessel is 115ft too long/);
     await expect(berth.locator('option', { hasText: 'North Pier East' }))
       .toHaveText(/free, fits/);
   });
@@ -417,8 +427,18 @@ test.describe('undoing a cancellation', () => {
 
 test.describe('the other tabs', () => {
   test('Vessels lists the biggest data gaps first, and says so in words', async ({ page }) => {
+    // The masthead used to report the split and then do arithmetic on it. Both jobs are
+    // done better below, so the page states them where they belong: the split is a button
+    // that names itself and is the one the page opens on, and the ordering puts the hull
+    // whose missing length blocks the most bookings first, with that number on the row.
     await page.goto('/vessels');
-    await expect(page.getByText(/ha(s|ve) no length on record/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'No length on record', exact: true }))
+      .toHaveAttribute('aria-pressed', 'true');
+
+    // R/V Test Regular has no length and 8 bookings; every other unmeasured hull has one.
+    const first = page.locator('.queue li').first();
+    await expect(first).toContainText('R/V Test Regular');
+    await expect(first).toContainText(`${REGULAR_BOOKING_COUNT} bookings`);
     await expect(page.getByText('M/V Test Drifter')).toBeVisible();
   });
 
@@ -432,12 +452,13 @@ test.describe('the other tabs', () => {
     await expect(page.locator('.prange')).toHaveText(/of \d+/);
 
     // The two halves of the register are two buttons, and pressing one replaces the list.
+    // `exact`, because "No length on record" contains the other button's whole name.
     await expect(page.getByText('M/V Test Drifter')).toBeVisible();
     await expect(page.getByText('R/V Test Harbor')).toBeHidden();
-    await page.getByRole('button', { name: 'With a length recorded' }).click();
+    await page.getByRole('button', { name: 'Length on record', exact: true }).click();
     await expect(page.getByText('R/V Test Harbor')).toBeVisible();
     await expect(page.getByText('M/V Test Drifter')).toBeHidden();
-    await page.getByRole('button', { name: 'No length on record' }).click();
+    await page.getByRole('button', { name: 'No length on record', exact: true }).click();
 
     // Filtering is a search across the whole register, not inside the category on screen.
     await page.getByLabel('Filter vessels by name').fill('Drifter');
@@ -452,7 +473,8 @@ test.describe('the other tabs', () => {
     // 398 of 427 items were this type, burying everything that needed a decision.
     await page.goto('/review');
     // One section heading, not one row per vessel and no longer a pill saying it twice.
-    await expect(page.getByRole('heading', { name: /No recorded length/ })).toHaveCount(1);
+    // Named the way the register's own button names it, so the two cannot drift.
+    await expect(page.getByRole('heading', { name: /No length on record/ })).toHaveCount(1);
     // The heading is the whole row: a count and a way to the work, no arithmetic.
     await expect(page.getByRole('link', { name: /Add lengths/ })).toHaveAttribute('href', '/vessels');
   });
@@ -856,67 +878,134 @@ test.describe('the new-booking sheet opens usable', () => {
 });
 
 /**
- * A booking already in the past is a RECORD, and a record can be corrected.
+ * A booking that has ended is the RECORD, and this product does not change the record.
  *
- * `src/domain/move.ts` says so and nine unit tests prove the rule — but the value
- * reaching it came from `String(aDate)`, which is "Sat Nov 30 2019 19:00:00 GMT-0500".
- * Compared with `>=` against "2026-09-22" that is a string comparison a letter always
- * wins, so every past booking read as "has not started yet" and all 2,031 imported
- * rows were unmovable. The pure function was tested; its caller was not, and the whole
- * fixture was future-dated, so nothing in the suite could see it.
+ * These specs used to prove the opposite, and they were right to at the time: `move.ts`
+ * still carries the reasoning that a typed-wrong date from 2010 should be fixable, and a
+ * real bug hid behind a future-dated fixture until one row was seeded in the past.
+ *
+ * What changed is the deployment, not the principle (`src/domain/record.ts`). This runs
+ * on a public URL with no accounts, and an edit overwrites berth, span, name, kind and
+ * note in place with no undo — so "anyone may correct the record" reads as "anyone may
+ * rewrite 23 years of somebody else's history, permanently, from a link". The correction
+ * stays with whoever holds the database credentials.
+ *
+ * So the same fixture row now proves a guarantee rather than a capability, which is the
+ * stronger thing to hold: every one of the 2,031 imported bookings is in its position.
  */
-test.describe('correcting a booking that has already happened', () => {
-  test('moves a past booking to another berth', async ({ page }) => {
+test.describe('a booking that has already happened', () => {
+  test('offers no way to change it, and says why instead of just going quiet', async ({ page }) => {
     await page.goto(PAST_HREF);
     await page.getByLabel(new RegExp(PAST_LABEL)).first().click();
-    await expect(page.getByRole('dialog')).toContainText(PAST_LABEL);
+    const panel = page.getByRole('dialog', { name: 'Booking', exact: true });
+    await expect(panel).toContainText(PAST_LABEL);
 
-    const berth = page.getByLabel('Berth', { exact: true });
-    await expect(berth).toHaveValue(
-      (await berth.locator('option', { hasText: 'North Pier East' }).getAttribute('value')) ?? '',
-    );
-    await berth.selectOption(
-      (await berth.locator('option', { hasText: 'South Float West' }).getAttribute('value')) ?? '',
-    );
-    await page.getByRole('button', { name: 'Save changes' }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // The rule, said in the sentence the write path refuses with. A reader who is told
+    // "this is the record" has learned why; one who finds the buttons missing has only
+    // learned that something is broken.
+    await expect(panel.locator('.verdict.idle')).toHaveText(ENDED_REFUSAL);
 
-    await page.goto(PAST_HREF);
-    await page.getByLabel(new RegExp(PAST_LABEL)).first().click();
-    await expect(page.getByRole('dialog')).toContainText('South Float West');
-    // And the refusal it must NOT give.
-    await expect(page.getByRole('dialog')).not.toContainText('has not started yet');
+    // Nothing to press, rather than something disabled: not Save, not Cancel, and not
+    // Restore either — that is the cancelled booking's move, not this one's.
+    await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Cancel booking' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Restore' })).toHaveCount(0);
 
-    // Back where the fixture had it.
-    const back = page.getByLabel('Berth', { exact: true });
-    await back.selectOption(
-      (await back.locator('option', { hasText: 'North Pier East' }).getAttribute('value')) ?? '',
-    );
-    await page.getByRole('button', { name: 'Save changes' }).click();
+    // And no form behind them. Every field the edit panel writes is gone, not merely
+    // read-only, so there is nothing for a save path to be asked about.
+    await expect(page.getByLabel('Start date')).toHaveCount(0);
+    await expect(page.getByLabel('End date')).toHaveCount(0);
+    await expect(page.getByLabel('Berth', { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Note', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Event', exact: true })).toHaveCount(0);
+
+    // One control, and it leaves. `.actions` is where the panel's buttons live, so this
+    // is the assertion that nothing else was added beside Close.
+    const actions = page.locator('.panel-sheet .actions .btn');
+    await expect(actions).toHaveCount(1);
+    await expect(actions).toHaveText('Close');
+    await actions.click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('corrects a past booking to other past dates', async ({ page }) => {
+  test('states the record it will not change, rather than an empty panel', async ({ page }) => {
+    // With the form gone the panel would otherwise show a name, a hull and a provenance
+    // line and nothing else — not even which berth or which days. A read-only view that
+    // omits the record is not a read-only view of anything.
+    //
+    // It doubles as the assertion that nothing edited the row: these are the values
+    // `seedFixture` wrote, read back through the panel that used to offer to change them.
     await page.goto(PAST_HREF);
     await page.getByLabel(new RegExp(PAST_LABEL)).first().click();
-    const start = await page.getByLabel('Start date').inputValue();
-    const shifted = `${start.slice(0, 8)}12`;
+    const panel = page.getByRole('dialog', { name: 'Booking', exact: true });
 
-    await page.getByLabel('Start date').fill(shifted);
-    await page.getByLabel('End date').fill(`${start.slice(0, 8)}14`);
-    // No floor on a record being corrected: the picker must not fight it either.
-    await expect(page.getByLabel('Start date')).not.toHaveAttribute('min', /.+/);
+    await expect(panel).toContainText(PAST_BERTH);
+    await expect(panel).toContainText(`${PAST_START} to ${PAST_END}`);
+    await expect(panel).toContainText('Kind');
+    await expect(panel).toContainText('Vessel');
+    // The hull on the register, which the label is not, and where the row came from.
+    await expect(panel).toContainText('R/V Test Harbor');
+    await expect(panel).toContainText('entered in this system');
+  });
+
+  test('a booking ending TODAY is still work, and the server takes the edit', async ({ page }) => {
+    // The boundary is inclusive: a booking ending today is still running today, so it is
+    // not a record until tomorrow. Off by one in either direction and the product either
+    // freezes a stay that is alongside right now, or offers to rewrite yesterday.
+    //
+    // This is also the one half of the rule a browser can hold the SERVER to. The panel's
+    // gate is a hint; `updateBooking` and `cancelBooking` refuse for themselves. Nothing
+    // in a browser can honestly make the refused call — the Server Action id is not
+    // something a spec may fabricate — but the ACCEPTED call at the exact boundary is a
+    // real round trip, and a `<=` in either place would break it.
+    const today = facilityDaysAgo(0);
+
+    await page.goto('/');
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByRole('button', { name: 'Event', exact: true }).click();
+    await page.getByLabel('Description').fill('E2E ends today');
+    const sheet = page.getByLabel('Berth', { exact: true });
+    await sheet.selectOption(
+      (await sheet.locator('option', { hasText: 'North Pier Face' }).getAttribute('value')) ?? '',
+    );
+    // Both dates default to the facility's today, so this is a single day: it has ended
+    // by no measure, and by `end_date < today` it has not ended at all.
+    const dates = page.locator('.panel-sheet input[type="date"]');
+    await expect(dates.first()).toHaveValue(today);
+    await expect(dates.nth(1)).toHaveValue(today);
+    await page.getByRole('button', { name: 'Save booking' }).click();
+
+    const bar = page.getByLabel(/E2E ends today/);
+    await expect(bar).toBeVisible();
+
+    /*
+      Opened by following the bar's own href rather than by pressing it. A bar IS that
+      link — `?y&m&sel=` is how Review and the register open one too — and this is the
+      only spec whose bar sits in the current month, where `.todaycol` is painted over
+      the lane at z-index 1 with no `pointer-events: none`. A click through the marker is
+      the board's problem to fix, not this spec's to depend on either way.
+    */
+    const href = await bar.getAttribute('href');
+    expect(href, 'a bar is a link to its own panel').toMatch(/sel=/);
+    await page.goto(href!);
+
+    // Work, not record: the form is there, and the refusal is not.
+    const panel = page.getByRole('dialog', { name: 'Booking', exact: true });
+    await expect(panel).not.toContainText(ENDED_REFUSAL);
+    await expect(page.getByLabel('End date')).toHaveValue(today);
+
+    // The write goes through, which only the server can decide.
+    await page.getByLabel('Note', { exact: true }).fill('Alongside today; sails tonight');
     await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
-    await page.goto(PAST_HREF);
-    await page.getByLabel(new RegExp(PAST_LABEL)).first().click();
-    await expect(page.getByLabel('Start date')).toHaveValue(shifted);
+    await page.goto(href!);
+    await expect(page.getByLabel('Note', { exact: true })).toHaveValue(/sails tonight/);
 
-    await page.getByLabel('Start date').fill(start);
-    await page.getByLabel('End date').fill(`${start.slice(0, 8)}08`);
-    await page.getByRole('button', { name: 'Save changes' }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // And so does the cancel, which is the other half refused on an ended booking.
+    page.once('dialog', (d) => d.accept());
+    await page.getByRole('button', { name: 'Cancel booking' }).click();
+    await expect(page.getByLabel(/E2E ends today/)).toHaveCount(0);
   });
 });
 
