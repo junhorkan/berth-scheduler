@@ -18,6 +18,7 @@ import { todayISO, lastBookableISO } from '../lib/nav';
 import { parseLengthFt } from '../lib/length';
 import { checkMove } from '../domain/move';
 import { checkEdit, cleanNotes, vesselLinkFor } from '../domain/edit';
+import { hasEnded, ENDED_REFUSAL } from '../domain/record';
 import type { ImportPlan } from '../import/plan';
 import { randomUUID } from 'node:crypto';
 
@@ -389,6 +390,16 @@ export async function createBooking(input: {
 export async function cancelBooking(id: string): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {
+    // Cancelling an ended booking is not a cancellation — the vessel already came and
+    // went. It is a deletion from the record, and it takes the row off the board along
+    // with its provenance, so the rule that closes editing has to close this too
+    // (domain/record). Checked on the server because the action is a public endpoint.
+    const [existing] = await sql`select end_date::text from bookings where id = ${id}`;
+    if (!existing) return { ok: false, error: 'That booking no longer exists.' };
+    if (hasEnded(existing.end_date as string, todayISO())) {
+      return { ok: false, error: ENDED_REFUSAL };
+    }
+
     await sql.begin(async (tx) => {
       await tx`update bookings set status = 'cancelled', cancelled_at = now() where id = ${id}`;
       // A cancelled booking occupies nothing, so anything flagged about it is moot.
@@ -483,9 +494,9 @@ async function refreshTooLongItems(
   await sql`
     insert into review_items (type, booking_id, vessel_id, berth_id, raw_text, detail)
     select 'too_long', b.id, v.id, be.id, v.canonical_name,
-           'Vessel is ' || v.length_ft || '''' ||
-           ' but the berth is ' || be.length_ft || '''' ||
-           ' — over by ' || (v.length_ft - be.length_ft) || '''' ||
+           'Vessel is ' || v.length_ft || 'ft' ||
+           ' but the berth is ' || be.length_ft || 'ft' ||
+           ' — over by ' || (v.length_ft - be.length_ft) || 'ft' ||
            ' (' || b.start_date || '..' || b.end_date || ')'
       from bookings b
       join vessels v on v.id = b.vessel_id
@@ -537,8 +548,17 @@ export async function updateBooking(
     // rules need the stored row, and this is the check for anything calling the action
     // directly, which the panel's disabled button cannot be.
     const [row] = await sql`
-      select start_date::text, kind, label, vessel_id from bookings where id = ${id}`;
+      select start_date::text, end_date::text, kind, label, vessel_id
+        from bookings where id = ${id}`;
     if (!row) return { ok: false, error: 'That booking no longer exists.' };
+
+    // A booking that has ended is what happened, and this product does not offer to
+    // change what happened (domain/record). Refused here as well as in the panel,
+    // because the panel's rules are hints and this action is a public endpoint —
+    // the whole point of the rule is that a request cannot get around it.
+    if (hasEnded(row.end_date as string, todayISO())) {
+      return { ok: false, error: ENDED_REFUSAL };
+    }
 
     /*
       `::text`, not String(a Date).

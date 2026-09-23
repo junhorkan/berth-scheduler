@@ -43,12 +43,15 @@ export default async function Nav({
         {!home && <Link className="home" href="/">&lsaquo; {SITE_NAME}</Link>}
         <span className="spacer" />
         <form className="find" method="get" action="/search" role="search">
+          {/* The three searchable kinds, named the way /search names them. This said
+              "vessel or event", so the box omitted the third kind that /search's own
+              panel lists — and a box that omits closures is one nobody tries them in. */}
           <input
             type="search"
             name="q"
             defaultValue={query}
-            placeholder="Find a vessel or event"
-            aria-label="Find a vessel or event across all years"
+            placeholder="Find a vessel, event or closure"
+            aria-label="Find a vessel, event or closure across all years"
           />
           <button type="submit">Find</button>
         </form>

@@ -657,7 +657,7 @@ most, and it was the heaviest one for a feature behind a button.
 | Register in the HTML | all 418 | none |
 
 **Why it is safe to arrive late.** A name that matches nothing is a new vessel anyway
-([invariant 2](../CLAUDE.md)), and `createBooking` resolves a known name to its row on
+([invariant 2](../CLAUDE.md#invariants)), and `createBooking` resolves a known name to its row on
 the server through `findOrCreateVessel`. So while the register is in flight the field
 still accepts anything and a save still lands on the right vessel. What waits is the
 autocomplete list and the *"100ft on record"* line, not the ability to book.
@@ -712,7 +712,7 @@ twice would wipe whatever was done after the first one, and undoing a clear *aft
 deliberately loading something else would silently discard that choice. Same rule both
 times: an undo applies to the thing it was taken for.
 
-**What this closes.** [Invariant 12](../CLAUDE.md) used to read *"nothing destructive is
+**What this closes.** [Invariant 12](../CLAUDE.md#invariants) used to read *"nothing destructive is
 irreversible, except the one thing that says so"*. Saying so in a dialog is a warning,
 not a design. The exception is gone.
 
@@ -935,6 +935,14 @@ parser still produce what it produced yesterday", and only the first one finds t
 ---
 
 ## 32. A move changes a span, not only a berth
+
+> **The function and the field list are superseded by
+> [35](../DECISIONS.md#35-a-booking-is-editable-because-the-alternative-throws-the-row-away).**
+> `moveBooking` never survived under that name: the live function is `updateBooking`
+> (`src/db/mutations.ts`), and the panel now edits the name, the kind and the note as well
+> as the berth and the dates. Everything below — why a span had to become editable at all,
+> and the floor rule that decides it — stands unchanged. Kept because the argument, and the
+> shape it arrived in, is the record.
 
 **Decision.** The booking panel's `Move to` berth dropdown becomes two fields — **Berth**
 and **Dates** — and one button saves whichever changed. `reassignBooking(id, berthId)` is
@@ -1198,8 +1206,11 @@ under the bold word **Verified**:
 > rejected, adjacent bookings accepted, pooled berths exempt, closures blocking vessels,
 > reassignment onto an occupied berth refused.*
 
-**There was no such suite, and there never had been.** Twenty-two test files, every one
-of them pure TypeScript; not one opened a database connection. The sentence was written
+**There was no such suite, and there never had been.** Nineteen `*.test.ts` files under
+`src/`, every one of them pure TypeScript; not one opened a database connection. The three
+Playwright specs beside them did — `e2e/helpers/schedule.ts` calls `postgres()`, and still
+does — but they drive the app through a browser, which is the opposite of what the sentence
+claimed, and `npm test` does not run them. The sentence was written
 from the *descriptions* of `src/domain/conflicts.test.ts` — "does NOT flag merely
 adjacent ranges", "returns nothing for a POOLED berth", "treats a closure as blocking a
 vessel" — which is almost exactly the list it claimed.
@@ -1211,7 +1222,7 @@ check's own unit tests** — the precise thing the decision rejects. And it cont
 the README two files away, which says the suite needs no database at all.
 
 **How it survived.** Nothing checks prose. The counts in this project have been wrong
-four times in one day — 260/299/39, then 272/312/40, then 318/278/40 — each time because
+three times in one day — 260/299/39, then 272/312/40, then 318/278/40 — each time because
 a number was stated once and then tests were added. A sentence describing tests that do
 not exist is the same failure with the count set to eleven.
 

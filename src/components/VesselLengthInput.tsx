@@ -33,9 +33,17 @@ export default function VesselLengthInput({
     const n = parsed.value;
     start(async () => {
       const res = await setVesselLengthAction(vesselId, n);
-      setSaved(res.ok ? 'ok' : res.error ?? 'Failed');
+      setSaved(res.ok ? 'ok' : res.error ?? 'Could not save that length.');
     });
   }
+
+  // Pluralised the way the visible row two elements away pluralises, and in its
+  // vocabulary: "unlocks" appears nowhere a reader can see, and the announced
+  // "unlocks 1 bookings" was the only ungrammatical string on the page.
+  const bookings = bookingCount === 1 ? '1 booking' : `${bookingCount.toLocaleString()} bookings`;
+  const label = bookingCount
+    ? `Length in feet, checks the fit on ${bookings}`
+    : 'Length in feet';
 
   return (
     <span className="lenwrap">
@@ -44,7 +52,7 @@ export default function VesselLengthInput({
         inputMode="numeric"
         value={value}
         placeholder="—"
-        aria-label={`Length in feet${bookingCount ? `, unlocks ${bookingCount} bookings` : ''}`}
+        aria-label={label}
         onChange={(e) => { setValue(e.target.value); setSaved(null); }}
         onBlur={save}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}

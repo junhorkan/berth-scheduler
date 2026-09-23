@@ -184,35 +184,6 @@ export async function getRecentlyCancelled(limit = 8): Promise<CancelledRow[]> {
   }));
 }
 
-export type PreviousSchedule = {
-  takenAt: string;
-  bookings: number;
-  vessels: number;
-  /** Which action replaced it: Clear, loading the sample over it, or a Put back. */
-  kind: 'clear' | 'load' | 'restore';
-};
-
-/**
- * The schedule the last Clear or Load replaced, if it can still be put back.
- *
- * Null means there is nothing to put back. The policy (src/lib/undo.ts) guarantees the
- * snapshot is only ever a schedule worth restoring — never an empty one, never the
- * untouched sample — so when this returns a row, the offer is worth making. The counts come from the
- * snapshot rather than being recomputed, so the button can say what it will restore
- * before anybody presses it.
- */
-export async function getPreviousSchedule(): Promise<PreviousSchedule | null> {
-  const sql = db();
-  const [r] = await sql`
-    select taken_at, bookings, vessels, kind from undo_meta where id = 1`;
-  if (!r) return null;
-  return {
-    takenAt: (r.taken_at as Date).toISOString(),
-    bookings: r.bookings as number,
-    vessels: r.vessels as number,
-    kind: r.kind as 'clear' | 'load' | 'restore',
-  };
-}
 
 export type SystemSummary = {
   berths: number;

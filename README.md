@@ -154,13 +154,14 @@ npm run dev
 ```
 
 ```bash
-npm test          # 344 unit tests, no database. Without data/*.xlsx, 304 run and 40 skip
+npm test          # 352 unit tests, no database. Without data/*.xlsx, 312 run and 40 skip
 npm run test:db   # 15 raw-SQL tests of the EXCLUDE constraint itself. Every case rolls back
 npm run e2e       # 69 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean
 npm run import    # replace the schedule with the workbook (needs data/*.xlsx, gitignored)
 npm run import:check # the same parse and reconciliation, printed, touching nothing
+npm run put:back    # undo the last schedule replacement (operator only)
 npm run sample:load # reset the live site to the sample, with no undo left pending
 npm run db:check  # verify connection and that the constraint exists
 ```

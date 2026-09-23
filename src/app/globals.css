@@ -234,8 +234,11 @@ a { color: var(--vessel); }
 }
 .tbl td { padding: 11px 10px 11px 0; border-bottom: 1px solid var(--grid); vertical-align: middle; }
 
+/* A pill badge, so it belongs in DESIGN 11's uppercase micro-label carve-out rather
+   than below the 13px floor — and it now looks like one, matching `.skind` on Search. */
 .flag {
-  display: inline-block; margin-left: 8px; font-size: 10px;
+  display: inline-block; margin-left: 8px; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--event); border: 1px solid var(--event); border-radius: 8px; padding: 0 6px;
 }
 
@@ -249,9 +252,11 @@ a { color: var(--vessel); }
   background: var(--surface); color: var(--ink);
 }
 .leninput:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
-/* Monospace metadata, so 12px is within the floor (DESIGN 11). */
+/* `.unit` is monospace metadata, so 12px is within the floor (DESIGN 11). `.hint` sat
+   under the same comment without being monospace, and `.hint.bad` renders an error
+   sentence — body text by any reading. It takes the floor. */
 .unit { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); }
-.hint { font-size: 12px; color: var(--ink-muted); }
+.hint { font-size: 13px; color: var(--ink-muted); }
 .hint.ok { color: var(--vessel); }
 .hint.bad { color: var(--critical); }
 
@@ -454,8 +459,11 @@ a { color: var(--vessel); }
 .smeta { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); }
 
 /* The kind is named in text, never by colour alone. */
+/* 9px is the board grid's scale, borrowed onto a page that has a full row of width and
+   no constraint to justify it — the leak DESIGN 11 exists to stop. It is an uppercase
+   micro-label, so 11px puts it inside its own category. */
 .skind {
-  font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
   padding: 1px 5px; border-radius: 7px; border: 1px solid var(--axis);
   color: var(--ink-muted);
 }
@@ -482,8 +490,18 @@ a { color: var(--vessel); }
   .hero { padding: 18px 0 20px; }
   .hero h1 { font-size: 28px; }
   .hero .tagline { font-size: 15px; }
-  /* The rail gives up a third of its width so more days fit beside it. */
-  .gridrow { grid-template-columns: 108px minmax(620px, 1fr); }
+  /*
+    The rail keeps its width here. It used to drop to 108px so more days fit beside it,
+    which stopped being free when the board stopped shortening the pooled berth's name:
+    at 108px "Small craft slips (institution boats)" wraps to four lines and its pooled
+    span to two — 93px of content in a 66px row, spilling into the lane below. At 150px
+    it is two lines and one, the same as desktop.
+
+    The narrowing bought little anyway. The lane is `minmax(620px, 1fr)`, so at phone
+    width the board already scrolls sideways; 108px to 150px moves the scroll width by
+    42px on a surface that is already scrolled three times over.
+  */
+  .gridrow { grid-template-columns: 150px minmax(620px, 1fr); }
   .boardhead .month { min-width: 0; flex: 1; font-size: 17px; }
   /* The pickers take a row of their own, or they squeeze the month into the arrows. */
   .boardhead .jump { flex-basis: 100%; }
@@ -516,18 +534,34 @@ a { color: var(--vessel); }
  * card clips vertically as well. A tooltip placed above a bar in the top lane is
  * therefore invisible — it renders correctly and is cut off by the card.
  */
+/*
+ * `content` is empty until the tip is wanted, and that is load-bearing rather than tidy.
+ *
+ * It used to carry its text at `opacity: 0`, which hides a box without unmaking it: a
+ * 560px `nowrap` element, absolutely positioned inside `.board`, still enlarged that
+ * card's scrollable area. On a 375px phone it bought **280px of blank white** at the end
+ * of every month — four fifths of the viewport scrolling into nothing, with a scrollbar
+ * thumb that lied about how much month was left. Invisible is not absent.
+ *
+ * Empty, it lays out at zero and contributes nothing. The opacity transition still runs,
+ * because `content` and `opacity` change in the same rule on the same event.
+ */
 .bar[data-tip]::after {
-  content: attr(data-tip);
+  content: '';
   position: absolute; top: calc(100% + 6px);
   z-index: 30; pointer-events: none; opacity: 0;
-  padding: 5px 9px; border-radius: 6px; white-space: nowrap;
+  width: 0; height: 0; padding: 0; overflow: hidden;
+  border-radius: 6px; white-space: nowrap;
   background: var(--ink); color: var(--surface);
   font-size: 11px; font-weight: 500; letter-spacing: 0.01em;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
   transition: opacity 90ms ease;
 }
 .bar[data-tip]:hover::after,
-.bar[data-tip]:focus-visible::after { opacity: 1; }
+.bar[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  opacity: 1; width: auto; height: auto; padding: 5px 9px;
+}
 /* The last two lanes have nothing below them, so theirs go above. */
 .gridrow > .lane:nth-last-child(-n + 2) .bar[data-tip]::after {
   top: auto; bottom: calc(100% + 6px);
@@ -538,11 +572,15 @@ a { color: var(--vessel); }
    clips it: a violation late in the month read `120ft in 75ft be`. */
 .bar.tipleft .ftbadge { left: -1px; }
 .bar.tipright .ftbadge { right: -1px; }
-.bar[data-tip]::after { max-width: 560px; overflow: hidden; text-overflow: ellipsis; }
+.bar[data-tip]:hover::after,
+.bar[data-tip]:focus-visible::after { max-width: 560px; text-overflow: ellipsis; }
 
 .legend-hint { color: var(--ink-muted); font-style: italic; }
-/* The height rule reads as a sentence under the swatches, not as a sixth swatch. */
-.legend-rule { flex-basis: 100%; color: var(--ink-2); }
+/* The height rule reads as a sentence under the swatches, not as a sixth swatch — and
+   being a sentence rather than a micro-label it takes the 13px floor. It already has a
+   line to itself, so the size costs no layout. The swatch labels stay at 12px: they are
+   two or three words each, and raising them wraps the legend to a third row. */
+.legend-rule { flex-basis: 100%; color: var(--ink-2); font-size: 13px; }
 
 .qcount {
   margin-left: 6px; padding: 0 5px; border-radius: 7px;
@@ -714,16 +752,6 @@ a { color: var(--vessel); }
 .qempty { margin: 2px 0 0; font-size: 13px; color: var(--ink-muted); max-width: 72ch; }
 /* The card's own line sits under its title, above the buttons it describes. */
 .board.history > .qempty { margin: -4px 0 12px; }
-
-/* The schedule's controls, outside the cards: they replace everything above rather than
-   acting on a row of it. Two short lines under them, each wrapping as its own items so
-   the second one's gloss starts flush left at phone width instead of hanging. */
-.sampledata { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--axis); }
-.sampleacts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.sampleacts .sub-hint { margin-top: 0; }
-.sampledata > .sub-hint {
-  margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline;
-}
 
 /* The optional length beside a vessel with none: a short box, its unit, and one line
    saying what it buys. It sits under the name field rather than in a row of its own,

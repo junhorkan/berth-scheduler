@@ -31,23 +31,23 @@ export type FitResult = {
  */
 export function checkFit(vesselLengthFt: number | null, berthLengthFt: number | null): FitResult {
   if (vesselLengthFt == null) {
-    return { verdict: 'unverified', reason: 'No recorded length for this vessel.' };
+    return { verdict: 'unverified', reason: 'No length on record for this vessel.' };
   }
   if (berthLengthFt == null) {
-    return { verdict: 'unverified', reason: 'No recorded length for this berth.' };
+    return { verdict: 'unverified', reason: 'No length on record for this berth.' };
   }
   if (vesselLengthFt > berthLengthFt) {
     return {
       verdict: 'too_long',
       overByFt: vesselLengthFt - berthLengthFt,
-      reason: `Vessel is ${vesselLengthFt}' but the berth is ${berthLengthFt}' — over by ${
+      reason: `Vessel is ${vesselLengthFt}ft but the berth is ${berthLengthFt}ft — over by ${
         vesselLengthFt - berthLengthFt
-      }'.`,
+      }ft.`,
     };
   }
   return {
     verdict: 'fits',
-    reason: `Vessel is ${vesselLengthFt}' in a ${berthLengthFt}' berth.`,
+    reason: `Vessel is ${vesselLengthFt}ft in a ${berthLengthFt}ft berth.`,
   };
 }
 

@@ -2,11 +2,9 @@ import Board from '../components/Board';
 import Nav from '../components/Nav';
 import BookingPanel from '../components/BookingPanel';
 import BookingDetail from '../components/BookingDetail';
-import { LoadSampleButton, RestorePreviousButton } from '../components/SampleData';
 import MonthJump from '../components/MonthJump';
 import {
   getBerths, getBookingsInRange, getSummary, getBookingById, getNearestBookedMonth,
-  getPreviousSchedule,
 } from '../db/queries';
 import { monthBounds } from '../lib/layout';
 import {
@@ -17,11 +15,10 @@ import {
 // A cached schedule is a wrong schedule.
 export const dynamic = 'force-dynamic';
 /**
- * Server Actions inherit this route's function limit, and the sample controls live here.
- * Restoring the workbook deletes and re-inserts 2,031 bookings, 418 vessels and their
- * review items in one transaction, which measured at roughly 12 seconds — past Vercel's
- * 10-second default, where the function is killed mid-transaction and the button simply
- * appears to do nothing.
+ * The twelve-second workbook restore that needed this is no longer reachable from any
+ * page. Kept for the margin: a Server Action inherits its route's limit, and one killed
+ * at the ten-second default dies mid-transaction and returns nothing to show the user.
+ * Booking and editing are single transactions and nowhere near it, cold pool included.
  */
 export const maxDuration = 60;
 
@@ -71,9 +68,7 @@ export default async function BoardPage({
   // from a broken page. When the schedule has bookings somewhere else, say where.
   const elsewhere =
     bookings.length > 0 || scheduleIsEmpty ? null : await getNearestBookedMonth(bounds.start);
-  // Offered on the empty board as well as on Review: whoever just cleared it is looking
-  // at this screen, not at the tab they pressed the button on.
-  const undo = scheduleIsEmpty ? await getPreviousSchedule() : null;
+
   /*
     A new booking defaults to the 1st of the month on screen — unless that has passed,
     in which case it defaults to today.
@@ -143,22 +138,13 @@ export default async function BoardPage({
                   : `${MONTH_NAMES[month - 1]} ${year} is empty.`}
               </b>{' '}
               {scheduleIsEmpty ? (
-                <>
-                  Start with <b>+ New booking</b>, or{' '}
-                  <LoadSampleButton label="restore the original schedule" /> &mdash; every
-                  booking the facility has on record, to try the checks against.
-                  {/*
-                    Only reachable now if a Put back put an empty schedule back, since
-                    nothing on a public page empties one any more. Kept because the offer
-                    belongs on the screen you are looking at, not the tab you pressed.
-                  */}
-                  {undo && (
-                    <>
-                      {' '}Or{' '}
-                      <RestorePreviousButton bookings={undo.bookings} vessels={undo.vessels} kind={undo.kind} />
-                    </>
-                  )}
-                </>
+                /*
+                  No button here offers to load a schedule any more. On a public page
+                  with no accounts, nothing should replace everyone's data in one press —
+                  loading the workbook is `npm run import`, behind the credentials. What
+                  is left is the one thing a visitor can honestly do from an empty board.
+                */
+                <>Start with <b>+ New booking</b>.</>
               ) : elsewhere ? (
                 <>
                   Nearest bookings:{' '}
@@ -174,7 +160,8 @@ export default async function BoardPage({
               <ul className="bn-list">
                 <li>A bar taller than its lane is a vessel too long for that berth.</li>
                 <li>Overlapping bookings cannot be saved at all.</li>
-                <li>Click any bar to move or cancel it.</li>
+                <li>Click any bar to edit or cancel it, while it is still to come.</li>
+                <li>A booking that has ended is the record, and is read-only.</li>
               </ul>
             </details>
           </div>

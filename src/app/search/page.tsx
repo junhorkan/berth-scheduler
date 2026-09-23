@@ -68,8 +68,15 @@ export default async function SearchPage({
 
       {groups.length === 0 && (
         <div className="panel">
+          {/*
+            What `searchBookings` actually matches: `b.label` and the vessel's
+            normalized name. It claimed closure notes as well, which sent anyone
+            searching for something they had typed into a booking's note away empty
+            while the page told them it had looked there.
+          */}
           <p style={{ margin: 0 }}>
-            Searching vessel names, event labels, and closure notes. Cancelled bookings are
+            Searching vessel names and booking labels, which is what an event or a closure
+            is called. A booking&rsquo;s notes are not searched, and cancelled bookings are
             not included.
           </p>
         </div>

@@ -71,13 +71,18 @@ export function describeChoices(
       status = `taken ${formatSpan(first.startDate, first.endDate)}`;
       if (busy.length > 1) status += ` +${busy.length - 1} more`;
     } else if (pooled) {
-      status = 'shared, no fit check';
+      // One word for the pooled property, and it is already in the size slot above:
+      // this said `pooled · shared, no fit check`, two words for one fact.
+      status = 'free, fit not checked';
     } else if (fit === 'too_long') {
-      status = `free, ${vesselLengthFt! - b.lengthFt!}ft too short`;
+      // Framed from the vessel's end, like every other surface — the panel's
+      // `over by 55ft` and the bar's `145ft in 90ft berth`. This read
+      // `55ft too short`, which described the berth and inverted the sentence.
+      status = `free, vessel is ${vesselLengthFt! - b.lengthFt!}ft too long`;
     } else if (fit === 'fits') {
       status = 'free, fits';
     } else if (fit === 'unverified') {
-      status = 'free, fit unchecked';
+      status = 'free, fit not checked';
     } else {
       status = 'free';
     }

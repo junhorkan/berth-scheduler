@@ -168,9 +168,20 @@ function BerthLane({
   return (
     <>
       <div className="rail" style={{ height: rowHeight }}>
-        <b>{berth.name.replace(' (institution boats)', '')}</b>
+        {/*
+          The berth's own name, in full. It used to have ` (institution boats)` stripped
+          here, which gave one berth two names: the rail disagreed with its own tooltip,
+          both dropdowns, Review and Search, all of which show what the migration says.
+          The berths are the facility (invariant 5), so the rail wraps instead: two
+          lines of the 150px rail, 46px of a 66px row. The 108px rail under the 720px
+          breakpoint needs the same 150px — measured at four lines there, which
+          overflows the row.
+        */}
+        <b>{berth.name}</b>
         {berth.lengthFt != null ? (
-          <i>{berth.lengthFt}&prime;</i>
+          // `ft`, not `&prime;`: the tooltip one line below says `90ft berth`, and a
+          // rail that abbreviates what its own tooltip spells out is not a saving.
+          <i>{berth.lengthFt}ft</i>
         ) : (
           <span className="pooled">pooled &middot; no stated length</span>
         )}
@@ -284,7 +295,7 @@ function Bar({
     fit?.verdict === 'too_long'
       ? `does not fit: vessel is ${booking.vesselLengthFt}ft`
       : fit?.verdict === 'unverified'
-        ? 'length not recorded, so the fit cannot be checked'
+        ? 'no length on record, so the fit is not checked'
         : booking.vesselLengthFt != null
           ? `vessel ${booking.vesselLengthFt}ft \u2014 fits`
           : null,
@@ -322,7 +333,7 @@ function Legend() {
   return (
     <div className="legend">
       <div><span className="sw vessel" />Vessel fits its berth</div>
-      <div><span className="sw unknown" />Length unknown &mdash; fit not checked</div>
+      <div><span className="sw unknown" />No length on record &mdash; fit not checked</div>
       <div><span className="sw toolong" />Too long: bar breaks out of its lane</div>
       <div><span className="sw event" />Event, not a vessel</div>
       <div><span className="sw closure" />Berth closed</div>

@@ -10,6 +10,7 @@ import { checkEdit, cleanNotes, isUnchanged } from '../domain/edit';
 import type { BookingEdit } from '../domain/edit';
 import type { BookingKind } from '../domain/types';
 import { RestoreButton } from './RestoreButton';
+import { hasEnded, ENDED_REFUSAL } from '../domain/record';
 import { todayISO, lastBookableISO } from '../lib/nav';
 
 /**
@@ -189,7 +190,17 @@ export default function BookingDetail({
     the slot has been taken since. So the whole form is behind one test rather than one
     per field, which is what stopped a sixth field being added to five guarded ones.
   */
-  const editable = booking.status !== 'cancelled';
+  /*
+    And a booking that has ended is a record, not work (domain/record). Every one of the
+    2,031 imported rows is one, which is the point: on a public page with no accounts,
+    "correct the record" and "rewrite somebody else's 23 years" are the same request, and
+    an edit has no undo to fall back on.
+
+    It joins the cancelled test rather than getting its own, so the form stays behind one
+    condition — the thing that stopped a sixth field being added to five guarded ones.
+  */
+  const ended = hasEnded(booking.endDate, todayISO());
+  const editable = booking.status !== 'cancelled' && !ended;
 
   return (
     <>
@@ -239,10 +250,43 @@ export default function BookingDetail({
             {/* Telling someone to resolve a stay that has already ended sends them to do
                 work that means nothing (DECISIONS 26). It can still be moved, to correct
                 the record, so this says what it is rather than that nothing can be done. */}
-            {booking.endDate < todayISO()
+            {ended
               ? `. It ended on ${booking.endDate}, so it is history rather than work.`
               : '; move or cancel it to resolve.'}
           </p>
+        )}
+
+        {/*
+          With the form gone, the panel would otherwise show a name, a hull and a
+          provenance line and nothing else — not even which berth or which days. So the
+          fields become rows: the same facts, stated rather than editable. A read-only
+          view that omits the record is not a read-only view of anything.
+        */}
+        {!editable && (
+          <dl className="meta">
+            <dt>Berth</dt>
+            <dd>{berths.find((b) => b.id === booking.berthId)?.name ?? '\u2014'}</dd>
+            <dt>Dates</dt>
+            <dd>
+              {booking.startDate === booking.endDate
+                ? booking.startDate
+                : `${booking.startDate} to ${booking.endDate}`}
+            </dd>
+            <dt>Kind</dt>
+            <dd>{booking.kind === 'vessel' ? 'Vessel' : booking.kind === 'event' ? 'Event' : 'Closure'}</dd>
+            {booking.notes && (<><dt>Note</dt><dd>{booking.notes}</dd></>)}
+          </dl>
+        )}
+
+        {/*
+          Said, not merely enforced by an absent form. The rule is the interesting part —
+          a reader who is told "this is the record" has learned why, where one who finds
+          the buttons missing has only learned that something is broken. One sentence,
+          the same one the server refuses with (domain/record), so the page and the
+          endpoint cannot drift into explaining it differently.
+        */}
+        {ended && booking.status !== 'cancelled' && (
+          <p className="verdict idle" style={{ marginTop: 14 }}>{ENDED_REFUSAL}</p>
         )}
 
         {editable && (
@@ -383,6 +427,11 @@ export default function BookingDetail({
         {error && <p className="verdict stop">{error}</p>}
 
         <div className="actions">
+          {/*
+            Three states, not two. A cancelled booking offers the one move that exists
+            from there; an ended one offers nothing at all, and says so above rather than
+            showing a disabled button with no caption. Only a live booking gets the form.
+          */}
           {editable ? (
             <>
               <button
@@ -390,13 +439,13 @@ export default function BookingDetail({
                 disabled={!edited || !legal.ok || !named.ok || conflicted || pending}
                 onClick={doSave}
               >
-                {pending ? 'Working…' : 'Save changes'}
+                {pending ? 'Saving\u2026' : 'Save changes'}
               </button>
               <button className="btn danger" disabled={pending} onClick={doCancel}>Cancel booking</button>
             </>
-          ) : (
+          ) : booking.status === 'cancelled' ? (
             <RestoreButton id={booking.id} />
-          )}
+          ) : null}
           <a className="btn" href={closeHref}>Close</a>
         </div>
       </aside>

@@ -113,14 +113,6 @@ export async function setVesselLengthAction(vesselId: string, lengthFt: number |
 }
 
 
-export async function resetToImportedAction() {
-  const res = await m.resetToImported();
-  revalidatePath('/');
-  revalidatePath('/vessels');
-  revalidatePath('/review');
-  return res;
-}
-
 export async function resolveReviewGroupAction(ids: string[]) {
   const res = await m.resolveReviewItems(ids);
   revalidatePath('/review');
@@ -128,20 +120,19 @@ export async function resolveReviewGroupAction(ids: string[]) {
   return res;
 }
 
-/** Put back the schedule the last restore replaced. Consumed on success. */
-export async function restorePreviousAction() {
-  const res = await m.restorePrevious();
-  revalidatePath('/');
-  revalidatePath('/vessels');
-  revalidatePath('/review');
-  return res;
-}
-
 /*
-  `clearScheduleAction` was here. The button that called it is gone: emptying a real
-  23-year schedule is not a berth coordinator's action, and the empty board it existed to
-  demonstrate is already the front door. The `clearSchedule` mutation stays — the
-  Playwright fixture builds the empty schedule with it — but nothing on a public page
-  reaches it now, which is the point.
+  Three actions stood here — `resetToImportedAction`, `restorePreviousAction` and
+  `clearScheduleAction` — and all three are gone, because nothing on a public page should
+  be able to replace or empty everyone's schedule in one press.
+
+  They existed as the floor under an irreversible edit. That floor is now a rule instead:
+  a booking that has ended cannot be changed at all (`domain/record`), so the 23-year
+  record cannot be damaged and does not need putting back. What is still editable is what
+  a visitor made themselves, and cancelling that is already a soft delete they can undo.
+
+  The mutations survive, behind the database credentials, where replacing a schedule
+  belongs and where `npm run import` already lived: `npm run sample:load` restores the
+  workbook, `npm run put:back` undoes that, and `clearSchedule` builds the Playwright
+  fixture. Same posture, fewer ways for a stranger to use it.
 */
 

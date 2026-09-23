@@ -4,7 +4,7 @@ Fourteen choices, **including the ones rejected** — knowing why something was 
 usually more informative than the thing that was. Each states the decision, what it cost,
 and what was measured. Fifteen minutes end to end; less if you read the bold.
 
-The other 22 entries — library choices, type scale, page layout, the undo state machine,
+The other 24 entries — library choices, type scale, page layout, the undo state machine,
 the importer's hardening — are the build log, in
 [docs/ENGINEERING-LOG.md](docs/ENGINEERING-LOG.md), under the numbers they always had.
 
@@ -70,7 +70,7 @@ application's own tests cannot be the evidence:
 > sentence in this document — asserting, under the word **Verified**, precisely the
 > thing this decision says an application-level check cannot prove. It was found by
 > auditing the docs against the code, and the tests were written to make it true.
-> → [ENGINEERING-LOG 37](docs/ENGINEERING-LOG.md)
+> → [ENGINEERING-LOG 37](docs/ENGINEERING-LOG.md#37-the-one-sentence-in-the-documentation-that-was-not-true)
 
 ---
 
@@ -110,8 +110,11 @@ genuine need for two vessels on one berth is rafting — modelled properly as be
 feet — not a checkbox that disables the rule.
 
 **Consequence worth stating:** `bookings.status` still carries a `conflict_unresolved` value,
-and the constraint applies `WHERE status = 'active'`. Nothing in the app creates that status
-now. It is the seam an import path would need, and it costs nothing to leave in place.
+and the constraint applies `WHERE status = 'active'`. **Nothing in the web UI can create that
+status** — no form, no server action, and a restore comes back `active` and never to it. The
+importer does: `plan.ts` marks a row that overlaps one it has already accepted, `writeImportPlan`
+inserts it, and the workbook produces exactly one — the 2017-07-11 overlap on South Float East.
+That is the seam, and it is what lets the history load intact rather than abort the import.
 
 ---
 
@@ -127,9 +130,9 @@ the berth allocation problem** (time on one axis, quay space on the other, recta
 vessel length) adapted to fixed berths, over the interaction model of a hotel PMS **tape
 chart**.
 
-**Adjusted after seeing it render:** a floor of 9px, because a 40′ vessel in the 410′ berth is
-proportionally a 3px hairline that reads as an empty berth. Proportionality still governs
-everything above the floor, including every overflow.
+**Adjusted after seeing it render:** a floor of 14px, because in a 52px lane a 40′ vessel in
+the 410′ berth is proportionally a 5px hairline that reads as an empty berth. Proportionality
+still governs everything above the floor, including every overflow.
 
 **Adjusted again, from the owner reading the board cold**, and neither fault was the idea. The
 overflowing bar was filled solid, so where it grew into the lane above it covered that
@@ -268,7 +271,7 @@ attacks that a level up: there is less left to verify. But choosing outright fai
 
 - **95% of vessels have no recorded length** (398 of 418), so for 97% of vessel bookings the
   system cannot know what fits. Assigning anyway would mean guessing, and
-  [invariant 2](CLAUDE.md) is that a length is never invented. With no length the suggester
+  [invariant 2](CLAUDE.md#invariants) is that a length is never invented. With no length the suggester
   ranks on availability alone and says `fit is not checked` in as many words.
 - **The coordinator knows things the database does not**: shore power, crane reach, which
   float is nearest the lab, who is arriving at 0600. A silent assignment ignoring all of that
@@ -287,7 +290,7 @@ the measurement is worth more than a proposal that does not fit.
 **The pooled berth is never suggested.** Small craft slips accepts another boat regardless, so
 it would win every time and carry no information; it stays selectable, labelled
 `shared, no fit check`. Ranking and wording live in `src/lib/suggest.ts`, pure and unit-tested
-against a fixture ([invariant 1](CLAUDE.md)).
+against a fixture ([invariant 1](CLAUDE.md#invariants)).
 
 **Rejected: two modes, "book a specific berth" or "book any berth".** A fork in the form costs
 a second path to build and test, and the "any" branch would hide the one thing worth showing —
@@ -323,7 +326,7 @@ items are history, which is the truest version of this decision's point: the bad
 the archive to 46, and the badge still did not move.*
 
 **The history is not deleted.** It is the evidence that the import dropped nothing silently
-([invariant 3](CLAUDE.md)): "what happened to the cells you could not parse?" needs a better
+([invariant 3](CLAUDE.md#invariants)): "what happened to the cells you could not parse?" needs a better
 answer than "gone". Nothing is removed; only the framing changes, and that is the whole fix.
 
 **The split is by actionability, not by severity.** An unresolved conflict is the worst thing
@@ -479,7 +482,7 @@ it — it is just more expensive, and the expense is mine.
 **Decision.** `updateBooking` replaces `moveBooking`. One transaction now writes the
 berth, the dates, the name, the kind and the note; one button saves whatever changed.
 
-**Why the name mattered as much as the date.** [32](docs/ENGINEERING-LOG.md) refused
+**Why the name mattered as much as the date.** [32](docs/ENGINEERING-LOG.md#32-a-move-changes-a-span-not-only-a-berth) refused
 cancel-and-rebook for a date change, because it loses the row's identity, its
 `imported from sheet 2010, row 75` provenance and the review items hanging off
 `booking_id`, and leaves two rows where the facility has one booking. Every word of that
@@ -518,12 +521,13 @@ to say so rather than left to imply cover it does not have.
 **Decision.** When a vessel is booked at a **different** berth over the same days, both
 panels say so in amber. It never blocks, and there is no constraint behind it.
 
-**It is a real fault in their own data.** Twelve rows of the supplied workbook put one
-hull at two berths on overlapping days. Four overlap by two whole days; eight share
-exactly one, which is what a same-day berth shift looks like in a spreadsheet that
-records only whole days. The `EXCLUDE` is on `berth_id`, and `checkBooking` only ever
-queried the one berth — so the system that promises a double-booking is unstorable would
-happily record one hull in two places, and already had, four times.
+**It is a real fault in their own data.** Twelve pairs of rows in the supplied workbook —
+24 rows in all — put one hull at two berths on overlapping days. Four overlap by two whole
+days; eight share exactly one, which is what a same-day berth shift looks like in a
+spreadsheet that records only whole days. The `EXCLUDE` is on `berth_id`, and
+`checkBooking` only ever queried the one berth — so the system that promises a
+double-booking is unstorable would happily record one hull in two places, and already had,
+four times.
 
 **This is the awkward case for [2](#2-fit-warns-it-never-blocks), and the entry needs
 saying properly.** That decision framed the split as *decidable → unstorable, undecidable

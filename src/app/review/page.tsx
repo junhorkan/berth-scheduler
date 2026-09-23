@@ -1,9 +1,6 @@
 import Nav from '../../components/Nav';
 import { ResolveButton } from '../../components/ResolveButton';
-import { LoadSampleButton, RestorePreviousButton } from '../../components/SampleData';
-import {
-  getReviewItems, getMissingLengthSummary, getRecentlyCancelled, getPreviousSchedule,
-} from '../../db/queries';
+import { getReviewItems, getMissingLengthSummary, getRecentlyCancelled } from '../../db/queries';
 import type { ReviewRow } from '../../db/queries';
 import { groupReviewItems, describeOccurrences } from '../../lib/review';
 import type { ReviewGroup } from '../../lib/review';
@@ -12,11 +9,11 @@ import { RestoreButton } from '../../components/RestoreButton';
 
 export const dynamic = 'force-dynamic';
 /**
- * Server Actions inherit this route's function limit, and the sample controls live here.
- * Restoring the workbook deletes and re-inserts 2,031 bookings, 418 vessels and their
- * review items in one transaction, which measured at roughly 12 seconds — past Vercel's
- * 10-second default, where the function is killed mid-transaction and the button simply
- * appears to do nothing.
+ * Nothing on this page replaces the schedule any more, so the twelve-second restore that
+ * needed this limit is gone with it. It stays because the margin costs nothing and the
+ * failure it prevents is silent: a Server Action inherits its route's limit, and a
+ * function killed at the default ten seconds dies mid-transaction with no error to show.
+ * Resolving a large review group is the slowest thing left here, and it is nowhere near.
  */
 export const maxDuration = 60;
 
@@ -62,8 +59,8 @@ function tighten(detail: string): string {
 }
 
 export default async function ReviewPage() {
-  const [items, missing, cancelled, undo] = await Promise.all([
-    getReviewItems(), getMissingLengthSummary(), getRecentlyCancelled(), getPreviousSchedule(),
+  const [items, missing, cancelled] = await Promise.all([
+    getReviewItems(), getMissingLengthSummary(), getRecentlyCancelled(),
   ]);
 
   /*
@@ -144,7 +141,7 @@ export default async function ReviewPage() {
         */}
         <section className="qsection">
           <h2 className="qhead muted">
-            No recorded length
+            No length on record
             <span className="qhcount">{missing.vessels.toLocaleString()}</span>
             {missing.vessels > 0 && (
               <a className="qlink qheadlink" href="/vessels">Add lengths &rarr;</a>
@@ -250,38 +247,6 @@ export default async function ReviewPage() {
         <p className="note">Showing the first 200 open items.</p>
       )}
 
-      {/*
-        One control, at the foot and outside the cards: it replaces everything above
-        rather than acting on any one row of it. A third card, with a title and a
-        paragraph, made the page read as three things competing — Board and Vessels are
-        each one card and a line.
-
-        There was a second button here, "Clear the schedule", and it is gone. It existed
-        to demonstrate that an empty schedule is supported (invariant 8) — but the front
-        door already demonstrates that: every booking in the supplied workbook ended in
-        2019, and the board opens on the facility's own month, so the first screen anyone
-        sees is an empty one. What the button added was the only way, on a public page
-        with no accounts, to delete 23 years of a real schedule in one press. Undoable,
-        and still not a thing a berth coordinator does.
-
-        Restoring stays. Without it a visitor who cancels or edits a few bookings has no
-        way back to what was here, and the schedule this is loaded with is the facility's
-        own record. DECISIONS 26.
-      */}
-      <div className="sampledata">
-        <div className="sampleacts">
-          <LoadSampleButton />
-          {undo && (
-            <RestorePreviousButton
-              bookings={undo.bookings}
-              vessels={undo.vessels}
-              kind={undo.kind}
-              when={relativeTime(undo.takenAt)}
-            />
-          )}
-        </div>
-        <p className="sub-hint">This replaces every booking, and can be undone.</p>
-      </div>
     </main>
   );
 }

@@ -26,21 +26,24 @@ describe('describeChoices', () => {
     expect(byId(cs, 'sf').optionLabel).toBe('South Float East — 90ft · free, fits');
   });
 
-  it('states how far short a berth is, rather than just "no"', () => {
+  it('states how far over the vessel is, rather than just "no"', () => {
     const cs = choicesFor(free(), 95);
-    expect(byId(cs, 'ic').optionLabel).toBe('Inner Channel — 55ft · free, 40ft too short');
+    // Framed from the vessel's end, as every other surface frames it.
+    expect(byId(cs, 'ic').optionLabel).toBe('Inner Channel — 55ft · free, vessel is 40ft too long');
   });
 
   it('never claims a fit it cannot check', () => {
     const cs = choicesFor(free(), null);
-    expect(byId(cs, 'sf').optionLabel).toContain('fit unchecked');
+    expect(byId(cs, 'sf').optionLabel).toContain('fit not checked');
     expect(byId(cs, 'sf').fit).toBe('unverified');
   });
 
   it('treats a pooled berth as never taken, because it holds several boats', () => {
     const cs = choicesFor(busy('sc', STAY), 60);
     expect(byId(cs, 'sc').free).toBe(true);
-    expect(byId(cs, 'sc').optionLabel).toContain('shared, no fit check');
+    // One word for the pooled property, and it is said once: `pooled` in the size
+    // slot. This once read `pooled · shared, no fit check`.
+    expect(byId(cs, 'sc').optionLabel).toBe('Small craft slips — pooled · free, fit not checked');
   });
 
   it('counts further clashes instead of listing them all', () => {

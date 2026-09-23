@@ -44,8 +44,10 @@ berth is drawn 1.61 lanes tall and visibly breaks out of its row.
   is the span and height is the fit, neither may grow, so `.bar::before` extends the hit
   area instead: anchored to the bar's bottom, `max(100%, 34px)` tall so it grows upward
   into empty lane and only helps the bars that need it, and 2px sideways because the next
-  day's booking starts where this one ends. `.bar` must therefore stay `overflow: visible`
-  — the label clips itself.
+  day's booking starts where this one ends. `.bar` must therefore never be given
+  `overflow: hidden` — it declares no overflow at all and so stays at the default, and the
+  clipping is done one level down by `.bar .lbl`. `.bar.toolong` states `overflow: visible`
+  outright, for the `.ftbadge` that sits above the bar.
 
 Full argument: [DECISIONS 4](../DECISIONS.md#4-the-bars-height-is-the-fit-check) and
 [LOG 33](ENGINEERING-LOG.md#33-the-drawn-bar-is-the-data-the-target-you-press-is-not).

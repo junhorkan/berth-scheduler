@@ -53,8 +53,11 @@ describe('checkFit', () => {
   });
 
   it('includes both lengths in the reason text so the panel can show it verbatim', () => {
-    expect(checkFit(145, 90).reason).toContain("145'");
-    expect(checkFit(145, 90).reason).toContain("90'");
+    // Feet are written `ft` everywhere outside the board grid, never `'` or `′`
+    // (DESIGN 6: say it in words). This sentence is the verdict both panels show.
+    expect(checkFit(145, 90).reason).toContain('145ft');
+    expect(checkFit(145, 90).reason).toContain('90ft');
+    expect(checkFit(145, 90).reason).not.toContain("'");
   });
 });
 

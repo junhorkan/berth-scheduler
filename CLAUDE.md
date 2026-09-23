@@ -9,7 +9,7 @@ Live at https://berth-scheduler.vercel.app
 |---|---|
 | [README.md](README.md) | Setup, what the app does, how to run it |
 | [DECISIONS.md](DECISIONS.md) | Why something is the way it is — **read before changing a design choice** |
-| [docs/ENGINEERING-LOG.md](docs/ENGINEERING-LOG.md) | The other 22 decision entries, same numbers — build detail, read when one is cited |
+| [docs/ENGINEERING-LOG.md](docs/ENGINEERING-LOG.md) | The other 24 decision entries, same numbers — build detail, read when one is cited |
 | [ASSUMPTIONS.md](ASSUMPTIONS.md) | What was assumed where the brief was silent |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Deploying, keep-warm, DB access posture — **read before deploying or touching the database** |
 | [docs/DESIGN.md](docs/DESIGN.md) | The presentation invariants in full — **read before changing anything visual** |
@@ -28,7 +28,7 @@ keeping them apart.**
 - **Vessel too long for its berth** is *not* — a length is known only once somebody
   records it, and most never will. Advisory. Amber in the UI. **Never blocks.**
 - **One hull at two berths at once** is decidable and *still* advisory, because twelve
-  rows of the supplied workbook already do it: a constraint would refuse the facility's
+  pairs of rows in the workbook already do it: a constraint would refuse the facility's
   own past. The line is **preventable vs. already present**, not decidable vs. not.
   → [DECISIONS 36](DECISIONS.md#36-one-hull-two-berths-decidable-and-still-only-a-warning)
 
@@ -142,6 +142,7 @@ npm run e2e          # Playwright. HITS THE LIVE DB: swaps in a fixture, restore
 npm run import       # replace the schedule with the workbook (needs data/*.xlsx, gitignored)
 npm run import:check # the same parse, printed, with no database
 npm run sample:load  # reset the live site to the sample, leaving no undo pending
+npm run put:back     # undo the last schedule replacement. Operator-only, like import
 npm run db:check     # verify the connection and that the constraint exists
 npm run build        # production build
 ```

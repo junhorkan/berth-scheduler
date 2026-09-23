@@ -93,7 +93,7 @@ export default function VesselTable({ vessels, perPage }: { vessels: VesselRow[]
             aria-pressed={category === 'recorded'}
             onClick={() => show('recorded')}
           >
-            With a length recorded
+            Length on record
           </button>
         </div>
       )}
@@ -175,7 +175,7 @@ function VesselItem({ vessel: v }: { vessel: VesselRow }) {
               className="flag"
               title="The source states two different lengths for this vessel. Both are kept; neither is silently chosen."
             >
-              source also says LOA {v.loaFt}&prime;
+              source also says LOA {v.loaFt}ft
             </span>
           )}
         </span>

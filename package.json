@@ -10,6 +10,7 @@
     "import": "tsx scripts/import.mts",
     "import:check": "tsx scripts/import-check.mts",
     "sample:load": "tsx scripts/sample-load.mts",
+    "put:back": "tsx scripts/put-back.mts",
     "lint": "eslint",
     "start": "next start",
     "test": "vitest run",
