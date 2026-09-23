@@ -154,7 +154,7 @@ npm run dev
 ```bash
 npm test          # 347 unit tests, no database. Without data/*.xlsx, 307 run and 40 skip
 npm run test:db   # 15 raw-SQL tests of the EXCLUDE constraint itself. Every case rolls back
-npm run e2e       # 67 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
+npm run e2e       # 69 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean
 npm run import    # replace the schedule with the workbook (needs data/*.xlsx, gitignored)
@@ -208,7 +208,8 @@ its lane, and none can draw a bar that **overhangs** its row.
   conflict check without credentials. Nothing it offers is destructive for long: a cancelled
   booking is restored from Review, and **Clear** and **Load** each keep what they replaced,
   so **Put back the previous schedule** undoes either. The one exception, stated rather than
-  implied: **moving** a booking overwrites its berth and dates in place and has no undo.
+  implied: **editing** a booking overwrites its berth, dates, name, kind and note in
+  place, and has no undo.
 
 ## The rest of the documentation
 

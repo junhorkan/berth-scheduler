@@ -167,7 +167,7 @@ describe('verifyInflation, the only step that decompresses', () => {
   });
 
   it('refuses a file too big to be a schedule by its size alone, before reading its bytes', () => {
-    // /check calls this with File.size, so a huge file never reaches the tab's memory.
+    // Called with the file size before any bytes are read, so a huge file never reaches memory.
     expect(() => refuseOversize(ZIP_LIMITS.maxDeclaredBytes + 1)).toThrow(ImportError);
     expect(() => refuseOversize(394_385)).not.toThrow();
   });

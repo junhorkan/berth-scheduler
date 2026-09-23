@@ -2,7 +2,7 @@
  * A reconciliation, as text for a terminal.
  *
  * Shared by `npm run import` and `npm run import:check`, so the dry run prints exactly
- * what a real import would. The browser check at /check renders the same Reconciliation
+ * what a real import would. `npm run import:check` prints the same Reconciliation
  * as a page instead. Pure.
  */
 import type { Reconciliation } from './plan';

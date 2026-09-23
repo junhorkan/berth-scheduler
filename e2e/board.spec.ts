@@ -992,3 +992,99 @@ test.describe('recording a length while booking', () => {
     await expect(page.getByLabel('Vessel length in feet, optional')).toHaveCount(0);
   });
 });
+
+/**
+ * One hull at two berths on the same days.
+ *
+ * Advisory and never blocking, for the reason in DECISIONS 36: twelve rows of the
+ * supplied workbook already do this, so a constraint would refuse to load the
+ * facility's own history. Both panels have to say it, and neither may gate on it.
+ */
+test.describe('the same vessel at two berths', () => {
+  const day = (d: number) =>
+    `${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const bar = (page: import('@playwright/test').Page, label: string) =>
+    page.getByLabel(new RegExp(label));
+  const NAME = 'R/V E2E Twinned';
+
+  async function bookVessel(
+    page: import('@playwright/test').Page, berth: RegExp, from: number, to: number,
+  ) {
+    await page.goto(FIXTURE_HREF);
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByLabel('Vessel', { exact: true }).fill(NAME);
+    const sel = page.getByLabel('Berth', { exact: true });
+    await sel.selectOption(
+      (await sel.locator('option', { hasText: berth }).getAttribute('value')) ?? '',
+    );
+    const dates = page.locator('.panel-sheet input[type="date"]');
+    await dates.first().fill(day(from));
+    await dates.nth(1).fill(day(to));
+    return sel;
+  }
+
+  test('warns in both panels, and blocks neither', async ({ page }) => {
+    // Days chosen clear of S/Y Test Beacon's day-14 misfit, whose 2.4-lane overhang
+    // covers South Float West and takes its clicks — the known limit in globals.css.
+    await bookVessel(page, /North Pier East/, 16, 17);
+    await page.getByRole('button', { name: 'Save booking' }).click();
+    await expect(bar(page, NAME)).toBeVisible();
+
+    // Same hull, same days, a different berth. The create panel must say so.
+    await bookVessel(page, /South Float West/, 16, 17);
+    // Scoped by text: an unmeasured hull also draws a "fit unverified" amber line, and
+    // the two advisory warnings are deliberately separate sentences.
+    const clash = page.locator('.panel-sheet .verdict.warn', { hasText: 'booked elsewhere' });
+    await expect(clash).toHaveCount(1);
+    await expect(clash).toContainText('North Pier East');
+    // Advisory: it says so, and it still saves.
+    await expect(clash).toContainText('does not stop');
+    await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
+    await page.getByRole('button', { name: 'Save booking' }).click();
+
+    // And the edit panel says it too, on a booking that already clashes.
+    await page.goto(FIXTURE_HREF);
+    await bar(page, NAME).first().click();
+    await expect(page.locator('.panel-sheet .verdict.warn', { hasText: 'booked elsewhere' }))
+      .toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Cancel booking' })).toBeEnabled();
+
+    // Leave the fixture as it was found.
+    for (let i = 0; i < 2; i++) {
+      await page.goto(FIXTURE_HREF);
+      page.once('dialog', (d) => d.accept());
+      await bar(page, NAME).first().click();
+      await page.getByRole('button', { name: 'Cancel booking' }).click();
+      await expect(bar(page, NAME)).toHaveCount(2 - i - 1);
+    }
+  });
+});
+
+/**
+ * The edit panel refuses a conflict BEFORE the click, not after it.
+ *
+ * It fetched the whole verdict on every change and kept only the advisory half, so a
+ * move onto occupied days showed nothing and left Save enabled; the refusal arrived
+ * from the pre-check after the press. The create panel has gated live on exactly this
+ * data since it was written.
+ */
+test.describe('editing onto occupied days', () => {
+  const day = (d: number) =>
+    `${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+  test('says so live, and disables Save', async ({ page }) => {
+    // Community sail day holds North Pier East on the 10th-12th; OSV Test Osprey the
+    // 20th-23rd. Move the event onto the Osprey's days.
+    await page.goto(FIXTURE_HREF);
+    await page.getByLabel(/Community sail day/).first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.locator('.panel-sheet .verdict.stop')).toHaveCount(0);
+
+    await page.getByLabel('Start date').fill(day(21));
+    await page.getByLabel('End date').fill(day(22));
+
+    await expect(page.locator('.panel-sheet .verdict.stop')).toContainText('already occupied');
+    await expect(page.locator('.panel-sheet .verdict.stop')).toContainText('OSV Test Osprey');
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  });
+});

@@ -895,8 +895,8 @@ exactly 2,031 stays.
 berth row — the fault of [17](#17-repetition-is-not-information) recreated in the act of
 fixing a different one. So the queue carries one item per affected sheet, which folds
 into a single row listing all seventeen, each with its count and its first cell. Every
-one of the 373 is in the reconciliation, which is what `npm run import:check` prints and
-what `/check` renders for a grader's own copy of the file.
+one of the 373 is in the reconciliation, which is what `npm run import:check` prints for
+a grader's own copy of the file.
 
 **What it cost.** The review count goes from 29 to 46, all of it history; the badge does
 not move, because none of these has a booking that has not ended. `plan.test.ts` pins the
@@ -954,7 +954,7 @@ because the action behind the panel is a public endpoint and `min` guards only t
 Same function, same sentence, both places. → [invariant 7](../CLAUDE.md#invariants)
 
 **What is still missing.** A move has no undo. Cancel, Clear, Load and Put back all keep
-what they replace; a move overwrites the old berth and span in place, and that was already
+what they replace; an edit overwrites the berth, span, name, kind and note in place, and that was already
 true of berth changes before this. It is honest to say the fix is the same shape — snapshot
 the row inside the transaction — and that it was not built, rather than to claim
 [invariant 12](../CLAUDE.md#invariants) covers a path it does not.
@@ -962,7 +962,7 @@ the row inside the transaction — and that it was not built, rather than to cla
 **Three specs**, because a write path with an undo-less overwrite deserves them: a date
 move that keeps the same row, a date move refused by the constraint because another
 booking holds those days, and the past-date refusal. `src/domain/move.test.ts` covers the
-floor rule in nine cases without touching a database.
+floor rule without touching a database.
 
 ---
 

@@ -11,11 +11,11 @@ export const SITE_NAME = 'Harborview Dock Schedule';
  * it, the search box, and the three tabs. Under it, one big line says what this page
  * is, one small line says what it is for or what it holds right now, and on the board
  * the one action the tool exists for sits beneath both. The shape is the reference
- * site's (DECISIONS 19 and 24): nothing is small, the primary action cannot be
+ * site's (ENGINEERING-LOG 19 and 24): nothing is small, the primary action cannot be
  * missed, and a first-time visitor is told what this is before seeing anything else.
  * None of it is a page about the project; invariant 9 holds.
  *
- * `search` and `check` are destinations, not tabs: they leave all three tab links
+ * `search` is a destination, not a tab: it leaves all three tab links
  * unhighlighted, because neither page belongs to a section of the app.
  */
 export default async function Nav({

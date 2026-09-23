@@ -5,7 +5,7 @@
  * is one snapshot slot. Every undo bug found in review was in the *policy* — which state
  * gets saved, and when — not in the SQL that moves rows, so the policy lives here where
  * it can be tested against every sequence of actions, and `src/db/mutations.ts` follows
- * it step for step. See DECISIONS 30.
+ * it step for step. See ENGINEERING-LOG 30.
  *
  * ONE RULE, for all three actions: **an action saves what it replaces, unless that has
  * nothing to lose.** A schedule has nothing to lose when it has no active bookings, or

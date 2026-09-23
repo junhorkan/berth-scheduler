@@ -2,7 +2,7 @@
  * Read an .xlsx into a SheetJS workbook, refusing anything that is not one.
  *
  * Every parse goes through here — the command-line importer, the no-database dry run,
- * and the in-browser check — so a hostile or malformed file is stopped in one place:
+ * — so a malformed file is stopped in one place:
  *
  *  - the zip is inspected before it is inflated (zipGuard), reading the same headers
  *    SheetJS will. `planImport` also inflates every entry once, natively and bounded,

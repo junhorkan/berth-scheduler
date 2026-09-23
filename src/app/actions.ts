@@ -112,11 +112,6 @@ export async function setVesselLengthAction(vesselId: string, lengthFt: number |
   return res;
 }
 
-export async function resolveReviewItemAction(id: string) {
-  const res = await m.resolveReviewItem(id);
-  revalidatePath('/review');
-  return res;
-}
 
 export async function resetToImportedAction() {
   const res = await m.resetToImported();

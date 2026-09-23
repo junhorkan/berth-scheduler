@@ -441,13 +441,6 @@ export async function getReviewItems(limit = 200): Promise<ReviewRow[]> {
   }));
 }
 
-export async function getReviewCounts(): Promise<Record<string, number>> {
-  const sql = db();
-  const rows = await sql`
-    select type, count(*)::int as n from review_items
-     where resolved_at is null group by type`;
-  return Object.fromEntries(rows.map((r) => [r.type as string, r.n as number]));
-}
 
 export type BookingDetailRow = BookingRow & {
   berthName: string;

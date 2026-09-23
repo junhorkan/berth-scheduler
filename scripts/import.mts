@@ -4,7 +4,7 @@
  *   npm run import                     # the workbook in data/
  *   npm run import -- path/to/any.xlsx
  *
- * Parses first, with the same planner the dry run and the in-browser check use, so a
+ * Parses first, with the same planner the dry run uses, so a
  * file that is empty, damaged, or not a schedule is refused before anything is written.
  * Then one transaction: it replaces the schedule under the same lock and undo rule as
  * "Load the sample", maps every row onto the facility's own berths, and rewrites the

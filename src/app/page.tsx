@@ -91,7 +91,7 @@ export default async function BoardPage({
    * The month navigation, drawn inside the board card as its header rather than in a
    * bar of its own: it navigates the grid and nothing else, and one fewer box on
    * screen is one fewer thing to parse. The count strip that used to sit beside it is
-   * gone — it said four things the screen already said (DECISIONS 24).
+   * gone — it said four things the screen already said (ENGINEERING-LOG 24).
    */
   const head = (
     <div className="boardhead">

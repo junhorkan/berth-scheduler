@@ -48,7 +48,7 @@ const LABEL: Record<string, { title: string; blurb: string; tone: string }> = {
 /**
  * Rows shown per section before the rest fold behind "Show the remaining N". The same
  * rule as the Vessels register: a long list shows its head, and the tail is one click
- * away rather than a screen of scrolling (DECISIONS 23).
+ * away rather than a screen of scrolling (ENGINEERING-LOG 23).
  */
 const HEAD = 5;
 

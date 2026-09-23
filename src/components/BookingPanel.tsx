@@ -22,7 +22,7 @@ import type { Occupancy } from '../lib/suggest';
  *
  *   RED    a conflict. The database's exclusion constraint will refuse this write, so
  *          Save is disabled. There is no override.
- *   AMBER  a fit problem. Advisory only, and never blocks — because 97% of vessels
+ *   AMBER  a fit problem. Advisory only, and never blocks — because 95% of vessels
  *          have no recorded length, so blocking on it would make the tool unusable.
  *   AMBER  the same hull booked at another berth over these days. Also advisory, for a
  *          different reason: the imported schedule already contains twelve of them
@@ -244,6 +244,11 @@ export default function BookingPanel({
         const y = Number(start.slice(0, 4));
         const m = Number(start.slice(5, 7));
         if (y !== viewYear || m !== viewMonth) {
+          // Close first. `router.push` swaps the page under the sheet but does not
+          // unmount it, so the filled-in create form stayed mounted beneath the new
+          // booking's own panel — two dialogs, two overlays, and a still-enabled Save
+          // on the one underneath.
+          setOpen(false);
           router.push(`/?y=${y}&m=${m}&sel=${res.id}`);
           return;
         }
@@ -252,6 +257,16 @@ export default function BookingPanel({
         setVesselName('');
         setLabel('');
         setNotes('');
+        /*
+          Every field that describes the LAST vessel, not the next one. A typed length
+          left behind is the worst of them: reopening the sheet for a different hull
+          would pre-fill somebody else's measurement and write it on save — which is
+          inventing a length (invariant 2) by way of a stale text box. The suggestion
+          and the occupancy describe the last set of dates and are equally stale.
+        */
+        setLengthInput('');
+        setSuggestion(null);
+        setOccupancy(null);
         return;
       }
       setSaveError(res.error);
@@ -301,7 +316,17 @@ export default function BookingPanel({
                 list="vessel-list"
                 value={vesselName}
                 placeholder="Start typing a vessel name"
-                onChange={(e) => setVesselName(e.target.value)}
+                /*
+                  Clearing the length here is the whole point of it being here.
+
+                  It describes the hull named in this field, so changing the name
+                  strands it: type "R/V A", type 77, then retype the name as "R/V B",
+                  and the form asserted 77ft for a vessel nobody measured — and SAVED
+                  it, because createBooking writes wherever length_ft is null. That is
+                  inventing a length (invariant 2) by way of a stale text box, and it
+                  corrupts the one column the fit check reads.
+                */
+                onChange={(e) => { setVesselName(e.target.value); setLengthInput(''); }}
               />
               <datalist id="vessel-list">
                 {(vessels ?? []).map((v) => <option key={v.id} value={v.name} />)}

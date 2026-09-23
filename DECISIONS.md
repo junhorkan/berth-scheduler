@@ -530,8 +530,9 @@ saying properly.** That decision framed the split as *decidable → unstorable, 
 decidable.** The dates are always known; the instinct is a second `EXCLUDE` on
 `(vessel_id, during)`.
 
-The source schedule forbids it. A constraint would abort `npm run import` on those four
-rows and roll back all 2,031, so the history this project promises to keep could not be
+The source schedule forbids it. A constraint would abort `npm run import` on the
+first of those twelve pairs it reached — a shared day is a violation whether one day is
+shared or two — and roll back all 2,031, so the history this project promises to keep could not be
 loaded at all. So the rule is not *decidable versus not* — it is **preventable versus
 already present**. A guarantee can only be absolute about what it is allowed to refuse,
 and refusing the facility's own past is not on the table.

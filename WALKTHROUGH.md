@@ -114,7 +114,8 @@ board renders one; watching the system refuse a booking proves the rule is real.
 > means berth capacity in feet rather than a yes/no. **Draft and depth** — vessel draft
 > matters, but no berth depth exists anywhere in the material I was given, so that check is
 > impossible rather than merely missing. **Undo for a move** — cancel, clear and load all keep
-> what they replace, but a move overwrites the old berth and dates in place; the fix is the
+> what they replace, but an edit overwrites the berth, dates, name, kind and note in
+> place; the fix is the
 > same shape, and I would rather say it is missing than imply it is covered. And a **second
 > database for the test suite**, which today writes to the live one.
 
@@ -125,7 +126,7 @@ board renders one; watching the system refuse a booking proves the rule is real.
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
 > `src/domain` and `src/lib`, which import nothing from the database or the UI: 307 unit tests
 > run in about half a second with no infrastructure, and 40 more verify the parse of their
-> workbook once it is in `data/`. 67 Playwright specs build their own fixture against a real
+> workbook once it is in `data/`. 69 Playwright specs build their own fixture against a real
 > server and restore the sample afterwards, so the app is left in the state it ships in.
 >
 > I used Claude to write it. The work that mattered was deciding what it should do, and

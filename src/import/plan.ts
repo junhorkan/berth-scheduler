@@ -4,7 +4,7 @@
  *
  * This is the one place the legacy workbook is interpreted. The command-line importer
  * writes a plan to the database; `npm run import:check` prints one; the in-browser
- * check at /check renders one. They cannot disagree, because there is only this.
+ * command-line check prints one. They cannot disagree, because there is only this.
  *
  * It used to live inline in `scripts/import.mts`, as top-level script code with no
  * tests: the conflict pre-classification, the review items, the fit checks. Here it is a
@@ -106,7 +106,7 @@ export type ImportPlan = {
 /**
  * Bytes to plan. Rejects with an ImportError, carrying a reason a person can act on.
  *
- * The entry point for a file from outside — the importer's and /check's. Async because
+ * The entry point for a file from outside — the importer's and import:check's. Async because
  * every entry is inflated once, natively and bounded, before SheetJS is allowed near it
  * (zipGuard). The synchronous readers the tests use skip that step; they only ever read
  * the known workbook.

@@ -28,7 +28,7 @@ import { todayISO, lastBookableISO } from '../lib/nav';
  *
  * Every field is here for one reason: the alternative is cancel and rebook, which throws
  * away the row, its import provenance and the review items attached to it. That trade
- * was refused for a date (DECISIONS 32), and a mistyped vessel name is the same trade.
+ * was refused for a date (ENGINEERING-LOG 32), and a mistyped vessel name is the same trade.
  * The note is the place for what the database cannot hold — shore power, crane reach, who
  * is arriving at 0600 (DECISIONS 22) — and the column existed, unwritable, until now.
  */
@@ -50,7 +50,16 @@ export default function BookingDetail({
   const [label, setLabel] = useState(booking.label);
   const [notes, setNotes] = useState(booking.notes ?? '');
   const [error, setError] = useState<string | null>(null);
-  const [clashes, setClashes] = useState<CheckResult['vesselClashes']>([]);
+  /*
+    The whole verdict, not only the advisory half.
+
+    This effect already paid for the round trip and then kept `vesselClashes` and threw
+    `bookable`, `conflicts` and `blockedBecause` away — so the edit panel showed no
+    conflict at all and its Save stayed enabled until the click. The create panel has
+    gated live on exactly this data since it was written.
+  */
+  const [check, setCheck] = useState<CheckResult | null>(null);
+  const clashes = check?.vesselClashes ?? [];
   const [pending, start] = useTransition();
 
   const current: BookingEdit = {
@@ -60,7 +69,18 @@ export default function BookingDetail({
   const next: BookingEdit = {
     berthId, start: startDate, end: endDate, label, kind, notes,
   };
+  // Declared here, above the live check that reads it: a renamed booking is about to
+  // point at a different hull, which changes both the clash question and the fit answer.
+  const renamed = label.trim() !== booking.label.trim();
   const edited = !isUnchanged(current, next);
+  /*
+    A conflict refuses the write, so the button must not offer it. The panel used to
+    find out only after the click, from the pre-check in `doSave` — which still runs,
+    because the action behind this form is a public endpoint and a button is not a
+    guard. This is the same verdict, arriving 280ms after a change instead of after a
+    click, and gating Save exactly as the create sheet's does.
+  */
+  const conflicted = check ? !check.bookable : false;
   const named = checkEdit({ kind, label });
 
   /*
@@ -73,27 +93,33 @@ export default function BookingDetail({
   */
   const generation = useRef(0);
   useEffect(() => {
-    if (booking.status === 'cancelled' || !booking.vesselId) return;
+    if (booking.status === 'cancelled') return;
     const mine = ++generation.current;
     const t = setTimeout(async () => {
       try {
         const res = await checkBookingAction({
-          berthId, vesselId: booking.vesselId, kind: booking.kind,
+          berthId,
+          // What the save will STORE, not what is stored now — the same arguments
+          // doSave uses. Passing the original kind and vessel meant switching to Event
+          // left the old hull's warnings on screen, and switching to Vessel produced
+          // none at all.
+          vesselId: kind === 'vessel' && !renamed ? booking.vesselId : null,
+          kind,
           start: startDate, end: endDate, excludeBookingId: booking.id,
         });
-        if (mine === generation.current) setClashes(res.vesselClashes);
+        if (mine === generation.current) setCheck(res);
       } catch {
-        // An advisory line that could not be fetched is simply absent. Unlike the
-        // conflict verdict in BookingPanel, nothing is gated on it, so a failure here
-        // cannot turn into a false assurance — but a stale one would still mislead.
-        if (mine === generation.current) setClashes([]);
+        // No answer is not a yes. The create panel learned this the same way: a stale
+        // verdict left on screen reads as a guarantee about the current dates, and
+        // Save is computed from it.
+        if (mine === generation.current) setCheck(null);
       }
     }, 280);
     return () => clearTimeout(t);
-  }, [booking.id, booking.status, booking.vesselId, booking.kind, berthId, startDate, endDate]);
+  }, [booking.id, booking.status, booking.vesselId, booking.kind,
+      berthId, startDate, endDate, kind, renamed]);
 
   const target = berths.find((b) => b.id === berthId)!;
-  const renamed = label.trim() !== booking.label.trim();
   /*
     The length on record belongs to the vessel this booking is linked to NOW. Once the
     name has been changed it describes a different hull — possibly one not yet on the
@@ -315,6 +341,12 @@ export default function BookingDetail({
 
         {!legal.ok && <p className="verdict stop">{legal.error}</p>}
         {legal.ok && !named.ok && <p className="verdict stop">{named.error}</p>}
+        {legal.ok && named.ok && conflicted && (
+          <p className="verdict stop">
+            <b>Blocked &mdash; berth already occupied.</b>{' '}
+            {check?.blockedBecause} The database will refuse this write.
+          </p>
+        )}
         </>
         )}
 
@@ -355,7 +387,7 @@ export default function BookingDetail({
             <>
               <button
                 className="btn primary"
-                disabled={!edited || !legal.ok || !named.ok || pending}
+                disabled={!edited || !legal.ok || !named.ok || conflicted || pending}
                 onClick={doSave}
               >
                 {pending ? 'Working…' : 'Save changes'}

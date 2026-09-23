@@ -15,6 +15,7 @@ import type { Booking, BookingKind } from '../domain/types';
 import { nothingToLose } from '../lib/undo';
 import type { Schedule } from '../lib/undo';
 import { todayISO, lastBookableISO } from '../lib/nav';
+import { parseLengthFt } from '../lib/length';
 import { checkMove } from '../domain/move';
 import { checkEdit, cleanNotes, vesselLinkFor } from '../domain/edit';
 import type { ImportPlan } from '../import/plan';
@@ -326,6 +327,21 @@ export async function createBooking(input: {
       error: `The schedule only takes bookings up to ${lastBookableISO().slice(0, 4)}.`,
     };
   }
+
+  /*
+    The length is re-read here for the same reason the dates are: the form parses it
+    with lib/length, and the form is not the guard — this action is a public endpoint.
+    Called directly with 987654 it stored 987654, and the queue duly reported a vessel
+    "over by 987599 feet". A bogus length is worse than no length, because it turns
+    "cannot verify" into a confident wrong answer — which is the one thing `lib/length`
+    exists to prevent, in the one place it was not running.
+  */
+  let length: number | null = null;
+  if (input.vesselLengthFt != null) {
+    const parsed = parseLengthFt(String(input.vesselLengthFt));
+    if (!parsed.ok) return { ok: false, error: parsed.error };
+    length = parsed.value;
+  }
   const sql = db();
   try {
     let id = '';
@@ -352,10 +368,10 @@ export async function createBooking(input: {
         this system's second check depends on. Correcting a known length stays a
         deliberate act on the Vessels page.
       */
-      if (input.kind === 'vessel' && vesselId && input.vesselLengthFt != null) {
+      if (input.kind === 'vessel' && vesselId && length != null) {
         await tx`
           update vessels
-             set length_ft = ${input.vesselLengthFt}, length_source = 'manual'
+             set length_ft = ${length}, length_source = 'manual'
            where id = ${vesselId} and length_ft is null`;
       }
 
@@ -602,9 +618,6 @@ export async function setVesselLength(
   }
 }
 
-export async function resolveReviewItem(id: string): Promise<{ ok: boolean; error?: string }> {
-  return resolveReviewItems([id]);
-}
 
 /**
  * Resolve a whole group at once.
@@ -642,7 +655,7 @@ export async function resolveReviewItems(
  *   3. snapshot  if so, save it
  *   4. replace   delete the live rows and write the new ones
  *
- * DECISIONS 28–30 have the history, including the Put back that deleted the live
+ * ENGINEERING-LOG 28–30 have the history, including the Put back that deleted the live
  * schedule without saving it.
  */
 
@@ -943,6 +956,16 @@ function describeDbError(e: unknown): string {
   }
   if (err.code === '22000') {
     return 'The end date must not be before the start date.';
+  }
+  /*
+    A berth id that names no berth. The trigger that copies `capacity_mode` finds no row,
+    leaves `exclusive` null, and the NOT NULL rejects it — so the symptom is two steps
+    from the cause, and the raw message named an internal column. `checkBooking` already
+    answers "Unknown berth." for the same input; this is the write path saying the same
+    thing instead of leaking the schema.
+  */
+  if (err.code === '23502' || err.code === '23503') {
+    return 'That berth does not exist.';
   }
   return err.message ?? 'The database rejected that change.';
 }

@@ -72,8 +72,6 @@ const FOLLOWING = monthsAhead(4);
  */
 const PAST = monthsAhead(-1);
 
-export const PAST_YEAR = PAST.year;
-export const PAST_MONTH = PAST.month;
 export const PAST_HREF = `/?y=${PAST.year}&m=${PAST.month}`;
 export const PAST_LABEL = 'R/V Test Ghost of Last Month';
 
