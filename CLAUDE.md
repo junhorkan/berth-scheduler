@@ -9,6 +9,7 @@ Live at https://berth-scheduler.vercel.app
 |---|---|
 | [README.md](README.md) | Setup, what the app does, how to run it |
 | [DECISIONS.md](DECISIONS.md) | Why something is the way it is — **read before changing a design choice** |
+| [docs/ENGINEERING-LOG.md](docs/ENGINEERING-LOG.md) | The other 22 decision entries, same numbers — build detail, read when one is cited |
 | [ASSUMPTIONS.md](ASSUMPTIONS.md) | What was assumed where the brief was silent |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Deploying, keep-warm, DB access posture — **read before deploying or touching the database** |
 | [docs/DESIGN.md](docs/DESIGN.md) | The presentation invariants in full — **read before changing anything visual** |
@@ -26,6 +27,10 @@ keeping them apart.**
   constraint makes it **unstorable**. Red in the UI. Blocks saving.
 - **Vessel too long for its berth** is *not* — a length is known only once somebody
   records it, and most never will. Advisory. Amber in the UI. **Never blocks.**
+- **One hull at two berths at once** is decidable and *still* advisory, because twelve
+  rows of the supplied workbook already do it: a constraint would refuse the facility's
+  own past. The line is **preventable vs. already present**, not decidable vs. not.
+  → [DECISIONS 36](DECISIONS.md#36-one-hull-two-berths-decidable-and-still-only-a-warning)
 
 Unifying them into one "validation" costs one or the other — the tool blocks on unknowns,
 or the overlap guarantee softens. → [DECISIONS 2](DECISIONS.md#2-fit-warns-it-never-blocks)
@@ -39,17 +44,20 @@ obeyable.
 1. **`src/domain` and `src/lib` import nothing from `db` or `app`.** Pure, and unit-tested
    without infrastructure.
 2. **Never invent a vessel length, and never gate a booking on picking a known vessel.**
-   Booking registers the vessel; **cancelling its last booking unregisters it** — the
+   Booking registers the vessel and may record its length — **optional, never required**,
+   and written only where none is on record. Booking registers the vessel; **cancelling its last booking unregisters it** — the
    register INNER JOINs bookings, so a hull with nothing on the schedule is not on it.
    The row is kept, so a restore brings it back, and `getVesselOptions` stays unfiltered
    so re-booking that name reuses it. The berth suggester **proposes and explains, never
-   assigns**. → [DECISIONS 22 and 23](DECISIONS.md#22-the-system-suggests-a-berth-it-never-assigns-one)
+   assigns**. → [DECISIONS 22](DECISIONS.md#22-the-system-suggests-a-berth-it-never-assigns-one) ·
+   [LOG 23](docs/ENGINEERING-LOG.md#23-a-long-list-shows-its-head-and-names-its-categories-once)
 3. **Nothing vanishes silently, but repetition is not information.** What the importer
    cannot place becomes a review item carrying its sheet/row/column; missing lengths are
    derived, not stored; identical problems fold with a count (`lib/review.ts`), and
    conflicts never fold. **A queue holds work**: an item whose booking has ended moves to
    the archive card and leaves the badge, and nothing is ever deleted to get it there.
-   → [DECISIONS 17, 23 and 26](DECISIONS.md#17-repetition-is-not-information)
+   → [DECISIONS 26](DECISIONS.md#26-a-queue-holds-work-history-goes-in-an-archive) ·
+   [LOG 17 and 23](docs/ENGINEERING-LOG.md#17-repetition-is-not-information)
 4. **`Small craft slips` is pooled** and exempt from conflict detection. Every other berth
    is exclusive.
 5. **The berths live in a migration**, not in application code. They are the facility.
@@ -57,14 +65,16 @@ obeyable.
    instant `data-tip` and never the native `title`.
    **Width and height are data, so neither may grow to be easier to press** — `.bar::before`
    pads the target instead, upward into the empty lane.
-   → [DESIGN](docs/DESIGN.md#6-bar-height-is-the-fit-check) · [DECISIONS 33](DECISIONS.md#33-the-drawn-bar-is-the-data-the-target-you-press-is-not)
+   → [DESIGN](docs/DESIGN.md#6-bar-height-is-the-fit-check) · [DECISIONS 4](DECISIONS.md#4-the-bars-height-is-the-fit-check) ·
+   [LOG 33](docs/ENGINEERING-LOG.md#33-the-drawn-bar-is-the-data-the-target-you-press-is-not)
 7. **Every date bound comes from `lib/nav`; none is hard-coded.** The floor stretches to
    the earliest booking; the form refuses a start before today, in the save path as well,
    since `min` only guards the picker. A fixed bound has hidden real bookings three times.
    **A move is judged by where the booking is now** (`domain/move.ts`): one that has not
    started cannot go behind today; one already past is a record being corrected, and has
    no floor — otherwise all 2,031 imported rows would be uneditable.
-   → [DECISIONS 32](DECISIONS.md#32-a-move-changes-a-span-not-only-a-berth)
+   → [DECISIONS 8](DECISIONS.md#8-the-board-opens-on-today-you-can-look-back-but-not-book-back) ·
+   [LOG 32](docs/ENGINEERING-LOG.md#32-a-move-changes-a-span-not-only-a-berth)
 8. **Empty is supported, and never silent.** The full grid still draws, and one line says
    where the bookings are. **Review's rows stay drawn at zero** — a count and a line
    saying what would fill it — rather than deleting themselves and leaving a bare page.
@@ -82,16 +92,17 @@ obeyable.
     → [DESIGN](docs/DESIGN.md#10-light-only-and-one-obvious-action)
 11. **Nothing outside the grid below 13px.** When something will not fit, change its shape,
     not its point size. → [DESIGN](docs/DESIGN.md#11-nothing-outside-the-grid-below-13px)
-12. **Nothing destructive is irreversible**, with one stated exception: **a move
-    overwrites the berth and span in place and has no undo** — say so, do not imply it is
-    covered. No accounts, so reversibility is the answer
+12. **Nothing destructive is irreversible**, with one stated exception: **an edit
+    overwrites the berth, span, name, kind and note in place and has no undo** — say so,
+    do not imply it is covered. No accounts, so reversibility is the answer
     rather than a gate. Cancelling is a soft delete restored from Review, and restoring
     re-runs the constraint, so it can be refused. **Clear, Load and Put back** each save
     what they replace, unless it has nothing to lose (`lib/undo.ts`, tested over every
     sequence), inside the transaction that replaces it. **Importing is not a UI action
     at all**: `npm run import` runs behind the database credentials, because a public
     page with no accounts must not be able to replace everyone's schedule.
-    → [DECISIONS 20, 28 and 30](DECISIONS.md#20-cancelling-is-reversible-not-restricted)
+    → [DECISIONS 20](DECISIONS.md#20-cancelling-is-reversible-not-restricted) ·
+    [LOG 28 and 30](docs/ENGINEERING-LOG.md#28-clear-is-undoable-and-the-board-is-not-a-wall)
 13. **Never use WHOI's name or marks.** A real institution, a public site, synthetic data.
     → [DECISIONS 21](DECISIONS.md#21-the-facility-is-not-whoi)
 
@@ -159,8 +170,8 @@ log, not the input to it. → [OPERATIONS](docs/OPERATIONS.md#schema)
 - **Server Actions inherit their route's `maxDuration`.** The 10s default killed the ~12s
   workbook restore mid-transaction, and the button discarded its `{ok, error}`, so it
   failed in total silence. Never throw a mutation's result away.
-- Deployments that come back `BLOCKED`, the pool-sizing trap, the keep-warm ping, and why
-  `git ls-files data` must print nothing: [docs/OPERATIONS.md](docs/OPERATIONS.md).
+- The pool-sizing trap, the keep-warm ping, the RLS posture, and why `git ls-files data`
+  must print nothing: [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

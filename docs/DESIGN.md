@@ -47,7 +47,8 @@ berth is drawn 1.61 lanes tall and visibly breaks out of its row.
   day's booking starts where this one ends. `.bar` must therefore stay `overflow: visible`
   — the label clips itself.
 
-Full argument: [DECISIONS 4 and 33](../DECISIONS.md).
+Full argument: [DECISIONS 4](../DECISIONS.md#4-the-bars-height-is-the-fit-check) and
+[LOG 33](ENGINEERING-LOG.md#33-the-drawn-bar-is-the-data-the-target-you-press-is-not).
 
 ## 8. Empty is supported, and never silent
 
@@ -89,7 +90,8 @@ save, the queue off a problem — and on an empty month none of them render, inc
 - **Each page's masthead is its own name and one line** — the board's, being the site's,
   adds the primary action. Vessels and Review put their lede under their name; the site's
   name becomes a small link back in the top row, with the search box and the tabs. A
-  one-line tagline is not a page, and neither is a title. See DECISIONS 24.
+  one-line tagline is not a page, and neither is a title. See
+  [LOG 24](ENGINEERING-LOG.md#24-the-masthead-is-the-pages-name-in-the-reference-sites-shape).
 - **That line says what the page is FOR, not how it happens to be doing.** Review's read
   *"Nothing on the schedule needs a decision."* — true, and on the front door it argues
   the page should not exist. State belongs in the card, against the row it is the state
@@ -99,7 +101,7 @@ save, the queue off a problem — and on an empty month none of them render, inc
 - **A row with a count is organisation; a paragraph explaining the row is clutter.** An
   empty state gets a label, not an essay — *Nothing right now.*, *None missing.* Review
   was rebuilt twice in an hour, once for being bare and once for the prose that fixed it
-  ([DECISIONS 26](../DECISIONS.md#26-a-queue-holds-work-history-goes-in-an-archive)).
+  ([LOG 26 continued](ENGINEERING-LOG.md#26-continued-reviews-two-revisions)).
   Board is one card and a line; Vessels is one card, a row of buttons and a pager.
 
 ## 10. Light only, and one obvious action
@@ -133,7 +135,8 @@ commit at a time.
 - **Repetition is not information.** Identical problems fold into one row with a count; a
   category is named once above its rows, not on every row; a column that is blank or
   identical on every row is furniture, not data. What does *not* fold: conflicts, which
-  are distinct pairs of bookings. See [DECISIONS 17 and 23](../DECISIONS.md).
+  are distinct pairs of bookings. See
+  [LOG 17 and 23](ENGINEERING-LOG.md#17-repetition-is-not-information).
 - **A long list shows its head.** Vessels pages: ten of 418 at a time, its two halves on
   two buttons, and a filter that searches the whole register. Rendering all of them made
   the page 21,713px tall and buried the page's own argument, and a *Show the remaining
@@ -142,9 +145,10 @@ commit at a time.
   `<details>`; navigation on a row is a text link, and only the decision is a button.
   Review's **History** card goes further and starts closed: one button per category, and
   nothing drawn until one is pressed, because an archive nobody has asked for is the
-  longest list on the page ([DECISIONS 26](../DECISIONS.md#26-a-queue-holds-work-history-goes-in-an-archive)).
+  longest list on the page ([LOG 26 continued](ENGINEERING-LOG.md#26-continued-reviews-two-revisions)).
   Both mechanisms are CSS on a server-rendered page — a fold is a `<details>`, the
   archive is a radio group — so neither costs JavaScript.
 - **A count strip is repetition too.** The board once carried *7 berths · 0 in September ·
   418 vessels · 29 to review* beside the month; three of the four were already on screen
-  as seven lanes, the empty-month line, and the Review badge. It is gone (DECISIONS 24).
+  as seven lanes, the empty-month line, and the Review badge. It is gone
+  ([LOG 24](ENGINEERING-LOG.md#24-the-masthead-is-the-pages-name-in-the-reference-sites-shape)).

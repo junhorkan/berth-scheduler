@@ -10,36 +10,9 @@ Supabase project `rtovlwkwakiqrconbacm`.
 
 ## Deploying
 
-**Pushing to `main` deploys.** The Vercel project is connected to
-`junhorkan/berth-scheduler`, so a push fires a webhook and production rebuilds on its own.
-
-### The commit author has to be someone Vercel recognises
-
-Vercel **blocks** a git deployment whose commit author matches no account with access to
-the project. It fires the webhook, creates the deployment, and stops it at `BLOCKED` —
-so the repo looks current, a deployment exists, and the site is still serving old code.
-
-This happened here. Git had no `user.email` configured, so commits were authored as
-`junhorkan@Juns-MacBook-Pro-4.local`, a placeholder derived from the hostname. The fix
-was to set the repo's identity to the email on the Vercel account:
-
-```bash
-git config user.email "junhorkan@gmail.com"
-```
-
-If deployments start coming back `BLOCKED`, check the commit author before anything else.
-
-### Verifying a deploy actually landed
-
-The deployment list is not proof, and neither is the Git settings page — "connected" was
-true here while nothing was building. Check a *behaviour* that changed:
-
-```bash
-curl -s https://berth-scheduler.vercel.app/ | grep -c 'class="find"'      # search box
-curl -s -o /dev/null -w '%{http_code}' https://berth-scheduler.vercel.app/search
-```
-
-A `READY` deployment in the list is not proof the alias moved.
+**Pushing to `main` deploys.** The Vercel project is connected to the repository, so a push
+fires a webhook and production rebuilds on its own. A deployment appearing in the list is
+not proof that the site changed — check a behaviour that changed before believing it.
 
 ## Staying awake
 

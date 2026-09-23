@@ -37,7 +37,7 @@ that month.
   but only a lone `1` is printed on the day-number row.
 - **2002+** — true calendar offset.
 
-## Three source defects, and how each is handled
+## Four source defects, and how each is handled
 
 1. **The 2002, 2003 and 2004 sheets each open with the previous December.** Sheet "2002"
    row 1 reads `DECEMBER 2001`. The year must come from the header text, not the sheet
