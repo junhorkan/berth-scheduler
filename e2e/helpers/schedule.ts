@@ -198,11 +198,17 @@ export async function seedFixture(): Promise<void> {
             from berths be where be.name = ${b.berth}`;
       }
       // The fit check only has something to say once a length is on record, so the
-      // two oversized vessels produce review items exactly as the app would.
+      // two oversized vessels produce review items exactly as the app would — including
+      // the detail's wording, which is `refreshTooLongItems`'s in src/db/mutations. It used to
+      // write feet as `'`, a spelling the app no longer uses anywhere, so the suite was
+      // the only thing on the site still saying it.
       await tx`
         insert into review_items (type, booking_id, vessel_id, berth_id, raw_text, detail)
         select 'too_long', b.id, v.id, be.id, v.canonical_name,
-               'Vessel is ' || v.length_ft || '''' || ' but the berth is ' || be.length_ft || ''''
+               'Vessel is ' || v.length_ft || 'ft'
+               || ' but the berth is ' || be.length_ft || 'ft'
+               || ' — over by ' || (v.length_ft - be.length_ft) || 'ft'
+               || ' (' || b.start_date || '..' || b.end_date || ')'
           from bookings b
           join vessels v on v.id = b.vessel_id
           join berths be on be.id = b.berth_id
