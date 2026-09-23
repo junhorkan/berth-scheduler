@@ -224,6 +224,26 @@ export default function BookingDetail({
                 {booking.vesselLengthFt != null
                   ? ` — ${booking.vesselLengthFt}ft on record`
                   : ' — no length on record'}
+                {/*
+                  The heading above is this booking's own text and this is the hull it
+                  was matched to, and on an imported row the two can differ in casing:
+                  `Tug BLUE FATHOM` over `Tug Blue Fathom`, one panel, two spellings,
+                  nothing saying they are the same boat.
+
+                  Neither wins, and that is not a dodge. `canonicalVesselName` keeps
+                  FIRST-SEEN casing on purpose — "so we never invent a spelling the
+                  facility does not use" — so the register's spelling is whichever row
+                  the importer happened to reach first, and the booking's is what that
+                  cell actually says. Promoting either promotes an accident of row
+                  order, and rewriting the label would also orphan the provenance line
+                  two rows down. So the relationship is stated instead, and only when
+                  there is one to state.
+                */}
+                {booking.vesselName && booking.vesselName !== booking.label && (
+                  <span className="sub-hint">
+                    This booking is written &ldquo;{booking.label}&rdquo; on the schedule.
+                  </span>
+                )}
               </dd>
             </>
           )}

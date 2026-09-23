@@ -235,7 +235,22 @@ a { color: var(--vessel); }
   font-size: 10px; color: var(--ink-muted); padding-bottom: 3px;
   min-width: 0;
 }
-.dayhead .d.wknd { color: var(--ink-2); font-weight: 600; }
+/*
+ * A weekend is marked once, by its column.
+ *
+ * This also darkened and bolded the day number, so the header read as one row of text in
+ * two colours and two weights: a scatter of dark bold numerals — 1, 7, 8, 14, 15 — among
+ * light ones, which the eye reads as emphasis without being told what is emphasised. The
+ * shaded column behind them already says Saturday and Sunday, down the whole board and
+ * against every berth at once, which is the more useful place to say it.
+ *
+ * The bold went with it, for the same reason. Between the shaded column, the `S` under
+ * the numeral and a heavier numeral, a weekend was announced three times; the first two
+ * are enough, and the third was what made the row read as a scatter.
+ *
+ * Today keeps its own colour below. That one IS a single distinguished column, and it is
+ * the thing you look for.
+ */
 .dayhead .dow { display: block; font-size: 9px; opacity: 0.75; }
 
 .rail {

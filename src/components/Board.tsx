@@ -112,7 +112,7 @@ export default function Board({
           {dayNums.map((d, i) => (
             <span
               key={d}
-              className={`d${dow[i] === 0 || dow[i] === 6 ? ' wknd' : ''}${d === todayDay ? ' today' : ''}`}
+              className={`d${d === todayDay ? ' today' : ''}`}
               aria-current={d === todayDay ? 'date' : undefined}
             >
               {d}
