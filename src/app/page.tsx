@@ -115,6 +115,8 @@ export default async function BoardPage({
           <BookingPanel
             berths={berths}
             defaultDate={newBookingDate}
+            viewYear={year}
+            viewMonth={month}
             minDate={firstBookableISO()}
             maxDate={lastBookableISO()}
           />

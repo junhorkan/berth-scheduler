@@ -57,6 +57,25 @@ function monthsAhead(n: number): { year: number; month: number } {
 
 const FIXTURE = monthsAhead(3);
 const FOLLOWING = monthsAhead(4);
+/**
+ * One month BEHIND today, holding a single booking.
+ *
+ * The rest of the fixture is future-dated on purpose — a booking cannot be made for a
+ * past date, so a past fixture could be seeded by SQL but never reproduced through the
+ * form. That left the whole suite blind to anything that only happens to a booking
+ * already in the past, and a real one got through: `moveBooking` read the stored start
+ * with `String(aDate)` and compared "Sat Nov 30 2019 …" against "2026-09-22", so every
+ * past booking looked like one that had not started yet and none of them could be
+ * moved. 62 specs, all green.
+ *
+ * So this row is seeded rather than booked, and exists to be EDITED, not created.
+ */
+const PAST = monthsAhead(-1);
+
+export const PAST_YEAR = PAST.year;
+export const PAST_MONTH = PAST.month;
+export const PAST_HREF = `/?y=${PAST.year}&m=${PAST.month}`;
+export const PAST_LABEL = 'R/V Test Ghost of Last Month';
 
 export const FIXTURE_YEAR = FIXTURE.year;
 export const FIXTURE_MONTH = FIXTURE.month;
@@ -111,6 +130,9 @@ const BOOKINGS: Row[] = [
     label: 'M/V Test Crosser', start: d(27), end: d(4, FOLLOWING) },
   { vessel: 'OSV Test Osprey', berth: 'North Pier East', kind: 'vessel',
     label: 'OSV Test Osprey', start: d(20), end: d(23) },
+  // Last month. Seeded, never booked — see PAST above.
+  { vessel: 'R/V Test Harbor', berth: 'North Pier East', kind: 'vessel',
+    label: PAST_LABEL, start: d(6, PAST), end: d(8, PAST) },
   // Small craft slips is pooled, so these coexist without tripping the conflict check.
   ...Array.from({ length: REGULAR_BOOKING_COUNT }, (_, i) => ({
     vessel: 'R/V Test Regular',

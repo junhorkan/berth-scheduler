@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { setVesselLengthAction } from '../app/actions';
+import { parseLengthFt } from '../lib/length';
 
 /**
  * Inline length entry. This is the highest-leverage control in the whole system:
@@ -22,18 +23,14 @@ export default function VesselLengthInput({
   const [pending, start] = useTransition();
 
   function save() {
-    const n = value.trim() === '' ? null : Number(value);
-    if (n != null && (!Number.isFinite(n) || n <= 0 || n > 2000)) {
-      setSaved('Enter a length in feet.');
+    // Parsed by lib/length, not by Number(): this field writes the one column the whole
+    // fit check compares against, and Number('1e3') is a silent 1000.
+    const parsed = parseLengthFt(value);
+    if (!parsed.ok) {
+      setSaved(parsed.error);
       return;
     }
-    // Lengths are stored as whole feet. Postgres would silently round 45.5 to 46, and
-    // quietly altering a recorded measurement is the wrong failure mode in a system
-    // whose whole job is comparing that measurement against a berth.
-    if (n != null && !Number.isInteger(n)) {
-      setSaved('Whole feet only.');
-      return;
-    }
+    const n = parsed.value;
     start(async () => {
       const res = await setVesselLengthAction(vesselId, n);
       setSaved(res.ok ? 'ok' : res.error ?? 'Failed');

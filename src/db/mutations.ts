@@ -369,11 +369,24 @@ export async function moveBooking(
     // Where it sits now decides whether this is scheduling or correcting the record,
     // so the rule needs the stored start — and this is the check for anything calling
     // the action directly, which the panel's disabled button cannot be.
-    const [row] = await sql`select start_date from bookings where id = ${id}`;
+    const [row] = await sql`select start_date::text from bookings where id = ${id}`;
     if (!row) return { ok: false, error: 'That booking no longer exists.' };
 
+    /*
+      `::text`, not String(a Date).
+
+      postgres.js hands a `date` column back as a JS Date, and `String()` on one yields
+      "Sat Nov 30 2019 19:00:00 GMT-0500 (Eastern Standard Time)". Compared with `>=`
+      against "2026-09-22" that is a LEXICOGRAPHIC comparison, and a letter always beats
+      a digit — so every booking read as "has not started yet", and every one of the
+      2,031 imported rows became unmovable with the message that it cannot be moved into
+      the past. The pure rule was right and tested; the value reaching it was not.
+
+      The client runs the same `checkMove` on a real ISO string and therefore disagreed
+      with the server — which this function's own comment claims cannot happen.
+    */
     const verdict = checkMove({
-      currentStart: String(row.start_date), start: to.start, end: to.end,
+      currentStart: row.start_date as string, start: to.start, end: to.end,
       today: todayISO(), ceiling: lastBookableISO(),
     });
     if (!verdict.ok) return { ok: false, error: verdict.error };

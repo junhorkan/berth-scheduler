@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   FIXTURE_YEAR, FIXTURE_MONTH, FIXTURE_HREF, NEXT_MONTH_HREF, EMPTY_MONTH_HREF,
-  facilityDaysAgo,
+  PAST_HREF, PAST_LABEL, facilityDaysAgo,
 } from './helpers/schedule';
 
 /**
@@ -807,5 +807,70 @@ test.describe('the new-booking sheet opens usable', () => {
     await page.getByRole('button', { name: '+ New booking' }).click();
     await expect(page.locator('.panel-sheet input[type="date"]').first())
       .toHaveValue(`${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-01`);
+  });
+});
+
+/**
+ * A booking already in the past is a RECORD, and a record can be corrected.
+ *
+ * `src/domain/move.ts` says so and nine unit tests prove the rule — but the value
+ * reaching it came from `String(aDate)`, which is "Sat Nov 30 2019 19:00:00 GMT-0500".
+ * Compared with `>=` against "2026-09-22" that is a string comparison a letter always
+ * wins, so every past booking read as "has not started yet" and all 2,031 imported
+ * rows were unmovable. The pure function was tested; its caller was not, and the whole
+ * fixture was future-dated, so nothing in the suite could see it.
+ */
+test.describe('correcting a booking that has already happened', () => {
+  test('moves a past booking to another berth', async ({ page }) => {
+    await page.goto(PAST_HREF);
+    await page.getByLabel(new RegExp(PAST_LABEL)).first().click();
+    await expect(page.getByRole('dialog')).toContainText(PAST_LABEL);
+
+    const berth = page.getByLabel('Berth', { exact: true });
+    await expect(berth).toHaveValue(
+      (await berth.locator('option', { hasText: 'North Pier East' }).getAttribute('value')) ?? '',
+    );
+    await berth.selectOption(
+      (await berth.locator('option', { hasText: 'South Float West' }).getAttribute('value')) ?? '',
+    );
+    await page.getByRole('button', { name: 'Move booking' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await page.goto(PAST_HREF);
+    await page.getByLabel(new RegExp(PAST_LABEL)).first().click();
+    await expect(page.getByRole('dialog')).toContainText('South Float West');
+    // And the refusal it must NOT give.
+    await expect(page.getByRole('dialog')).not.toContainText('has not started yet');
+
+    // Back where the fixture had it.
+    const back = page.getByLabel('Berth', { exact: true });
+    await back.selectOption(
+      (await back.locator('option', { hasText: 'North Pier East' }).getAttribute('value')) ?? '',
+    );
+    await page.getByRole('button', { name: 'Move booking' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('corrects a past booking to other past dates', async ({ page }) => {
+    await page.goto(PAST_HREF);
+    await page.getByLabel(new RegExp(PAST_LABEL)).first().click();
+    const start = await page.getByLabel('Start date').inputValue();
+    const shifted = `${start.slice(0, 8)}12`;
+
+    await page.getByLabel('Start date').fill(shifted);
+    await page.getByLabel('End date').fill(`${start.slice(0, 8)}14`);
+    // No floor on a record being corrected: the picker must not fight it either.
+    await expect(page.getByLabel('Start date')).not.toHaveAttribute('min', /.+/);
+    await page.getByRole('button', { name: 'Move booking' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await page.goto(PAST_HREF);
+    await page.getByLabel(new RegExp(PAST_LABEL)).first().click();
+    await expect(page.getByLabel('Start date')).toHaveValue(shifted);
+
+    await page.getByLabel('Start date').fill(start);
+    await page.getByLabel('End date').fill(`${start.slice(0, 8)}08`);
+    await page.getByRole('button', { name: 'Move booking' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 });

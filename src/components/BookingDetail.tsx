@@ -5,6 +5,7 @@ import { cancelBookingAction, moveBookingAction, checkBookingAction } from '../a
 import type { BerthRow, BookingDetailRow } from '../db/queries';
 import { checkFit } from '../domain/fit';
 import { checkMove } from '../domain/move';
+import { RestoreButton } from './RestoreButton';
 import { todayISO, lastBookableISO } from '../lib/nav';
 
 /**
@@ -129,6 +130,7 @@ export default function BookingDetail({
           </p>
         )}
 
+        {booking.status !== 'cancelled' && (
         <div className="field" style={{ marginTop: 14 }}>
           <label htmlFor="mv">Berth</label>
           <select id="mv" value={berthId} onChange={(e) => { setBerthId(e.target.value); setError(null); }}>
@@ -139,12 +141,14 @@ export default function BookingDetail({
             ))}
           </select>
         </div>
+        )}
 
         {/*
           `min` guards the picker only, and only where there is a floor to guard: an
           imported 2010 booking is a record being corrected and has none. The rule is
           checkMove, run here and again in the save path.
         */}
+        {booking.status !== 'cancelled' && (
         <div className="field dates">
           <label htmlFor="mvs">Dates</label>
           {/* The pair is one item, so it wraps under the label as a unit rather than
@@ -168,8 +172,11 @@ export default function BookingDetail({
             />
           </div>
         </div>
+        )}
 
-        {!legal.ok && <p className="verdict stop">{legal.error}</p>}
+        {booking.status !== 'cancelled' && !legal.ok && (
+          <p className="verdict stop">{legal.error}</p>
+        )}
 
         {berthChanged && fit && fit.verdict !== 'fits' && (
           <p className="verdict warn">
@@ -181,11 +188,24 @@ export default function BookingDetail({
         {error && <p className="verdict stop">{error}</p>}
         {moveWarning && <p className="verdict warn">{moveWarning}</p>}
 
+        {/*
+          A cancelled booking is reachable by its own URL — Review links to one, and so
+          does anyone who kept the link. It used to offer "Cancel booking" on something
+          already cancelled: an action that would do nothing, next to a Status line
+          saying why. Restoring is the move that exists from here, and it is refused by
+          the constraint if the slot has been taken since.
+        */}
         <div className="actions">
-          <button className="btn primary" disabled={!moved || !legal.ok || pending} onClick={doReassign}>
-            {pending ? 'Working…' : 'Move booking'}
-          </button>
-          <button className="btn danger" disabled={pending} onClick={doCancel}>Cancel booking</button>
+          {booking.status === 'cancelled' ? (
+            <RestoreButton id={booking.id} />
+          ) : (
+            <>
+              <button className="btn primary" disabled={!moved || !legal.ok || pending} onClick={doReassign}>
+                {pending ? 'Working…' : 'Move booking'}
+              </button>
+              <button className="btn danger" disabled={pending} onClick={doCancel}>Cancel booking</button>
+            </>
+          )}
           <a className="btn" href={closeHref}>Close</a>
         </div>
       </aside>

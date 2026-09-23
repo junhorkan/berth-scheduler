@@ -28,11 +28,16 @@ import type { Occupancy } from '../lib/suggest';
 export default function BookingPanel({
   berths,
   defaultDate,
+  viewYear,
+  viewMonth,
   minDate,
   maxDate,
 }: {
   berths: BerthRow[];
   defaultDate: string;
+  /** The month the board is showing, so a save knows whether it lands out of sight. */
+  viewYear: number;
+  viewMonth: number;
   /** The bookable window, from lib/nav. Hard-coding it here let the form accept dates
    *  the board could not navigate to, which is how a saved booking became invisible. */
   minDate: string;
@@ -40,6 +45,8 @@ export default function BookingPanel({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  /** The check did not come back. Distinct from "came back and said no". */
+  const [checkFailed, setCheckFailed] = useState(false);
   /**
    * The register, fetched the first time this panel opens.
    *
@@ -93,6 +100,7 @@ export default function BookingPanel({
       // cascades a render, and the "Checking…" line is only read before the first
       // verdict lands anyway, so the 280ms delay costs nothing visible.
       setChecking(true);
+      setCheckFailed(false);
       try {
         // Both in one round trip: the verdict for the chosen berth, and what every
         // other berth is doing, so the dropdown can say so without a second wait.
@@ -101,6 +109,18 @@ export default function BookingPanel({
           berthOccupancyAction(start, end),
         ]);
         if (mine === generation.current) { setCheck(result); setOccupancy(occ); }
+      } catch {
+        /*
+          Whatever went wrong, the one thing that must not survive it is the previous
+          answer. A verdict left on screen from the last set of dates reads as a
+          guarantee about the current ones, and `canSave` is computed from it — so a
+          failed check would enable Save on dates nothing had looked at.
+        */
+        if (mine === generation.current) {
+          setCheck(null);
+          setOccupancy(null);
+          setCheckFailed(true);
+        }
       } finally {
         if (mine === generation.current) setChecking(false);
       }
@@ -139,16 +159,24 @@ export default function BookingPanel({
   const isNewVessel =
     kind === 'vessel' && vessels !== null && !vessel && vesselName.trim() !== '';
   const missingLabel = effectiveLabel === '';
-  const blocked = check ? !check.bookable : false;
+  // No answer is not a yes: Save waits rather than assuming the berth is free.
+  const blocked = checkFailed || (check ? !check.bookable : false);
   /**
    * `min` on a date input only constrains the picker. Saving happens through a click
    * handler rather than native form submission, so a date typed or pasted straight in
    * would otherwise sail past it.
    */
   const startsInPast = start < minDate;
-  const canSave = !blocked && !missingLabel && !startsInPast && !pending;
+  // `max` guards the picker the same way `min` does, and a pasted date sails past both.
+  // The save path refuses this too; without it here, Save looked available for a date
+  // the board could never navigate to.
+  const endsAfterWindow = end > maxDate;
+  const canSave =
+    !blocked && !missingLabel && !startsInPast && !endsAfterWindow && !pending;
 
-  const disabledReason = blocked
+  const disabledReason = checkFailed
+    ? 'Could not check these dates. Change them, or try again in a moment.'
+    : blocked
     ? check?.blockedBecause ?? 'This berth is already occupied.'
     : startsInPast
       ? 'A berth cannot be reserved for a day that has already passed.'
@@ -164,13 +192,26 @@ export default function BookingPanel({
       });
       if (res.ok) {
         /*
-          Go to the booking, rather than closing onto whatever month was behind the
-          sheet. The default date is now today whenever the month on screen has passed,
-          so a booking made while browsing 2010 lands in a month the board is not
-          showing — and "saved, and nothing appeared" is indistinguishable from failure.
-          Landing on it with its panel open also confirms what was written.
+          Usually just close: the board behind the sheet already shows the month the
+          booking is in, and the new bar appears there on revalidate. That is the
+          confirmation, and it costs no second panel to dismiss.
+
+          But the default date is today whenever the month on screen has passed, so a
+          booking made while browsing 2010 lands somewhere the board is not showing, and
+          "saved, and nothing appeared" is indistinguishable from failure. Only then is
+          it worth moving the board — and it arrives with the booking selected, so which
+          bar is the new one is not a guess.
         */
-        router.push(`/?y=${start.slice(0, 4)}&m=${Number(start.slice(5, 7))}&sel=${res.id}`);
+        const y = Number(start.slice(0, 4));
+        const m = Number(start.slice(5, 7));
+        if (y !== viewYear || m !== viewMonth) {
+          router.push(`/?y=${y}&m=${m}&sel=${res.id}`);
+          return;
+        }
+        setOpen(false);
+        setCheck(null);
+        setVesselName('');
+        setLabel('');
         return;
       }
       setSaveError(res.error);
@@ -282,10 +323,15 @@ export default function BookingPanel({
         <div className="field">
           <label htmlFor="s">Dates</label>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
+            {/* Named individually: the visible label says "Dates" for both, so without
+                these a screen reader announces the first as "Dates" and the second as
+                its own value. The move panel already does this. */}
             <input id="s" type="date" value={start} min={minDate} max={maxDate}
+                   aria-label="Start date"
                    onChange={(e) => { setStart(e.target.value); if (e.target.value > end) setEnd(e.target.value); }} />
             <span style={{ color: 'var(--ink-muted)' }}>to</span>
             <input type="date" value={end} min={start} max={maxDate}
+                   aria-label="End date"
                    onChange={(e) => setEnd(e.target.value)} />
           </div>
         </div>

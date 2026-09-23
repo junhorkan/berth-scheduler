@@ -83,7 +83,14 @@ a { color: var(--vessel); }
   margin: 0; font-size: 36px; line-height: 1.15; font-weight: 700;
   letter-spacing: -0.025em; color: var(--brand);
 }
-.hero .tagline { margin: 8px auto 0; max-width: 66ch; font-size: 16px; color: var(--ink-2); }
+/* `overflow-wrap: anywhere` because /search echoes the typed query into this line, and
+   a long unbroken string is a legal thing to type. Without it a 110-character query
+   made the page 994px wide inside a 375px viewport — 619px of sideways scroll on every
+   page of the site, from one search box. */
+.hero .tagline {
+  margin: 8px auto 0; max-width: 66ch; font-size: 16px; color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
 .hero .tagline b { color: var(--ink); font-weight: 600; }
 .heroactions { display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 /* The one thing this tool is for, at the size of the title's own promise. */

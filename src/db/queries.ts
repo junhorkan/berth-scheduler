@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { db } from './client';
 import type { BookingKind, BookingStatus, BerthCapacityMode } from '../domain/types';
 import { canonicalVesselName } from '../domain/normalize';
+import { isValidRange } from '../domain/conflicts';
 import { isSearchable, likePattern } from '../lib/search';
 import { todayISO } from '../lib/nav';
 import type { SearchHit } from '../lib/search';
@@ -112,6 +113,19 @@ export async function getBerthOccupancy(
   end: string,
   excludeBookingId?: string,
 ): Promise<Record<string, { label: string; startDate: string; endDate: string }[]>> {
+  /*
+    An end before its start is a state the form passes through on every edit, and
+    `daterange(start, end + 1)` THROWS on it — "range lower bound must be less than or
+    equal to range upper bound". The Server Action answered 500, the panel's
+    Promise.all rejected, and neither the verdict nor the occupancy was ever set: the
+    strip kept saying "Berth is clear for these dates" about dates nothing had checked,
+    with Save enabled. A stale yes is the one answer a conflict check must never give.
+
+    `checkBooking` already validates the range and reports it; this one silently threw.
+    Nothing is occupied over an impossible range, so the honest answer is nothing.
+  */
+  if (!isValidRange({ start, end })) return {};
+
   const sql = db();
   const rows = await sql`
     select b.berth_id, b.label, b.start_date, b.end_date
