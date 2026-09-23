@@ -13,6 +13,7 @@ export async function checkBookingAction(input: {
   start: string;
   end: string;
   excludeBookingId?: string;
+  vesselLengthFt?: number | null;
 }) {
   return m.checkBooking(input);
 }
@@ -25,9 +26,16 @@ export async function createBookingAction(input: {
   start: string;
   end: string;
   notes?: string | null;
+  vesselLengthFt?: number | null;
 }) {
   const res = await m.createBooking(input);
-  if (res.ok) revalidatePath('/');
+  if (res.ok) {
+    revalidatePath('/');
+    // A length given here can create or retire a too-long item, so the queue and its
+    // badge can both change on a path that never used to touch them.
+    revalidatePath('/review');
+    revalidatePath('/vessels');
+  }
   return res;
 }
 

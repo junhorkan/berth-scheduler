@@ -874,3 +874,76 @@ test.describe('correcting a booking that has already happened', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 });
+
+/**
+ * The gap the whole fit check is shaped around: 20 of 418 vessels have a recorded
+ * length, so 97% of bookings cannot be checked. The only place to close it was a
+ * register page somebody had to choose to visit; booking a vessel collected its name
+ * and threw the measurement away. This records it at the moment it is known.
+ */
+test.describe('recording a length while booking', () => {
+  const day = (d: number) =>
+    `${FIXTURE_YEAR}-${String(FIXTURE_MONTH).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const NAME = 'R/V E2E Measured';
+
+  test('registers the vessel with the length, and checks fit before it is saved', async ({ page }) => {
+    await page.goto(FIXTURE_HREF);
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    await page.getByLabel('Vessel', { exact: true }).fill(NAME);
+
+    const len = page.getByLabel('Vessel length in feet, optional');
+    await expect(len).toBeVisible();          // offered, because this hull has none
+
+    // A number that cannot be read stops the save and says why — it is never
+    // discarded silently — but blank never blocks.
+    await len.fill('45.5');
+    await expect(page.getByRole('button', { name: 'Save booking' })).toBeDisabled();
+    await expect(page.locator('.panel-sheet')).toContainText('Whole feet only.');
+    await len.fill('');
+    await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
+
+    // 170ft into the 55ft Inner Channel: the fit check answers for a vessel that is
+    // not on the register yet, which it could not do before.
+    const berth = page.getByLabel('Berth', { exact: true });
+    await berth.selectOption(
+      (await berth.locator('option', { hasText: 'Inner Channel' }).getAttribute('value')) ?? '',
+    );
+    await len.fill('170');
+    await expect(page.locator('.panel-sheet')).toContainText(/does not fit|170/);
+    // Advisory, never blocking (invariant 2).
+    await expect(page.getByRole('button', { name: 'Save booking' })).toBeEnabled();
+
+    const dates = page.locator('.panel-sheet input[type="date"]');
+    await dates.first().fill(day(6));
+    await dates.nth(1).fill(day(7));
+    await page.getByRole('button', { name: 'Save booking' }).click();
+    await expect(page.getByLabel(new RegExp(NAME))).toBeVisible();
+
+    // The register has it, measured, without anyone visiting that page.
+    await page.goto('/vessels');
+    await page.getByLabel('Filter vessels by name').fill('E2E Measured');
+    const row = page.locator('.queue li');
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('input')).toHaveValue('170');
+
+    // And the queue agrees: a booking that does not fit is a review item at once.
+    await page.goto('/review');
+    await expect(page.locator('.qsection:not(.undo)').first()).toContainText(NAME);
+
+    // Leave the fixture as it was found.
+    await page.goto(FIXTURE_HREF);
+    page.once('dialog', (d) => d.accept());
+    await page.getByLabel(new RegExp(NAME)).first().click();
+    await page.getByRole('button', { name: 'Cancel booking' }).click();
+    await expect(page.getByLabel(new RegExp(NAME))).toHaveCount(0);
+  });
+
+  test('does not ask again for a vessel that already has one', async ({ page }) => {
+    await page.goto(FIXTURE_HREF);
+    await page.getByRole('button', { name: '+ New booking' }).click();
+    // R/V Test Tern is seeded at 120ft.
+    await page.getByLabel('Vessel', { exact: true }).fill('R/V Test Tern');
+    await expect(page.locator('.panel-sheet')).toContainText('120ft on record');
+    await expect(page.getByLabel('Vessel length in feet, optional')).toHaveCount(0);
+  });
+});

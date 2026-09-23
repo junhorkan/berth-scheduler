@@ -712,6 +712,19 @@ a { color: var(--vessel); }
   margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline;
 }
 
+/* The optional length beside a vessel with none: a short box, its unit, and one line
+   saying what it buys. It sits under the name field rather than in a row of its own,
+   because it is a property of the vessel above it and not a fourth thing to fill in. */
+.lenask { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.lenask > label { font-size: 13px; color: var(--ink-muted); }
+.lenask input {
+  font: inherit; font-size: 13px; width: 64px; text-align: right; padding: 5px 8px;
+  border: 1px solid var(--axis); border-radius: 8px;
+  background: var(--surface); color: var(--ink);
+}
+.lenask input:focus { outline: 2px solid var(--vessel); outline-offset: 1px; }
+.lenask .sub-hint { margin-top: 0; flex-basis: 100%; }
+
 /* A destructive control that fails silently is worse than one that fails loudly. */
 .actionerr { font-size: 13px; color: var(--critical); max-width: 340px; }
 

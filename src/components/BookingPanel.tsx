@@ -9,6 +9,7 @@ import type { BerthRow, VesselOption } from '../db/queries';
 import type { CheckResult } from '../db/mutations';
 import type { BookingKind } from '../domain/types';
 import { describeChoices, suggestBerth } from '../lib/suggest';
+import { parseLengthFt } from '../lib/length';
 import type { Occupancy } from '../lib/suggest';
 
 /**
@@ -59,6 +60,14 @@ export default function BookingPanel({
   const [kind, setKind] = useState<BookingKind>('vessel');
   const [berthId, setBerthId] = useState(berths[0]?.id ?? '');
   const [vesselName, setVesselName] = useState('');
+  /**
+   * A length for a vessel that has none — typed at the one moment somebody knows it.
+   *
+   * Optional, always. Invariant 2 says never invent a length and never gate a booking
+   * on one, so blank stays blank and saves a booking with no measurement, exactly as
+   * before. What it must not do is make the form refuse work.
+   */
+  const [lengthInput, setLengthInput] = useState('');
   const [label, setLabel] = useState('');
   const [start, setStart] = useState(defaultDate);
   const [end, setEnd] = useState(defaultDate);
@@ -84,6 +93,13 @@ export default function BookingPanel({
   const vesselId = kind === 'vessel' ? vessel?.id ?? null : null;
   const effectiveLabel = kind === 'vessel' ? vessel?.name ?? vesselName.trim() : label.trim();
 
+  // Offered only where there is a gap to fill: a hull already measured is not re-asked,
+  // and an event or a closure has no vessel to measure.
+  const asksForLength =
+    kind === 'vessel' && vesselName.trim() !== '' && (vessel ? vessel.lengthFt == null : true);
+  const parsedLength = parseLengthFt(asksForLength ? lengthInput : '');
+  const typedLength = parsedLength.ok ? parsedLength.value : null;
+
   // Live verdict. Debounced so typing a date does not fire a request per keystroke.
   //
   // The generation counter matters: clearTimeout cancels a pending timer but cannot
@@ -105,7 +121,7 @@ export default function BookingPanel({
         // Both in one round trip: the verdict for the chosen berth, and what every
         // other berth is doing, so the dropdown can say so without a second wait.
         const [result, occ] = await Promise.all([
-          checkBookingAction({ berthId, vesselId, kind, start, end }),
+          checkBookingAction({ berthId, vesselId, kind, start, end, vesselLengthFt: typedLength }),
           berthOccupancyAction(start, end),
         ]);
         if (mine === generation.current) { setCheck(result); setOccupancy(occ); }
@@ -126,7 +142,7 @@ export default function BookingPanel({
       }
     }, 280);
     return () => clearTimeout(t);
-  }, [open, berthId, vesselId, kind, start, end]);
+  }, [open, berthId, vesselId, kind, start, end, typedLength]);
 
   /**
    * A name that matches nothing on the register is a NEW vessel, not an error.
@@ -144,7 +160,8 @@ export default function BookingPanel({
    * already are. Before the first check lands `choices` is empty and the dropdown falls
    * back to plain names, so the form is never unusable while waiting.
    */
-  const vesselLengthFt = kind === 'vessel' ? vessel?.lengthFt ?? null : null;
+  const vesselLengthFt =
+    kind === 'vessel' ? typedLength ?? vessel?.lengthFt ?? null : null;
   const choices = occupancy
     ? describeChoices(berths, new Map(Object.entries(occupancy)), vesselLengthFt, kind === 'vessel')
     : [];
@@ -171,24 +188,41 @@ export default function BookingPanel({
   // The save path refuses this too; without it here, Save looked available for a date
   // the board could never navigate to.
   const endsAfterWindow = end > maxDate;
-  const canSave =
-    !blocked && !missingLabel && !startsInPast && !endsAfterWindow && !pending;
+  /*
+    A length typed and not understood stops the save — but only once something has been
+    typed. Blank is a complete answer and never blocks (invariant 2).
 
-  const disabledReason = checkFailed
-    ? 'Could not check these dates. Change them, or try again in a moment.'
-    : blocked
-    ? check?.blockedBecause ?? 'This berth is already occupied.'
-    : startsInPast
-      ? 'A berth cannot be reserved for a day that has already passed.'
-      : missingLabel
-        ? kind === 'vessel' ? 'Name the vessel.' : 'Give this booking a name.'
-        : null;
+    The alternative was to ignore what it could not parse, which saves the booking with
+    no length and tells nobody the number was dropped. Silently discarding something
+    somebody took the trouble to type is worse than asking them to fix it.
+  */
+  const lengthUnreadable = asksForLength && lengthInput.trim() !== '' && !parsedLength.ok;
+  const canSave =
+    !blocked && !missingLabel && !startsInPast && !endsAfterWindow
+    && !lengthUnreadable && !pending;
+
+  /*
+    The caption under Save always names which condition disabled it — a list rather
+    than a ladder of ternaries, in the order the reasons should be read. Two additions
+    were silently lost inside the nested version before it was written out like this,
+    which is exactly the failure a disabled button with no caption produces.
+  */
+  const reasons: [boolean, string][] = [
+    [checkFailed, 'Could not check these dates. Change them, or try again in a moment.'],
+    [blocked, check?.blockedBecause ?? 'This berth is already occupied.'],
+    [startsInPast, 'A berth cannot be reserved for a day that has already passed.'],
+    [endsAfterWindow, `The schedule only takes bookings up to ${maxDate.slice(0, 4)}.`],
+    [lengthUnreadable, parsedLength.ok ? '' : parsedLength.error],
+    [missingLabel, kind === 'vessel' ? 'Name the vessel.' : 'Give this booking a name.'],
+  ];
+  const disabledReason = reasons.find(([when]) => when)?.[1] ?? null;
 
   function save() {
     setSaveError(null);
     startTransition(async () => {
       const res = await createBookingAction({
         berthId, vesselId, kind, label: effectiveLabel, start, end,
+        vesselLengthFt: typedLength,
       });
       if (res.ok) {
         /*
@@ -266,16 +300,37 @@ export default function BookingPanel({
               <datalist id="vessel-list">
                 {(vessels ?? []).map((v) => <option key={v.id} value={v.name} />)}
               </datalist>
-              {vessel && (
-                <div className="sub-hint">
-                  {vessel.lengthFt != null
-                    ? `${vessel.lengthFt}ft on record`
-                    : 'No length on record for this vessel'}
-                </div>
+              {vessel?.lengthFt != null && (
+                <div className="sub-hint">{vessel.lengthFt}ft on record</div>
               )}
               {isNewVessel && (
                 <div className="sub-hint">
-                  New vessel &mdash; saving adds it to the register, with no length yet.
+                  New vessel &mdash; saving adds it to the register.
+                </div>
+              )}
+              {/*
+                The gap-closing control, and the reason this form exists twice over.
+                It is deliberately here rather than only on the Vessels page: this is
+                the moment the number is in front of somebody, and the register page is
+                a queue of 398 rows nobody volunteers for. Blank is a complete answer.
+              */}
+              {asksForLength && (
+                <div className="lenask">
+                  <label htmlFor="vl">Length</label>
+                  <input
+                    id="vl"
+                    inputMode="numeric"
+                    value={lengthInput}
+                    placeholder="—"
+                    aria-label="Vessel length in feet, optional"
+                    onChange={(e) => setLengthInput(e.target.value)}
+                  />
+                  <span className="unit">ft</span>
+                  <span className="sub-hint">
+                    {parsedLength.ok
+                      ? 'Optional. Recording it checks this berth, and every future one.'
+                      : parsedLength.error}
+                  </span>
                 </div>
               )}
             </div>

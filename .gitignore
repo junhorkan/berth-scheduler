@@ -58,3 +58,5 @@ SUBMISSION.md
 
 # Per-machine Claude Code permissions. launch.json is shared; this is not.
 .claude/settings.local.json
+# Agent worktrees: separate checkouts of this repo, never part of it.
+.claude/worktrees/

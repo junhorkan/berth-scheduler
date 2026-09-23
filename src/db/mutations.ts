@@ -78,6 +78,16 @@ export async function checkBooking(input: {
   start: string;
   end: string;
   excludeBookingId?: string;
+  /**
+   * A length being typed into the booking form for a vessel that has none recorded —
+   * including one being registered by this very booking, which has no row to look up.
+   *
+   * It overrides the stored value for THIS check only; nothing is written until the
+   * booking saves. The fit sentence has one author either way: `checkFit`, here, on
+   * the server — computing a second opinion in the component is how the board and the
+   * form start disagreeing about the same vessel.
+   */
+  vesselLengthFt?: number | null;
 }): Promise<CheckResult> {
   const sql = db();
 
@@ -129,9 +139,15 @@ export async function checkBooking(input: {
   );
 
   let fit: FitResult | null = null;
-  if (input.kind === 'vessel' && input.vesselId) {
-    const v = vesselRows[0];
-    fit = checkFit(v?.length_ft ?? null, (berth.length_ft as number | null) ?? null);
+  if (input.kind === 'vessel') {
+    // A typed length beats the stored one, and is the only length a brand-new vessel
+    // has — so the fit check answers for a hull that is not on the register yet.
+    const stored = vesselRows[0]?.length_ft ?? null;
+    const known = input.vesselLengthFt ?? stored;
+    // Still nothing known and no vessel row: there is no question to answer.
+    if (input.vesselId || known != null) {
+      fit = checkFit(known, (berth.length_ft as number | null) ?? null);
+    }
   }
 
   return {
@@ -186,6 +202,16 @@ export async function createBooking(input: {
   start: string;
   end: string;
   notes?: string | null;
+  /**
+   * A length recorded at the moment of booking, which is the moment somebody actually
+   * knows it — reading the email that says "118ft LOA, arriving the 14th".
+   *
+   * 20 of 418 vessels in the source have a length, so the fit check is silent on 97%
+   * of bookings, and the only place to close that gap was a register page somebody had
+   * to choose to visit and type into 398 rows. Nobody does that work. Booking collected
+   * the name and threw the measurement away.
+   */
+  vesselLengthFt?: number | null;
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   // The form refuses these too, but that only stops people using the form: the action
   // behind it is a public endpoint. This is the check for anything that calls it
@@ -222,8 +248,24 @@ export async function createBooking(input: {
         returning id`;
       id = row.id as string;
 
+      /*
+        Record the length, but only onto a vessel that has none.
+
+        Never an overwrite: a booking form is not where a recorded measurement gets
+        revised, and silently replacing one from here would corrupt the single column
+        this system's second check depends on. Correcting a known length stays a
+        deliberate act on the Vessels page.
+      */
+      if (input.kind === 'vessel' && vesselId && input.vesselLengthFt != null) {
+        await tx`
+          update vessels
+             set length_ft = ${input.vesselLengthFt}, length_source = 'manual'
+           where id = ${vesselId} and length_ft is null`;
+      }
+
       // A booking that does not fit is a review item from the moment it exists, so the
       // queue agrees with the board without waiting for a length to be re-recorded.
+      // Runs after the length is written, so a length given here is already in force.
       if (input.kind === 'vessel' && vesselId) await refreshTooLongItems(tx, { bookingId: id });
     });
     return { ok: true, id };
