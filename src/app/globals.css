@@ -213,13 +213,16 @@ a { color: var(--vessel); }
  * `z-index: 8` clears every bar — they are positioned at `auto`, and the highest any
  * reaches is `.bar.selected` at 6.
  *
- * KNOWN LIMIT, and this comment used to claim the opposite: a tooltip does NOT stay
- * readable over the rail for a bar that has its own z-index (`.bar.toolong` 3,
- * `.bar.unresolved` 4, `.bar.selected` 6). Those bars establish a stacking context, so
- * their `::after` is trapped inside it and cannot clear the rail however high the
- * tooltip's own 30 is. It needs a hover and a horizontally scrolled board at once, so
- * desktop never sees it; a narrow window can. Fixing it properly means lifting the
- * tooltip out of the bar, which `::after` cannot do.
+ * A plain bar's tooltip DOES clear the rail: it is `z-index: auto`, so it makes no
+ * stacking context and its `::after` resolves at 30 against the page.
+ *
+ * KNOWN LIMIT, narrow: a bar with its own z-index — `.bar.toolong` 3, `.bar.unresolved`
+ * 4, `.bar.selected` 6 — is a stacking context, so its tooltip is trapped at the bar's
+ * level. That still clears every later berth row, but not this rail at 8. It needs a
+ * hover and a horizontally scrolled board at once, so desktop never sees it; a narrow
+ * window can. Fixing it means lifting the tooltip out of the bar, which `::after`
+ * cannot do — and raising those bars above 8 would put the bars themselves over the
+ * berth names, which is the thing this rail exists to prevent.
  */
 .rail, .railcorner {
   flex: 0 0 150px; position: sticky; left: 0; z-index: 8; background: var(--surface);
@@ -503,7 +506,26 @@ a { color: var(--vessel); }
 .why { font-size: 13px; color: var(--ink-muted); flex-basis: 100%; }
 
 .bar { text-decoration: none; cursor: pointer; }
-.bar:hover { filter: brightness(0.96); box-shadow: 0 0 0 1px var(--ink-muted); }
+/*
+ * The hover ring, and NO `filter` — which used to darken the bar and, in doing so, broke
+ * the tooltip it summons.
+ *
+ * `filter` creates a stacking context. A `.bar` is `position: absolute` at `z-index:
+ * auto`, so normally its `::after` tooltip resolves at `z-index: 30` in the page's root
+ * context and paints over everything. Add `filter` and the tooltip is trapped inside the
+ * bar, which sits at the bar's own level — beneath the NEXT berth row, a later positioned
+ * sibling. So the row below painted its grid lines and its weekend columns over the
+ * tooltip, and a solid dark box arrived on screen striped light and dark.
+ *
+ * The trap sprang at exactly the wrong moment: a tooltip is only ever shown on hover, and
+ * hover is the only time the filter applied. Every tooltip on the board was affected, and
+ * the taller the bar the worse it read.
+ *
+ * The ring alone is the feedback now. Darkening by `background` instead is not available:
+ * each kind has its own fill (`--vessel-fill`, `--event-fill`, the closure hatch), so one
+ * override would flatten the thing the colour is carrying.
+ */
+.bar:hover { box-shadow: 0 0 0 1px var(--ink-muted); }
 
 /*
  * The drawn bar is the data; the target you press is not.
