@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   FIXTURE_YEAR, FIXTURE_MONTH, FIXTURE_HREF, NEXT_MONTH_HREF, EMPTY_MONTH_HREF,
+  facilityDaysAgo,
 } from './helpers/schedule';
 
 /**
@@ -254,16 +255,8 @@ test.describe('creating a booking', () => {
     await page.getByRole('button', { name: '+ New booking' }).click();
     await page.getByLabel('Vessel', { exact: true }).fill('R/V Backdate Probe');
 
-    // Yesterday AT THE FACILITY, not in UTC. Subtracting a day from Date.now() is the
-    // trap lib/nav exists to avoid: after 20:00 Eastern, UTC has already rolled over,
-    // so UTC-minus-one-day IS the facility's today and this spec silently stops
-    // testing anything. It only fails in the evening, which is when it was found.
-    const facilityToday = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
-    }).format(new Date());
-    const yesterday = new Date(Date.parse(`${facilityToday}T00:00:00Z`) - 86_400_000)
-      .toISOString().slice(0, 10);
-    await page.locator('input[type="date"]').first().fill(yesterday);
+    // Yesterday AT THE FACILITY, not in UTC — see facilityDaysAgo.
+    await page.locator('input[type="date"]').first().fill(facilityDaysAgo(1));
 
     await expect(page.getByText(/already passed/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save booking' })).toBeDisabled();
@@ -694,12 +687,93 @@ test.describe('moving a booking in time', () => {
     await bookEvent(page, 'E2E time traveller', 26, 27);
     await open(page, 'E2E time traveller');
 
-    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-    await page.getByLabel('Start date').fill(yesterday);
+    await page.getByLabel('Start date').fill(facilityDaysAgo(1));
 
     await expect(page.locator('.verdict.stop')).toContainText('cannot be moved into the past');
     await expect(page.getByRole('button', { name: 'Move booking' })).toBeDisabled();
 
     await remove(page, 'E2E time traveller');
+  });
+});
+
+/**
+ * A bar's size is data — width is the span, height is vessel length over berth length
+ * (invariant 6) — so neither can be grown to make it easier to press. The target is
+ * padded instead, and these hold that apart from what is drawn.
+ */
+test.describe('pressing a small booking', () => {
+  test('a short bar has a target taller than the bar, and it grows upward', async ({ page }) => {
+    await page.goto(FIXTURE_HREF);
+    await expect(page.locator('.bar').first()).toBeVisible();
+
+    const probe = await page.evaluate(() => {
+      const bars = [...document.querySelectorAll('.bar')];
+      const shortest = bars.sort(
+        (a, b) => a.getBoundingClientRect().height - b.getBoundingClientRect().height,
+      )[0];
+      const r = shortest.getBoundingClientRect();
+      const hits = (dx: number, dy: number) => {
+        const el = document.elementFromPoint(r.left + r.width / 2 + dx, r.top + r.height / 2 + dy);
+        return el === shortest || shortest.contains(el);
+      };
+      let up = 0;
+      for (let d = 0; d < 60; d++) if (hits(0, -d)) up = d;
+      let down = 0;
+      for (let d = 0; d < 60; d++) if (hits(0, d)) down = d;
+      const lane = shortest.closest('.lane')!.getBoundingClientRect();
+      return {
+        drawnHeight: Math.round(r.height),
+        targetHeight: up + down,
+        // How far the target reaches past the lane's own floor. Must be zero: the berth
+        // below has its own bars sitting at the bottom of its lane.
+        pastLaneFloor: Math.round(r.top + r.height / 2 + down - lane.bottom),
+        // 1px past the drawn edge — inside the 2px pad, and outside the bar itself.
+        // +2 lands exactly on the pad's boundary, where subpixel rounding decides.
+        widerThanDrawn: hits(r.width / 2 + 1, 0) && hits(-(r.width / 2 + 1), 0),
+        padWidth: Math.round(
+          parseFloat(getComputedStyle(shortest, '::before').width) - r.width,
+        ),
+      };
+    });
+
+    // The fixture books a 40ft vessel in a 90ft berth, drawn 0.44 of a 52px lane.
+    expect(probe.drawnHeight).toBeLessThan(34);
+    expect(probe.targetHeight).toBeGreaterThanOrEqual(32);
+    expect(probe.targetHeight).toBeGreaterThan(probe.drawnHeight);
+    expect(probe.pastLaneFloor).toBeLessThanOrEqual(0);
+    expect(probe.widerThanDrawn).toBe(true);
+    expect(probe.padWidth).toBeGreaterThanOrEqual(4);   // 2px each side
+  });
+
+  test('a one-day booking opens its panel', async ({ page }) => {
+    // S/Y Test Beacon is booked for a single day, and is the 170ft-in-a-90ft-berth
+    // violation — the kind of row most worth opening and the hardest to hit.
+    await page.goto(FIXTURE_HREF);
+    await page.getByLabel(/S\/Y Test Beacon/).first().click();
+    await expect(page.getByRole('dialog')).toContainText('S/Y Test Beacon');
+    const start = await page.getByLabel('Start date').inputValue();
+    expect(start).toBe(await page.getByLabel('End date').inputValue());
+  });
+});
+
+/**
+ * "last 2019" is the one fact on a register row that names a specific booking, so it
+ * goes to it. The id and the year come from the same LATERAL row, so they cannot
+ * disagree — a link to a month with nothing in it would be worse than no link.
+ */
+test.describe('the register links to the last booking', () => {
+  test('opens that booking on the board, in its own month', async ({ page }) => {
+    await page.goto('/vessels');
+    const first = page.locator('.queue li').first();
+    const name = (await first.locator('.qtext').innerText()).trim();
+    const link = first.locator('.qmeta a');
+
+    const year = (await link.innerText()).replace(/\D/g, '');
+    await link.click();
+
+    await expect(page.locator('.month')).toContainText(year);
+    await expect(page.getByRole('dialog')).toContainText(name);
+    // The panel's dates are the booking the year named, not some other stay.
+    await expect(page.getByLabel('End date')).toHaveValue(new RegExp(`^${year}-`));
   });
 });

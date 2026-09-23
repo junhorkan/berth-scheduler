@@ -160,12 +160,12 @@ a { color: var(--vessel); }
   position: absolute; bottom: 3px;
   border-radius: 3px; box-sizing: border-box;
   display: flex; align-items: center; gap: 4px;
-  padding: 0 4px; overflow: hidden; white-space: nowrap;
+  padding: 0 4px; white-space: nowrap;
   font-size: 10px; line-height: 1;
   /* The grid keeps the system face: at 10px a display face costs label width. */
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
-.bar .lbl { overflow: hidden; text-overflow: ellipsis; }
+.bar .lbl { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .bar .ft { font-family: var(--mono); font-size: 9px; opacity: 0.85; flex: none; }
 
 .bar.vessel { background: var(--vessel-fill); border: 1px solid var(--vessel); color: var(--vessel); }
@@ -354,6 +354,34 @@ a { color: var(--vessel); }
 
 .bar { text-decoration: none; cursor: pointer; }
 .bar:hover { filter: brightness(0.96); box-shadow: 0 0 0 1px var(--ink-muted); }
+
+/*
+ * The drawn bar is the data; the target you press is not.
+ *
+ * A one-day booking is one column wide — 20px at the board's narrowest — and a small
+ * vessel in a large berth is MIN_BAR_PX, 14px, tall. 20x14 is far under the 44x44
+ * touch guideline: unusable on a phone, and fiddly with a mouse. Six of the nine
+ * violations in the sample are single-day bookings, so this hit the rows most worth
+ * opening.
+ *
+ * Growing the bar itself is not available: width is the span and height is vessel
+ * length / berth length (invariant 6), so either would make the board lie. This pads
+ * the target instead, and draws nothing. It is anchored to the bar's bottom and grows
+ * UPWARD into the empty part of the lane, where there is nothing to steal — never
+ * downward past the lane floor into the berth below.
+ *
+ * Sideways it grows 3px, and no more: the next day's booking starts where this one
+ * ends, so anything wider would take presses meant for the neighbour.
+ *
+ * The offsets are measured from the PADDING box and the bar has a 1px border, so each
+ * one buys a pixel less than it reads — -3px is 2px of real overhang, and `bottom` at
+ * -3px stops 1px short of the lane's floor rather than crossing it.
+ */
+.bar::before {
+  content: ''; position: absolute;
+  left: -3px; right: -3px; bottom: -3px;
+  height: max(100%, 34px);
+}
 .bar.selected { box-shadow: 0 0 0 2px var(--ink); z-index: 6; }
 
 .meta { display: grid; grid-template-columns: 78px 1fr; gap: 4px 10px; margin: 0 0 12px; font-size: 13px; }

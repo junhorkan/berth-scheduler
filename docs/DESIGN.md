@@ -39,7 +39,15 @@ berth is drawn 1.61 lanes tall and visibly breaks out of its row.
   first-time reader had to infer. One line, under the swatches: *bar height is the vessel
   against its berth*.
 
-Full argument: [DECISIONS 4](../DECISIONS.md).
+- **The target is padded; the bar is not.** A one-day booking is 20px wide and a small
+  vessel in a large berth is 14px tall — far under the 44×44 touch guideline. Since width
+  is the span and height is the fit, neither may grow, so `.bar::before` extends the hit
+  area instead: anchored to the bar's bottom, `max(100%, 34px)` tall so it grows upward
+  into empty lane and only helps the bars that need it, and 2px sideways because the next
+  day's booking starts where this one ends. `.bar` must therefore stay `overflow: visible`
+  — the label clips itself.
+
+Full argument: [DECISIONS 4 and 33](../DECISIONS.md).
 
 ## 8. Empty is supported, and never silent
 

@@ -151,11 +151,19 @@ export default function VesselTable({ vessels, perPage }: { vessels: VesselRow[]
  * what a length here would unlock, and whether the hull is still around to measure.
  */
 function VesselItem({ vessel: v }: { vessel: VesselRow }) {
-  const meta = [
-    v.bookingCount === 1 ? '1 booking' : `${v.bookingCount.toLocaleString()} bookings`,
-    v.lastSeen ? `last ${v.lastSeen.slice(0, 4)}` : null,
-    v.operator,
-  ].filter(Boolean).join(' · ');
+  /*
+    "last 2019" answers "is this hull still around to measure", and the obvious next
+    question is "where was that". It is the one fact on the row that names a specific
+    booking, so it links to it — the same `?y&m&sel` shape Review's "Show on board"
+    uses, which opens that month with the booking's panel already open.
+
+    Rendered as pieces rather than a joined string, because one of them is a link now.
+  */
+  const lastYear = v.lastSeen ? v.lastSeen.slice(0, 4) : null;
+  const lastHref = v.lastBookingId && v.lastBookingStart
+    ? `/?y=${v.lastBookingStart.slice(0, 4)}&m=${Number(v.lastBookingStart.slice(5, 7))}`
+      + `&sel=${v.lastBookingId}`
+    : null;
 
   return (
     <li>
@@ -171,7 +179,18 @@ function VesselItem({ vessel: v }: { vessel: VesselRow }) {
             </span>
           )}
         </span>
-        <span className="qmeta">{meta}</span>
+        <span className="qmeta">
+          {v.bookingCount === 1 ? '1 booking' : `${v.bookingCount.toLocaleString()} bookings`}
+          {lastYear && (
+            <>
+              {' · '}
+              {lastHref
+                ? <a className="qlink" href={lastHref}>last {lastYear}</a>
+                : <>last {lastYear}</>}
+            </>
+          )}
+          {v.operator && <>{' · '}{v.operator}</>}
+        </span>
       </div>
       <div className="qact">
         <VesselLengthInput vesselId={v.id} lengthFt={v.lengthFt} bookingCount={v.bookingCount} />

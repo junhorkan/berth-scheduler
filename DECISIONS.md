@@ -1499,3 +1499,62 @@ the row inside the transaction — and that it was not built, rather than to cla
 move that keeps the same row, a date move refused by the constraint because another
 booking holds those days, and the past-date refusal. `src/domain/move.test.ts` covers the
 floor rule in nine cases without touching a database.
+
+---
+
+## 33. The drawn bar is the data; the target you press is not
+
+Two reports from the owner, one page apart.
+
+### "If the berth has a duration of 1 day you can't click on it from the board"
+
+**What it is.** The board's minimum lane width is 620px over 31 columns, so a one-day
+booking is drawn **20px wide**, and `MIN_BAR_PX` makes a small vessel in a large berth
+**14px tall**. A 20×14 target is less than a fifth of the 44×44 touch guideline: fiddly
+with a mouse, impractical with a thumb. Six of the nine violations in the source are
+single-day bookings, so this fell hardest on the rows most worth opening.
+
+**What it is not.** The link works — a precise click opens the panel, and the spec that
+proves it passed before this change. Nothing was broken; the target was too small.
+
+**Decision.** `.bar::before` pads the hit area and draws nothing.
+
+Growing the bar itself was not available: **width is the span and height is vessel length
+÷ berth length** ([invariant 6](CLAUDE.md#invariants)), so either would make the board
+lie about the booking. The pad is anchored to the bar's bottom and grows **upward** into
+the empty part of the lane, where there is nothing to take — `height: max(100%, 34px)`,
+so a bar already taller than 34px is untouched and only the small ones gain. Sideways it
+grows 2px and no more, because the next day's booking starts where this one ends.
+
+A 14px bar now has a 33px target. Nothing reaches past the lane floor into the berth below.
+
+**One thing this cost.** `.bar` had `overflow: hidden`, which would have clipped the pad
+away. It is `visible` now, and the label keeps its own `overflow: hidden` plus
+`min-width: 0` — verified at 375px, where four labels clip and none spills.
+
+### "Make `last 2019` blue and clickable, taking you to the last time it was booked"
+
+**Decision.** The year in a register row links to `?y&m&sel` — that month, with that
+booking's panel open. The same shape Review's *Show on board* uses.
+
+**Why it earns the colour.** It is the only fact on the row that names **one specific
+booking**. The count is an aggregate and the operator is an attribute; *last 2019* answers
+"is this hull still around to measure", and the next question is always "where was that".
+
+**The id and the year come from one row.** A LATERAL join takes the vessel's most recent
+booking once, and the link and the label are both built from it, so they cannot disagree.
+Two correlated subqueries would have allowed a link to a month that does not hold the
+booking the year names.
+
+### A spec that had quietly stopped testing anything
+
+Writing the move specs I reached for `new Date(Date.now() - 86_400_000)` for "yesterday".
+That is **UTC's** yesterday, and after 20:00 Eastern UTC has already rolled over — so it
+is the facility's **today**, which is legal, so the spec asserted a refusal that never
+came. It passed all afternoon and failed at 20:38.
+
+This is verbatim the gotcha in [CLAUDE.md](CLAUDE.md#gotchas-that-cost-time-before), and
+there was already a correct hand-rolled version eight hundred lines up in the same file,
+carrying a comment that ends *"It only fails in the evening, which is when it was found."*
+Knowing the rule was not enough; both specs call `facilityDaysAgo(n)` now, so the third
+one cannot get it wrong.

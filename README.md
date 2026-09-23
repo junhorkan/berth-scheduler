@@ -72,7 +72,8 @@ is the central design decision. See `DECISIONS.md`.
   both at once, for vessels, non-vessel events and
   berth closures alike.
 - **Vessels** — the register as a queue, ordered by *bookings blocked* rather than
-  alphabetically, so the highest-leverage gaps come first: ten to a page, its two halves
+  alphabetically, so the highest-leverage gaps come first, each row linking from its last
+  booked year straight to that booking on the board: ten to a page, its two halves
   on two buttons, and a filter that searches all 418. It fills itself and empties itself:
   booking a vessel adds it, and cancelling its last booking takes it off — the row is
   kept, so restoring the booking brings the hull back with whatever length was recorded

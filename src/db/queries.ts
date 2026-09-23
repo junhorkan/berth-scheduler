@@ -301,6 +301,9 @@ export type VesselRow = {
   operator: string | null;
   bookingCount: number;
   lastSeen: string | null;
+  /** The booking `lastSeen` came from, so the register can link straight to it. */
+  lastBookingId: string | null;
+  lastBookingStart: string | null;
 };
 
 /**
@@ -316,7 +319,12 @@ export async function getVessels(): Promise<VesselRow[]> {
   const rows = await sql`
     select v.id, v.canonical_name, v.length_ft, v.loa_ft, v.length_source, v.operator,
            count(b.id)::int as booking_count,
-           max(b.end_date) as last_seen
+           -- "last 2019" is a link, so the row needs the booking it refers to, not just
+           -- its year. LATERAL rather than two correlated subqueries: one ordered read
+           -- per vessel, and the id and the date it names cannot disagree.
+           recent.id as last_booking_id,
+           recent.start_date as last_booking_start,
+           recent.end_date as last_seen
       from vessels v
       -- An INNER join, so a hull with nothing on the schedule is not on the register.
       -- Booking a name registers it (invariant 2), and cancelling that booking used to
@@ -329,7 +337,14 @@ export async function getVessels(): Promise<VesselRow[]> {
       -- booking that name again finds the same row rather than making a second one.
       -- The register shows what is on the schedule; the typeahead remembers everything.
       join bookings b on b.vessel_id = v.id and b.status <> 'cancelled'
-     group by v.id
+      left join lateral (
+        select b2.id, b2.start_date, b2.end_date
+          from bookings b2
+         where b2.vessel_id = v.id and b2.status <> 'cancelled'
+         order by b2.end_date desc, b2.start_date desc
+         limit 1
+      ) recent on true
+     group by v.id, recent.id, recent.start_date, recent.end_date
      order by (v.length_ft is not null), count(b.id) desc, v.canonical_name`;
   return rows.map((r) => ({
     id: r.id as string,
@@ -340,6 +355,10 @@ export async function getVessels(): Promise<VesselRow[]> {
     operator: r.operator as string | null,
     bookingCount: r.booking_count as number,
     lastSeen: r.last_seen ? (r.last_seen as Date).toISOString().slice(0, 10) : null,
+    lastBookingId: (r.last_booking_id as string | null) ?? null,
+    lastBookingStart: r.last_booking_start
+      ? (r.last_booking_start as Date).toISOString().slice(0, 10)
+      : null,
   }));
 }
 

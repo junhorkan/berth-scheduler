@@ -55,7 +55,9 @@ obeyable.
 5. **The berths live in a migration**, not in application code. They are the facility.
 6. **Bar height is `vessel length ÷ berth length`**, stated in words at any width, with an
    instant `data-tip` and never the native `title`.
-   → [DESIGN](docs/DESIGN.md#6-bar-height-is-the-fit-check)
+   **Width and height are data, so neither may grow to be easier to press** — `.bar::before`
+   pads the target instead, upward into the empty lane.
+   → [DESIGN](docs/DESIGN.md#6-bar-height-is-the-fit-check) · [DECISIONS 33](DECISIONS.md#33-the-drawn-bar-is-the-data-the-target-you-press-is-not)
 7. **Every date bound comes from `lib/nav`; none is hard-coded.** The floor stretches to
    the earliest booking; the form refuses a start before today, in the save path as well,
    since `min` only guards the picker. A fixed bound has hidden real bookings three times.
@@ -149,7 +151,8 @@ log, not the input to it. → [OPERATIONS](docs/OPERATIONS.md#schema)
 - **Resolve every date in `America/New_York`, never the server's UTC**, the way
   `todayISO()` does. After 8pm Eastern the UTC date has already rolled over, so the board
   jumps a month early, and `Date.now() - 86_400_000` in a spec is the facility's *today* —
-  which makes the spec silently stop testing anything.
+  which makes the spec silently stop testing anything. In e2e, call `facilityDaysAgo(n)`
+  from `e2e/helpers/schedule` — two specs wrote it by hand and the second one was wrong.
 - **Server Actions inherit their route's `maxDuration`.** The 10s default killed the ~12s
   workbook restore mid-transaction, and the button discarded its `{ok, error}`, so it
   failed in total silence. Never throw a mutation's result away.

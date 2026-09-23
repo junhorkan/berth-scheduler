@@ -25,6 +25,24 @@ function todayAtFacility(): { year: number; month: number } {
 }
 
 /**
+ * A date N days before the facility's today, resolved in America/New_York.
+ *
+ * `Date.now() - 86_400_000` is UTC's yesterday, and after 20:00 Eastern UTC has already
+ * rolled over — so UTC-minus-one-day IS the facility's today, and a spec asserting "the
+ * past is refused" silently starts asserting that today is refused, which it is not. It
+ * passes all afternoon and fails in the evening. Two specs have now written this by hand;
+ * it lives here so the third does not.
+ */
+export function facilityDaysAgo(n: number): string {
+  const iso = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
  * A month three ahead of today, and the one after it.
  *
  * In the future on purpose: a booking cannot be made for a date that has passed, so a
