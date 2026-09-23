@@ -153,6 +153,7 @@ npm run dev
 
 ```bash
 npm test          # 347 unit tests, no database. Without data/*.xlsx, 307 run and 40 skip
+npm run test:db   # 15 raw-SQL tests of the EXCLUDE constraint itself. Every case rolls back
 npm run e2e       # 67 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
 npm run typecheck # clean

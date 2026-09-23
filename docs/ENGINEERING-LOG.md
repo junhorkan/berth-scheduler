@@ -1153,3 +1153,57 @@ is read *after* the decision to click, and a red button nobody dares press is no
 button, it is a dead one. Eight words is the price of a usable Clear.
 
 ---
+
+---
+
+## 37. The one sentence in the documentation that was not true
+
+**What it said.** [DECISIONS 1](../DECISIONS.md#1-the-database-prevents-double-booking-not-the-application),
+under the bold word **Verified**:
+
+> *by eleven tests that run as raw SQL rather than through the app: overlapping inserts
+> rejected, adjacent bookings accepted, pooled berths exempt, closures blocking vessels,
+> reassignment onto an occupied berth refused.*
+
+**There was no such suite, and there never had been.** Twenty-two test files, every one
+of them pure TypeScript; not one opened a database connection. The sentence was written
+from the *descriptions* of `src/domain/conflicts.test.ts` — "does NOT flag merely
+adjacent ranges", "returns nothing for a POOLED berth", "treats a closure as blocking a
+vessel" — which is almost exactly the list it claimed.
+
+**Why this was the worst possible sentence to get wrong.** Decision 1's entire argument
+is that *an application-level check is only as good as every code path that ever touches
+the table*. The evidence it offered for the database guarantee was **the application-level
+check's own unit tests** — the precise thing the decision rejects. And it contradicted
+the README two files away, which says the suite needs no database at all.
+
+**How it survived.** Nothing checks prose. The counts in this project have been wrong
+four times in one day — 260/299/39, then 272/312/40, then 318/278/40 — each time because
+a number was stated once and then tests were added. A sentence describing tests that do
+not exist is the same failure with the count set to eleven.
+
+**The fix was to make it true, not to soften it.** `src/db/constraint.db.test.ts` now
+does what the sentence promised, and more: fifteen cases in raw SQL against Postgres,
+with no React, no server actions and no `mutations.ts`. It runs under `npm run test:db`
+rather than `npm test`, because that command promises no database and must stay green on
+a clone with no credentials — the rule
+[29](../DECISIONS.md#29-nothing-on-the-board-is-invented) records being learned the
+hard way.
+
+**Everything is rolled back.** One transaction per case, ending in a deliberate throw, and
+each statement expected to fail wrapped in a `SAVEPOINT` — a constraint violation aborts
+its transaction, so without one the first refusal would poison every assertion after it.
+Rows are dated 2099, outside anything the app will write, and the last case asserts the
+table is unchanged.
+
+**It found something on the first run.** An end date before its start is refused by
+`22000` from `daterange()` itself, not by the `end_not_before_start` CHECK written for it:
+the generated column is evaluated first, so the CHECK never speaks. The application was
+already right about this — `describeDbError` handles 22000 — but the test I wrote first
+asserted the CHECK's code, and would have documented a path the database does not take.
+
+**The lesson, which is the same one as [31](#31-373-cells-the-importer-was-dropping-in-silence).**
+Asking "does this claim still hold?" is a different question from "do the tests pass?",
+and only the first one finds this. A submission whose argument is precise evidence cannot
+afford a single unchecked claim, and the most dangerous one sits under the word that
+invites checking.

@@ -46,9 +46,31 @@ someone at the database directly, a bug in my own code.
 **Rejected:** an application-level check-then-insert. Simpler to read, but the guarantee is
 only as good as every code path that ever touches the table.
 
-**Verified** by eleven tests that run as raw SQL rather than through the app: overlapping
-inserts rejected, adjacent bookings accepted, pooled berths exempt, closures blocking
-vessels, reassignment onto an occupied berth refused.
+**Verified three ways**, because the argument above is exactly the reason the
+application's own tests cannot be the evidence:
+
+1. **In raw SQL, against Postgres, with no application at all** — `npm run test:db`
+   (`src/db/constraint.db.test.ts`). Fifteen cases: an overlapping insert refused,
+   adjacent stays accepted, a **same-day handover refused** (which is what proves the
+   generated `daterange(start, end + 1)`), a pooled berth exempt, cancelling frees the
+   slot, `conflict_unresolved` sits outside the `WHERE` and is refused the moment it is
+   made active, a closure blocking a vessel, a **move** and a **date change** each
+   refused, two overlapping rows in a *single statement* refused, and the trigger that
+   keeps `exclusive` truthful when a booking changes berth. Every case runs in a
+   transaction that is always rolled back, and the last case asserts nothing was left
+   behind.
+2. **Through the app, end to end** — `e2e/board.spec.ts` drives a conflicting create, a
+   move onto occupied days, and a restore into a slot taken since; each is refused by
+   Postgres rather than by application code.
+3. **The mirror, purely** — 40 unit tests of `src/domain/conflicts.ts`, which is what the
+   UI draws with. It must agree with the constraint; it is not what enforces it.
+
+> This paragraph previously claimed eleven raw-SQL tests that did not exist. The claim
+> was written from the *domain* tests' own descriptions, and it was the one untrue
+> sentence in this document — asserting, under the word **Verified**, precisely the
+> thing this decision says an application-level check cannot prove. It was found by
+> auditing the docs against the code, and the tests were written to make it true.
+> → [ENGINEERING-LOG 37](docs/ENGINEERING-LOG.md)
 
 ---
 

@@ -42,7 +42,10 @@ the arrow leads to the reasoning and, for the visual ones, to the detail that ma
 obeyable.
 
 1. **`src/domain` and `src/lib` import nothing from `db` or `app`.** Pure, and unit-tested
-   without infrastructure.
+   without infrastructure — and because that means they only ever test the application's
+   *mirror* of the rule, **the constraint itself is proved separately in raw SQL**
+   (`npm run test:db`). Never let `npm test` need a database.
+   → [DECISIONS 1](DECISIONS.md#1-the-database-prevents-double-booking-not-the-application)
 2. **Never invent a vessel length, and never gate a booking on picking a known vessel.**
    Booking registers the vessel and may record its length — **optional, never required**,
    and written only where none is on record. Booking registers the vessel; **cancelling its last booking unregisters it** — the
@@ -131,6 +134,8 @@ scheduler library: none can draw a bar that overhangs its lane.
 npm run dev          # local dev server
 npm test             # unit tests, no database. The workbook-parse tests skip by name
                      # without data/*.xlsx; the counts live in README
+npm run test:db      # the EXCLUDE constraint in raw SQL. Hits the live DB, but every
+                     # case runs in a transaction that is always rolled back
 npm run typecheck    # tsc --noEmit. Safe while dev runs, unlike build
 npm run lint         # eslint
 npm run e2e          # Playwright. HITS THE LIVE DB: swaps in a fixture, restores after
