@@ -206,7 +206,7 @@ export default function BookingDetail({
   return (
     <>
       <a className="overlay" href={closeHref} aria-label="Close" />
-      <aside className="panel-sheet" role="dialog" aria-label="Booking">
+      <aside className="panel-sheet" role="dialog" aria-modal="true" aria-label="Booking">
         <h2>{booking.label}</h2>
 
         {/* The berth, the dates, the kind and the label are no longer stated here: they

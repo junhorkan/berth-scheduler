@@ -289,7 +289,7 @@ export default function BookingPanel({
       </button>
       {open && <>
       <div className="overlay" onClick={() => setOpen(false)} />
-      <aside className="panel-sheet" role="dialog" aria-label="New booking">
+      <aside className="panel-sheet" role="dialog" aria-modal="true" aria-label="New booking">
         <h2>New booking</h2>
 
         <div className="field">
@@ -407,16 +407,31 @@ export default function BookingPanel({
           </div>
         </div>
 
-        <div className="field">
+        {/*
+          `field dates` / `span` / `to`, the same markup the edit panel uses — not an
+          inline-styled div, which is what this was.
+
+          The classes are not decoration. `.span` carries `min-width: 0`, without which a
+          flex item cannot shrink below its content: two 141px date inputs, the word
+          between them and their gaps come to 309px at EVERY width, so on a 375px phone
+          the row ran 71px past the sheet and the end date was unreachable without
+          scrolling sideways inside the dialog. And `.field.dates` has a 520px breakpoint
+          that stacks the pair under its label, which an inline style cannot receive.
+
+          It is the same fault as the 186px of panel overflow fixed earlier today,
+          surviving on the one row that had opted out of the stylesheet. The edit panel
+          was always correct; this is the panel behind the page's one filled button.
+        */}
+        <div className="field dates">
           <label htmlFor="s">Dates</label>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
+          <div className="span">
             {/* Named individually: the visible label says "Dates" for both, so without
                 these a screen reader announces the first as "Dates" and the second as
                 its own value. The move panel already does this. */}
             <input id="s" type="date" value={start} min={minDate} max={maxDate}
                    aria-label="Start date"
                    onChange={(e) => { setStart(e.target.value); if (e.target.value > end) setEnd(e.target.value); }} />
-            <span style={{ color: 'var(--ink-muted)' }}>to</span>
+            <span className="to">to</span>
             <input type="date" value={end} min={start} max={maxDate}
                    aria-label="End date"
                    onChange={(e) => setEnd(e.target.value)} />
