@@ -14,7 +14,7 @@ import { canonicalVesselName } from '../domain/normalize';
 import type { Booking, BookingKind } from '../domain/types';
 import { nothingToLose } from '../lib/undo';
 import type { Schedule } from '../lib/undo';
-import { todayISO, lastBookableISO } from '../lib/nav';
+import { todayISO, lastBookableISO, isBookingId } from '../lib/nav';
 import { parseLengthFt } from '../lib/length';
 import { checkMove } from '../domain/move';
 import { checkEdit, cleanNotes, vesselLinkFor } from '../domain/edit';
@@ -44,6 +44,14 @@ const SEED_BOOKING_COLS =
 const VESSEL_COLS =
   'id, canonical_name, normalized_name, length_ft, loa_ft, length_source, operator, '
   + 'notes, created_at';
+/**
+ * `text` has no length, so these are the app's. A label is a vessel's name or an event's
+ * description and a note is a sentence or two; ten thousand characters of either is not
+ * a long name, it is someone writing on the board.
+ */
+const MAX_LABEL_CHARS = 200;
+const MAX_NOTES_CHARS = 2000;
+
 const REVIEW_COLS =
   'id, type, booking_id, vessel_id, berth_id, raw_text, detail, import_year, '
   + 'import_sheet, import_row, import_col, resolved_at, created_at';
@@ -149,6 +157,26 @@ export async function checkBooking(input: {
   vesselLengthFt?: number | null;
 }): Promise<CheckResult> {
   const sql = db();
+
+  /*
+    Ids checked before SQL, and for the same reason the board checks `sel`: a non-uuid
+    reaching `where id = $1` is a `22P02` thrown out of this function, out of the action,
+    and into a client that awaits it without a catch — the same shape as the 500 the
+    board once answered. `checkBooking` runs on every debounced keystroke, so it is the
+    most-called endpoint in the app and had no guard at all.
+  */
+  if (!isBookingId(input.berthId)) {
+    return {
+      bookable: false, conflicts: [], fit: null, vesselClashes: [], blockedBecause: 'Unknown berth.',
+    };
+  }
+  if ((input.vesselId != null && !isBookingId(input.vesselId))
+      || (input.excludeBookingId != null && !isBookingId(input.excludeBookingId))) {
+    return {
+      bookable: false, conflicts: [], fit: null, vesselClashes: [],
+      blockedBecause: 'That booking or vessel could not be found.',
+    };
+  }
 
   if (!isValidRange({ start: input.start, end: input.end })) {
     return {
@@ -311,9 +339,46 @@ export async function createBooking(input: {
    */
   vesselLengthFt?: number | null;
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  // The form refuses these too, but that only stops people using the form: the action
-  // behind it is a public endpoint. This is the check for anything that calls it
-  // directly, which the form's `min`/`max` and its disabled Save button cannot be.
+  /*
+    The form refuses these too, but that only stops people using the form: the action
+    behind it is a public endpoint. This is the check for anything that calls it
+    directly, which the form's `min`/`max` and its disabled Save button cannot be.
+
+    The shape checks come first, because a TypeScript signature is not a runtime promise
+    and every one of these was reachable:
+
+      - `kind` outside the three reached a CHECK and came back as a date complaint.
+      - `start: undefined` passed BOTH date guards below — `undefined < today` is false
+        and so is `undefined > ceiling` — and then failed NOT NULL, which the mapper read
+        as an unknown berth. A comparison against undefined is false either way, so a
+        missing date sailed through two checks written to catch a wrong one.
+      - an event carrying a `vesselId` stored fine: the schema only requires a vessel for
+        `kind = 'vessel'`, and the register joins bookings without filtering on kind, so
+        a hull appeared on the register through a booking that was not a vessel booking.
+      - a label of ten thousand characters stored fine, `text` having no bound.
+
+    `checkEdit` is the same rule `updateBooking` already applies, so the two paths refuse
+    an unnamed booking in the same words instead of one of them accepting it.
+  */
+  // Checked before it reaches SQL, the way `sel` is on the board: a berth id that is not
+  // a uuid is a `22P02` parse error from Postgres, and no sentence built from that tells
+  // anyone anything. An id that IS a uuid but names no berth is answered further down.
+  if (!isBookingId(input.berthId)) return { ok: false, error: 'That berth does not exist.' };
+  if (input.vesselId != null && !isBookingId(input.vesselId)) {
+    return { ok: false, error: 'That vessel does not exist.' };
+  }
+  if (input.kind !== 'vessel' && input.kind !== 'event' && input.kind !== 'closure') {
+    return { ok: false, error: 'A booking is a vessel, an event or a closure.' };
+  }
+  if (typeof input.start !== 'string' || typeof input.end !== 'string'
+      || !isValidRange({ start: input.start, end: input.end })) {
+    return { ok: false, error: 'A booking needs a start and an end, and the end cannot be first.' };
+  }
+  const named = checkEdit({ kind: input.kind, label: String(input.label ?? '') });
+  if (!named.ok) return { ok: false, error: named.error };
+  if (String(input.label).length > MAX_LABEL_CHARS || (input.notes ?? '').length > MAX_NOTES_CHARS) {
+    return { ok: false, error: 'That name or note is too long.' };
+  }
   if (input.start < todayISO()) {
     return { ok: false, error: 'A berth cannot be reserved for a day that has already passed.' };
   }
@@ -350,9 +415,19 @@ export async function createBooking(input: {
       // A vessel booking always resolves to a vessel row; only events and closures
       // legitimately have none.
       const vesselId =
-        input.kind === 'vessel' && input.vesselId == null
-          ? await findOrCreateVessel(tx, input.label)
-          : input.vesselId;
+        /*
+          `kind` decides first, and that ordering is the fix.
+
+          It used to ask only whether a vessel id was absent, so an EVENT carrying one
+          kept it: the CHECK constraint requires a vessel for `kind = 'vessel'` and says
+          nothing about the other two, and `getVessels` INNER JOINs bookings WITHOUT
+          filtering on kind — so a hull appeared on the register through a booking that
+          was not a vessel booking, which makes invariant 2's register lie. Only this
+          path could introduce it; `updateBooking` clears through `vesselLinkFor`.
+        */
+        input.kind !== 'vessel'
+          ? null
+          : input.vesselId ?? await findOrCreateVessel(tx, input.label);
 
       const [row] = await tx`
         insert into bookings (berth_id, vessel_id, kind, status, label, start_date, end_date, notes, source)
@@ -394,10 +469,26 @@ export async function cancelBooking(id: string): Promise<{ ok: boolean; error?: 
     // went. It is a deletion from the record, and it takes the row off the board along
     // with its provenance, so the rule that closes editing has to close this too
     // (domain/record). Checked on the server because the action is a public endpoint.
-    const [existing] = await sql`select end_date::text from bookings where id = ${id}`;
+    const [existing] = await sql`select end_date::text, status from bookings where id = ${id}`;
     if (!existing) return { ok: false, error: 'That booking no longer exists.' };
     if (hasEnded(existing.end_date as string, todayISO())) {
       return { ok: false, error: ENDED_REFUSAL };
+    }
+    /*
+      Cancelling a cancelled booking is not a no-op, which is why it has to be refused
+      rather than allowed to fall through harmlessly.
+
+      The undo depends on cancel writing `cancelled_at` and its items' `resolved_at` from
+      the SAME `now()`, so `restoreBooking` can re-open exactly the items this cancel
+      closed with `resolved_at >= cancelled_at`. A second cancel restamps `cancelled_at`
+      to a later time, while the items keep the first one — and the comparison is then
+      false forever. Restore would put the booking back and leave its conflicts and
+      misfits closed for good.
+
+      Reachable by a retried request or a direct call, so the guard belongs here.
+    */
+    if (existing.status === 'cancelled') {
+      return { ok: false, error: 'That booking is already cancelled.' };
     }
 
     await sql.begin(async (tx) => {
@@ -623,15 +714,44 @@ export async function setVesselLength(
 ): Promise<{ ok: boolean; error?: string }> {
   const sql = db();
   try {
-    await sql`
-      update vessels
-         set length_ft = ${lengthFt},
-             length_source = ${lengthFt == null ? null : 'manual'}
-       where id = ${vesselId}`;
-    // Recording a length answers a question that was previously unanswerable, which
-    // may reveal violations that were always there but could not be seen. The
-    // missing-length count needs no update: it is derived, not stored.
-    await refreshTooLongItems(sql, { vesselId });
+    /*
+      Re-parsed here, not only in the input box.
+
+      `createBooking` already does this, and says why: called directly with 987654 it
+      stored 987654, and the queue reported a vessel "over by 987,599 feet". This is the
+      OTHER path into the same column and it was not checking — so the same call against
+      this action did the same thing, and `MAX_LENGTH_FT` was bypassed entirely, the
+      column accepting anything an int4 holds. The component parses; the component is not
+      the guard. The action is a public endpoint (invariant 1).
+
+      `String()` because the argument is typed `number | null` and typing is not a
+      runtime promise: 45.5, NaN and Infinity all arrive here as numbers, and all three
+      are refused by name rather than by an int4 cast error nobody can read.
+    */
+    const parsed = parseLengthFt(lengthFt == null ? '' : String(lengthFt));
+    if (!parsed.ok) return { ok: false, error: parsed.error };
+    const length = parsed.value;
+
+    /*
+      One transaction, because `refreshTooLongItems` is resolve-then-reinsert: it closes
+      every open too-long item in scope and then recreates the ones that still apply.
+      Split across two statements on a pooled connection, a failure in between — a 15s
+      statement timeout, an evicted connection, a killed function — left the items closed
+      and never recreated. They would be gone from the queue and the badge with no error
+      and no way back, which is invariant 3's "nothing vanishes silently" failing exactly
+      where it is least visible.
+    */
+    await sql.begin(async (tx) => {
+      await tx`
+        update vessels
+           set length_ft = ${length},
+               length_source = ${length == null ? null : 'manual'}
+         where id = ${vesselId}`;
+      // Recording a length answers a question that was previously unanswerable, which
+      // may reveal violations that were always there but could not be seen. The
+      // missing-length count needs no update: it is derived, not stored.
+      await refreshTooLongItems(tx, { vesselId });
+    });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };
@@ -646,15 +766,38 @@ export async function setVesselLength(
  * bookings is one decision, so marking it done has to close all four. Resolving them
  * one at a time would leave the group half-present on the next render.
  */
+/**
+ * Mark review items done.
+ *
+ * The argument is an ARRAY from the client, which makes it the widest input the app
+ * accepts, and it was taken on trust: unbounded, so a hundred thousand elements were
+ * serialised into one bind and held a pooled connection until the statement timeout;
+ * unvalidated, so a single non-uuid aborted the batch with Postgres' own parse error;
+ * and read before the `try`, so a null argument threw out of the action instead of
+ * returning a refusal.
+ *
+ * The cap is generous against real use — the largest group the 23-year import produced
+ * is 36 — and small against the failure it prevents.
+ */
+const MAX_RESOLVE_BATCH = 500;
+
 export async function resolveReviewItems(
   ids: string[],
 ): Promise<{ ok: boolean; error?: string }> {
-  if (ids.length === 0) return { ok: true };
   const sql = db();
   try {
+    if (!Array.isArray(ids)) return { ok: false, error: 'Nothing to mark done.' };
+    // Filtered rather than refused: one malformed id in a batch should not throw away
+    // the rest, and `where id = any(...)` already ignores an id that matches nothing.
+    const clean = ids.filter((id) => isBookingId(id));
+    if (clean.length === 0) return { ok: true };
+    if (clean.length > MAX_RESOLVE_BATCH) {
+      return { ok: false, error: `Too many at once. Mark up to ${MAX_RESOLVE_BATCH}.` };
+    }
+
     await sql`
       update review_items set resolved_at = now()
-       where id = any(${ids}::uuid[]) and resolved_at is null`;
+       where id = any(${clean}::uuid[]) and resolved_at is null`;
     return { ok: true };
   } catch (e) {
     return { ok: false, error: describeDbError(e) };
@@ -959,18 +1102,26 @@ export async function discardPreviousSchedule(): Promise<void> {
 
 /** Turn a Postgres error into something a dock coordinator can act on. */
 function describeDbError(e: unknown): string {
-  const err = e as { code?: string; constraint_name?: string; message?: string };
+  const err = e as { code?: string; constraint_name?: string; column_name?: string };
   if (err.code === '23P01') {
     return 'That berth is already occupied for part of those dates. The database refused the booking.';
   }
   if (err.code === '23514') {
-    // Two CHECK constraints guard this table and they are about different things, so the
-    // class alone cannot name the problem: `end_not_before_start` is the dates, and
-    // `vessel_required_for_vessel_kind` is a vessel booking with nothing to link to,
-    // reachable now that the kind is editable. Reporting the second as a date problem
-    // would send someone to fix the one field that is right.
+    /*
+      Four CHECK constraints reach this class and they are about different things, so the
+      class alone cannot name the problem. Only `end_not_before_start` is about dates —
+      and the default USED to claim all four were, which is the mistake this project has
+      now made twice. The worst of them told someone editing a vessel's length on a page
+      with no date field that "those dates are not valid".
+    */
     if (err.constraint_name === 'vessel_required_for_vessel_kind') {
       return 'A vessel booking has to name a vessel. The database refused the change.';
+    }
+    if (err.constraint_name === 'vessels_length_ft_check') {
+      return 'A length has to be a whole number of feet, above zero.';
+    }
+    if (err.constraint_name === 'bookings_kind_check') {
+      return 'A booking is a vessel, an event or a closure, and that was none of them.';
     }
     return 'Those dates are not valid for a booking.';
   }
@@ -985,7 +1136,30 @@ function describeDbError(e: unknown): string {
     thing instead of leaking the schema.
   */
   if (err.code === '23502' || err.code === '23503') {
+    // Same trap as above, one class wider: the FK from a booking to a VESSEL lands here
+    // too, and blaming the berth for it sends someone to check the one field that was
+    // right. NOT NULL failures name their column, so a missing date says so.
+    if (err.constraint_name === 'bookings_vessel_id_fkey') {
+      return 'That vessel does not exist.';
+    }
+    if (err.column_name && err.column_name !== 'exclusive') {
+      return 'That change is missing something it needs. Check every field and try again.';
+    }
     return 'That berth does not exist.';
   }
-  return err.message ?? 'The database rejected that change.';
+  /*
+    Never the raw message.
+
+    postgres.js copies the server's text onto the error, so this returned Postgres
+    verbatim for anything unmapped — `invalid input syntax for type uuid: "hello"` for a
+    malformed id, and for a 3,000-character vessel name an index-row-size error naming
+    `vessels_normalized_name_key`. A stranger can reach both by calling an action
+    directly, and neither tells the user anything they can act on; the second hands out
+    a piece of the schema. It is the same leak the `sel` guard was added to close, on a
+    path nobody had looked at.
+
+    The code is logged for whoever holds the credentials, and the user gets a sentence.
+  */
+  if (err.code) console.error('[db] unmapped SQLSTATE', err.code, err.constraint_name ?? '');
+  return 'The database rejected that change. Nothing was saved.';
 }
