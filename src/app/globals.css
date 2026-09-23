@@ -519,6 +519,27 @@ a { color: var(--vessel); }
 /* Today, on the board. Only drawn when the month on screen is the current one. */
 .dayhead .d.today { color: var(--vessel); font-weight: 700; }
 .dayhead .d.today .dow { opacity: 1; }
+/*
+ * `pointer-events: none`, because this marker is paint and the bar underneath is the
+ * control.
+ *
+ * It is one day wide, `position: absolute`, and carries `z-index: 1` so the line shows
+ * over the lane's fill. A `.bar` is positioned with `z-index: auto`, and a positive
+ * z-index beats auto whatever the DOM order — so this strip was laid over every bar
+ * crossing today and swallowed its clicks. Only `.bar.unresolved` (4) and
+ * `.bar.selected` (6) sat above it.
+ *
+ * That was a cosmetic nuisance while every booking on the board was from 1997–2019.
+ * It stopped being one when the past became read-only (`src/domain/record.ts`): the
+ * bookings you CAN open are now exactly the ones from today forward, so the one column
+ * that blocked them was blocking the only interactive thing on the screen.
+ *
+ * `.wkndcol` has no z-index and is painted before the bars, so it never intercepted
+ * anything — it gets the same line anyway, because "this is paint" is the property both
+ * of them should have stated in the first place.
+ */
+.lane .wkndcol,
+.lane .todaycol { pointer-events: none; }
 .lane .todaycol {
   position: absolute; top: 0; bottom: 0; z-index: 1;
   border-left: 2px solid var(--vessel); opacity: 0.5;
