@@ -10,6 +10,8 @@
  * answers it where `2026-09-19T21:58:03Z` does not.
  */
 
+import { FACILITY_TIME_ZONE } from './nav';
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -17,9 +19,25 @@ const DAY = 24 * HOUR;
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** `2026-09-19T21:58:03Z` -> `19 Sep`. Read from the string, never through Date. */
+/**
+ * `2026-09-19T21:58:03Z` -> `19 Sep`, **in the facility's timezone**.
+ *
+ * It used to slice the month and day straight out of the string, with a comment saying
+ * "never through Date" — which is the right instinct for a `YYYY-MM-DD` date column, and
+ * wrong here. This one is a `timestamptz` rendered as UTC, so slicing it prints the UTC
+ * calendar date: anything cancelled after 8pm Eastern was dated a day late from the
+ * moment it turned a week old. That is precisely the trap CLAUDE.md names, arriving by
+ * the one route the rule against `Date` does not cover.
+ *
+ * Formatted in `America/New_York`, the way `todayISO` does it. The relative branches
+ * above are differences between instants and never needed a calendar at all.
+ */
 function shortDate(iso: string): string {
-  return `${Number(iso.slice(8, 10))} ${MONTH_ABBR[Number(iso.slice(5, 7)) - 1]}`;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: FACILITY_TIME_ZONE, day: 'numeric', month: 'numeric',
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  return `${get('day')} ${MONTH_ABBR[get('month') - 1]}`;
 }
 
 function plural(n: number, unit: string): string {

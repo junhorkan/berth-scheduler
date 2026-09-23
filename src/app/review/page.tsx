@@ -6,6 +6,8 @@ import { groupReviewItems, describeOccurrences, tighten } from '../../lib/review
 import type { ReviewGroup } from '../../lib/review';
 import { formatSpanFull } from '../../lib/search';
 import { relativeTime } from '../../lib/cancelled';
+import { hasEnded } from '../../domain/record';
+import { todayISO } from '../../lib/nav';
 import { RestoreButton } from '../../components/RestoreButton';
 
 export const dynamic = 'force-dynamic';
@@ -175,7 +177,15 @@ export default async function ReviewPage() {
                     <span className="qmeta">Cancelled {relativeTime(c.cancelledAt)}</span>
                   </div>
                   <div className="qact">
-                    <RestoreButton id={c.id} />
+                    {/* Put back is offered only while it would work: once the dates have
+                        passed the booking is a record, and the record does not change in
+                        either direction (domain/record). A refusal is better said here
+                        than after a press. */}
+                    {hasEnded(c.endDate, todayISO()) ? (
+                      <span className="qmeta">Too late to put back</span>
+                    ) : (
+                      <RestoreButton id={c.id} />
+                    )}
                   </div>
                 </li>
               ))}

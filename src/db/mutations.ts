@@ -523,10 +523,33 @@ export async function restoreBooking(id: string): Promise<{ ok: boolean; error?:
   const sql = db();
   try {
     let missing = false;
+    let ended = false;
     await sql.begin(async (tx) => {
       const [row] = await tx`
-        select cancelled_at from bookings where id = ${id} and status = 'cancelled'`;
+        select cancelled_at, end_date::text
+          from bookings where id = ${id} and status = 'cancelled'`;
       if (!row) { missing = true; return; }
+
+      /*
+        The record does not change in either direction, and this was the one public path
+        that could add to it.
+
+        `updateBooking` and `cancelBooking` both refuse a booking that has ended; restore
+        did not, and it is reachable: cancel a booking that is still running, wait for its
+        dates to pass, press Put back. It went back to `active` — and from that moment it
+        could never be edited or cancelled again, because both of those now refuse it. A
+        row written into the permanent record that nothing in the product can remove.
+
+        Refusing is also the right answer on its own terms rather than merely the safe
+        one. A booking that was cancelled and whose dates have since passed describes a
+        stay that did not happen; putting it back would assert one that did.
+
+        The cost is real and smaller: a cancellation made in error becomes permanent once
+        the dates pass. It stays visible on Review, and whoever holds the database
+        credentials can still correct it — the same place every other correction to the
+        record now lives.
+      */
+      if (hasEnded(row.end_date as string, todayISO())) { ended = true; return; }
 
       // Only the items that cancelling closed. Both timestamps were written by the same
       // transaction, so anything resolved by hand beforehand has an earlier resolved_at
@@ -541,6 +564,12 @@ export async function restoreBooking(id: string): Promise<{ ok: boolean; error?:
         update bookings set status = 'active', cancelled_at = null where id = ${id}`;
     });
     if (missing) return { ok: false, error: 'That booking is no longer cancelled.' };
+    if (ended) {
+      return {
+        ok: false,
+        error: 'These dates have passed, so this booking can no longer be put back.',
+      };
+    }
     return { ok: true };
   } catch (e) {
     // The shared message talks about refusing a booking, which is the wrong noun here.

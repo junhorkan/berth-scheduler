@@ -148,8 +148,33 @@ describe('formatSpan', () => {
   it('names both months when the stay crosses a boundary', () => {
     expect(formatSpan('2010-06-28', '2010-07-03')).toBe('Jun 28 – Jul 3');
   });
-  it('names both months across a year boundary', () => {
-    expect(formatSpan('2004-12-28', '2005-01-04')).toBe('Dec 28 – Jan 4');
+  /*
+    This asserted `Dec 28 – Jan 4`, and the omission was the bug rather than the style.
+
+    The function compared month NUMBERS and never the year, so any span whose ends share
+    a month number but not a year collapsed: 2026-10-01 to 2029-10-31 read `Oct 1 – 31`,
+    and a 367-day stay read `Sep 23 – 24`. The berth dropdown says `taken <span>`, so a
+    berth held for three years advertised itself as taken for one month — a false answer
+    in the one control that exists to stop a bad assignment.
+
+    Stating both years whenever they differ is the rule, rather than a special case for
+    adjacent ones: `Dec 28 – Jan 4` is only readable if you assume the shortest span that
+    fits, and a two-year booking breaks that assumption silently.
+  */
+  it('states both years when the stay crosses one', () => {
+    expect(formatSpan('2004-12-28', '2005-01-04')).toBe('Dec 28 2004 – Jan 4 2005');
+  });
+
+  it('does not collapse a multi-year span into one month', () => {
+    expect(formatSpan('2026-10-01', '2029-10-31')).toBe('Oct 1 2026 – Oct 31 2029');
+    expect(formatSpan('2026-09-23', '2027-09-24')).toBe('Sep 23 2026 – Sep 24 2027');
+    expect(formatSpan('2010-07-06', '2011-07-06')).toBe('Jul 6 2010 – Jul 6 2011');
+  });
+
+  it('never reports a month it was not given', () => {
+    // `tighten` reads a month out of a stored sentence, so an impossible one must not
+    // index past the array and throw a server component down.
+    expect(() => formatSpan('2001-13-01', '2001-13-02')).not.toThrow();
   });
   // new Date('2010-07-06') is UTC midnight, which is July 5 in any western timezone.
   it('reads the date from the string, so it never shifts by timezone', () => {

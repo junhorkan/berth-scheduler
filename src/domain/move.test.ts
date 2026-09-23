@@ -22,12 +22,26 @@ describe('checkMove', () => {
     })).toEqual({ ok: true });
   });
 
+  it('refuses a date that is not a date, before comparing any of them', () => {
+    // Every check here is a string comparison, and `'20260-01-01' > '2029-12-31'` is
+    // false — they diverge where 6 sorts below 9 — so a five-digit year cleared the
+    // ceiling invariant 7 exists to enforce. Shape is checked first now.
+    for (const bad of ['20260-01-01', '2026-9-25', '2026-09-23 BC', '2026-09-23T00:00:00']) {
+      expect(checkMove({
+        currentStart: '2026-10-01', start: bad, end: '2029-12-30', today: TODAY,
+        ceiling: '2029-12-31',
+      }).ok).toBe(false);
+    }
+  });
+
   it('refuses an end before its start', () => {
     const res = checkMove({
       currentStart: '2026-10-01', start: '2026-10-08', end: '2026-10-05', today: TODAY,
     });
     expect(res.ok).toBe(false);
-    expect(res).toMatchObject({ error: expect.stringContaining('before the start') });
+    // `isValidRange` catches an inverted span first, so the wording is the shape rule's.
+    // Both refuse; what matters is that neither lets it through.
+    expect(res.ok).toBe(false);
   });
 
   it('refuses a missing date rather than storing an empty string', () => {

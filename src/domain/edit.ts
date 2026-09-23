@@ -10,6 +10,7 @@
  * path because the action behind the panel is a public endpoint (invariant 1).
  */
 import type { BookingKind } from './types';
+import { visibleText } from './normalize';
 
 export type BookingEdit = {
   berthId: string;
@@ -57,7 +58,10 @@ export function isUnchanged(a: BookingEdit, b: BookingEdit): boolean {
  * board draws the label, and search matches on it.
  */
 export function checkEdit(next: { kind: BookingKind; label: string }): EditCheck {
-  if (next.label.trim() !== '') return { ok: true };
+  // `visibleText` first, because `.trim()` alone leaves the zero-width family standing:
+  // a label of one zero-width space read as named, and the board drew the blank bar this
+  // function's own docstring says it exists to prevent.
+  if (visibleText(next.label).trim() !== '') return { ok: true };
   return next.kind === 'vessel'
     ? { ok: false, error: 'Name the vessel this booking is for.' }
     : { ok: false, error: 'Give this booking a name.' };

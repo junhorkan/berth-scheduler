@@ -84,8 +84,34 @@ export function classifyEntry(raw: string): EntryKind {
  * We keep the first-seen display casing rather than title-casing, so we never
  * invent a spelling the facility does not use.
  */
+/**
+ * Text as a reader sees it: one Unicode spelling, and nothing that takes no space.
+ *
+ * Two separate problems, both of which quietly make one boat into two hulls.
+ *
+ * **Composition.** `Å` can be one code point or `A` plus a combining ring. They render
+ * identically and compare unequal, so `R/V Åland` pasted from a Mac and the same name
+ * typed here produce two register rows, two fit answers, and a search for one that
+ * cannot find the other. `NFC` settles on a single spelling. Decomposed text arrives
+ * routinely from macOS copy and paste, so this is not a theoretical input.
+ *
+ * **Invisible characters.** `String.trim()` removes `\u00A0` and `\uFEFF` and nothing
+ * else, and `\s` matches none of the zero-width family — so a label of one zero-width
+ * space passed every gate in the app and drew a blank bar on the board and a blank row
+ * on the register, and `R/V Tern` with one appended registered a second hull for a boat
+ * that already had one.
+ *
+ * `\p{Cf}` is the format category, which covers all of them. It also covers the zero-
+ * width joiners that matter in Devanagari, Persian and emoji sequences — a real cost,
+ * accepted because a berth register holds vessel names and the alternative is a hull
+ * you cannot see, cannot search for, and cannot merge.
+ */
+export function visibleText(raw: string): string {
+  return raw.normalize('NFC').replace(/\p{Cf}/gu, '');
+}
+
 export function canonicalVesselName(raw: string): { display: string; normalized: string } {
-  const display = raw
+  const display = visibleText(raw)
     .trim()
     .replace(/\s+/g, ' ')
     // Fold the OS/V typo into OSV so the two spellings become one vessel.

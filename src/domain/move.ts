@@ -22,6 +22,8 @@
  * (invariant 1, and the same reasoning as `createBooking`'s own past-date check).
  */
 
+import { isValidRange } from './conflicts';
+
 export type MoveCheck = { ok: true } | { ok: false; error: string };
 
 export function checkMove(input: {
@@ -36,6 +38,19 @@ export function checkMove(input: {
 }): MoveCheck {
   const { currentStart, start, end, today, ceiling } = input;
 
+  /*
+    Shape before order, because every check below is a STRING comparison and a string
+    comparison only means what it looks like when both sides are `YYYY-MM-DD`.
+
+    `'20260-01-01' > '2029-12-31'` is false — they diverge at the fourth character, where
+    `6` sorts below `9` — so a five-digit year sailed past the ceiling that invariant 7
+    exists to enforce, and `'2026-09-23 BC'` passed identically. `isValidRange` is the
+    domain's own format rule and was reachable only from the advisory pre-check, never
+    from a write.
+  */
+  if (!isValidRange({ start, end })) {
+    return { ok: false, error: 'A booking needs a start and an end date, in that order.' };
+  }
   if (!start || !end) return { ok: false, error: 'A booking needs both a start and an end date.' };
   if (end < start) return { ok: false, error: 'The end date cannot be before the start date.' };
 

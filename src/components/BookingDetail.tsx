@@ -311,18 +311,17 @@ export default function BookingDetail({
         )}
 
         {/*
-          A cancelled booking that has also ended can still be put back — a cancellation
-          made in error should not become permanent just because the dates have passed.
-          But putting it back makes it a record, and a record cannot be cancelled again:
-          the one control on this panel becomes a one-way door.
+          A cancelled booking whose dates have passed cannot be put back, and the panel
+          says so instead of offering a button the server will refuse.
 
-          Said before the press rather than discovered after it, which is the same rule
-          the cancel dialog follows.
+          This first shipped as a warning — press it and it becomes permanent — which was
+          the wrong answer. Restoring it would assert a stay that did not happen, and
+          leave a row nothing in the product could edit or cancel. The record does not
+          change in either direction.
         */}
         {ended && booking.status === 'cancelled' && (
           <p className="verdict idle" style={{ marginTop: 14 }}>
-            These dates have passed. Putting this booking back returns it to the record,
-            and it cannot be cancelled again here.
+            These dates have passed, so this booking can no longer be put back.
           </p>
         )}
 
@@ -480,7 +479,7 @@ export default function BookingDetail({
               </button>
               <button className="btn danger" disabled={pending} onClick={doCancel}>Cancel booking</button>
             </>
-          ) : booking.status === 'cancelled' ? (
+          ) : booking.status === 'cancelled' && !ended ? (
             <RestoreButton id={booking.id} />
           ) : null}
           <a className="btn" href={closeHref}>Close</a>

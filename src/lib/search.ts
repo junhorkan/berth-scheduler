@@ -138,12 +138,31 @@ export function groupHits(rows: SearchHit[], query: string): SearchGroup[] {
  * a whole-day booking must not shift because of where the browser is.
  */
 export function formatSpan(startDate: string, endDate: string): string {
-  const [, startMonth, startDay] = startDate.split('-');
-  const [, endMonth, endDay] = endDate.split('-');
+  const [startYear, startMonth, startDay] = startDate.split('-');
+  const [endYear, endMonth, endDay] = endDate.split('-');
   const from = `${monthAbbr(startMonth)} ${Number(startDay)}`;
   if (startDate === endDate) return from;
-  if (startMonth === endMonth) return `${from} – ${Number(endDay)}`;
-  return `${from} – ${monthAbbr(endMonth)} ${Number(endDay)}`;
+  /*
+    The YEAR is compared too, and leaving it out was a real bug rather than an omission.
+
+    This asked only whether the month numbers matched, so any span whose ends share a
+    month number but not a year collapsed into one month: `2026-10-01` to `2029-10-31`
+    read `Oct 1 – 31`, and `2026-09-23` to `2027-09-24` — a 367-day stay — read
+    `Sep 23 – 24`. Over 300,000 date pairs in the next seven years hit it.
+
+    It reached two surfaces, and the second is the one that matters: the berth dropdown
+    says `taken Oct 1 – 31` for a berth held for three years, which is a false statement
+    about availability inside the one control that exists to stop a bad assignment.
+
+    Both years are named when they differ. This function deliberately has no year of its
+    own — `/search` states it in a column and `formatSpanFull` appends it — but a span
+    that crosses one has to say so, or it describes a different booking.
+  */
+  if (startYear === endYear) {
+    if (startMonth === endMonth) return `${from} – ${Number(endDay)}`;
+    return `${from} – ${monthAbbr(endMonth)} ${Number(endDay)}`;
+  }
+  return `${from} ${startYear} – ${monthAbbr(endMonth)} ${Number(endDay)} ${endYear}`;
 }
 
 /**
@@ -165,8 +184,15 @@ export function formatSpanFull(startDate: string, endDate: string): string {
   return `${formatSpan(startDate, startDate)} ${startYear} – ${formatSpan(endDate, endDate)} ${endYear}`;
 }
 
+/**
+ * Guarded, because this is reached from `tighten`, which reads a month out of a STORED
+ * sentence. A month outside 1–12 indexed past the end of the array and threw a TypeError
+ * out of a server component — one malformed row would have taken the whole Review page
+ * down rather than rendering one odd date. Nothing writes such a row today; nothing
+ * should be able to cost a page either.
+ */
 function monthAbbr(month: string): string {
-  return MONTH_NAMES[Number(month) - 1].slice(0, 3);
+  return MONTH_NAMES[Number(month) - 1]?.slice(0, 3) ?? month;
 }
 
 /** The board link that lands on a booking's own month with the booking selected. */
