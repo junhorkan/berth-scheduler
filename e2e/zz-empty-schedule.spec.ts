@@ -2,9 +2,15 @@ import { test, expect } from '@playwright/test';
 import { clearSchedule } from './helpers/schedule';
 
 /**
- * The empty schedule: what a fresh facility sees, and what Clear leaves behind.
+ * The empty schedule: what a fresh facility sees, and the way back from one.
  *
- * Named to sort last, because it clears the fixture every other spec depends on.
+ * Named to sort last, because it empties the fixture every other spec depends on.
+ *
+ * There is no Clear button any more, so nothing here presses one. Emptying the schedule
+ * is `clearSchedule()` from the helpers, which calls the same mutation the removed button
+ * called and is now its only caller. Every state those specs reached through the button is
+ * still reached, and still asserted — including the snapshot it leaves, since the mutation
+ * is what takes it. What is gone is only the press, which no visitor can perform.
  */
 test.describe('an empty schedule', () => {
   test.beforeAll(async () => {
@@ -18,9 +24,9 @@ test.describe('an empty schedule', () => {
     await expect(page.getByRole('button', { name: '+ New booking' })).toBeVisible();
   });
 
-  test('offers the sample as an explicit choice rather than preloading it', async ({ page }) => {
+  test('offers the schedule as an explicit choice rather than preloading it', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: /load the sample schedule/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /restore the original schedule/i })).toBeVisible();
   });
 
   test('has an empty review queue and no badge', async ({ page }) => {
@@ -73,33 +79,30 @@ test.describe('an empty schedule', () => {
     await expect(page.getByText('R/V Test Cutter')).toBeVisible();
   });
 
-  test('clears the schedule from Review, leaving only the berths', async ({ page }) => {
-    // The one irreversible action in the app. Everything goes but the berths, which
-    // are the facility rather than schedule data.
-    page.on('dialog', (d) => d.accept());
+  test('an emptied schedule keeps the berths and nothing else', async ({ page }) => {
+    // Emptying is no longer something a visitor can do — it is a fixture and
+    // command-line operation — but an empty schedule is still a state the product
+    // supports, and the state every spec below starts from. No poll and no dialog: the
+    // mutation is awaited here rather than fired at a server action by a click.
+    await clearSchedule();
 
-    await page.goto('/review');
-    await page.getByRole('button', { name: /Clear the schedule/ }).click();
+    // The vessel the spec above registered goes with its booking. The register INNER
+    // JOINs bookings, so a hull with nothing on the schedule is not on it (invariant 2).
+    await page.goto('/vessels');
+    await expect(page.getByText('R/V Test Cutter')).toHaveCount(0);
 
-    await expect
-      .poll(async () => {
-        await page.goto('/vessels');
-        return page.getByText('R/V Test Cutter').count();
-      }, { timeout: 30_000 })
-      .toBe(0);
-
-    // Berths are the facility, not schedule data, so they survive a clear.
+    // Berths are the facility, not schedule data, so they survive (invariant 5).
     await page.goto('/');
     await expect(page.locator('.rail')).toHaveCount(7);
     await expect(page.locator('.bar')).toHaveCount(0);
   });
 
-  test('loading the sample brings in 23 years, and the board says where they are', async ({ page }) => {
+  test('restoring brings back 23 years, and the board says where they are', async ({ page }) => {
     // The reload copies 2,031 bookings from the seed snapshot; about 12s.
     test.setTimeout(120_000);
     page.once('dialog', (d) => d.accept());
     await page.goto('/');
-    await page.getByRole('button', { name: /load the sample schedule/i }).click();
+    await page.getByRole('button', { name: /restore the original schedule/i }).click();
 
     // Every booking in the workbook is behind today, so the board's own month is empty —
     // and it says where the bookings are instead of looking like a failed load.
@@ -137,10 +140,14 @@ test.describe('an empty schedule', () => {
     await expect(history.locator('.histpanel:visible')).toHaveCount(0);
     await expect(page.locator('.tabs .count')).toHaveCount(0);
 
-    // The schedule was empty when this ran, having just been cleared. Loading over an
-    // empty schedule must not overwrite the snapshot of what was there before the Clear,
-    // or an accidental Load after a Clear would lose it for good.
+    // The schedule was empty when this ran, the spec above having emptied it. Restoring
+    // over an empty schedule must not overwrite the snapshot of what was there before —
+    // or one accidental press on an empty board would lose it for good.
     await expect(page.getByRole('button', { name: /Put back the previous schedule/ })).toBeVisible();
+    // And it is still the OLD snapshot. The button alone does not prove that: a restore
+    // that wrongly snapshotted the empty schedule would draw the same button, saying
+    // "Replaced by the original schedule". The kind it reports is the evidence.
+    await expect(page.locator('.sampledata')).toContainText(/Cleared/);
   });
 
   test('the register pages through the vessels instead of growing a list', async ({ page }) => {
@@ -161,46 +168,49 @@ test.describe('an empty schedule', () => {
   });
 
   /**
+   * Emptying the schedule is no longer a button, but the way back from an empty one still
+   * is — and it is the offer the board carries, which the removal of Clear does not touch.
+   *
    * Self-contained: it makes the one booking it is about to lose, rather than leaning
    * on the sample the previous spec loaded. An earlier version read the review badge
    * to check the queue came back, which does not exist when the queue is empty — so
    * the spec hung for three minutes waiting for an element that was correctly absent.
    */
-  test('a cleared schedule can be put back', async ({ page }) => {
+  test('an emptied schedule can be put back', async ({ page }) => {
     test.setTimeout(120_000);
     page.on('dialog', (d) => d.accept());
 
-    await makeEvent(page, 'E2E undo the clear', 'Inner Channel — 55ft');
+    await makeEvent(page, 'E2E undo the emptying', 'Inner Channel — 55ft');
 
-    await page.goto('/review');
-    await page.getByRole('button', { name: /Clear the schedule/ }).click();
+    await clearSchedule();
 
     // Gone: the board draws its seven lanes and nothing else.
-    await expect.poll(async () => {
-      await page.goto('/');
-      return page.locator('.bar').count();
-    }, { timeout: 60_000 }).toBe(0);
+    await page.goto('/');
+    await expect(page.locator('.bar')).toHaveCount(0);
     await expect(page.locator('.rail')).toHaveCount(7);
 
-    // And the way back is offered where the person is looking — on the empty board,
-    // not only on the tab whose button they pressed.
+    // And the way back is offered where the person is looking — on the empty board, and
+    // not only at the foot of Review.
     const undo = page.getByRole('button', { name: /Put back the previous schedule/ });
     await expect(undo).toBeVisible();
     await undo.click();
 
-    await expect(page.getByLabel(/E2E undo the clear/)).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByLabel(/E2E undo the emptying/)).toBeVisible({ timeout: 60_000 });
 
     // The offer is gone, because the snapshot was consumed. An undo you can run twice
-    // would wipe whatever was done after the first one.
+    // would wipe whatever was done after the first one. Asserted on Review: the board
+    // only asks for a snapshot when the schedule is empty, so the button's absence there
+    // would prove nothing now that the bookings are back.
+    await page.goto('/review');
     await expect(page.getByRole('button', { name: /Put back the previous schedule/ })).toHaveCount(0);
   });
 
   /**
    * Loading the sample replaces the whole schedule, and it used to be the one action
-   * that could not be taken back: it deleted visitors' bookings outright and threw away
-   * the Clear snapshot as well. It now keeps what it replaced, like Clear does.
+   * that could not be taken back: it deleted visitors' bookings outright, and threw away
+   * the snapshot of whatever was there before them as well. It now keeps what it replaced.
    */
-  test('loading the sample over your work can be put back', async ({ page }) => {
+  test('restoring over your work can be put back', async ({ page }) => {
     test.setTimeout(120_000);
     page.on('dialog', (d) => d.accept());
 
@@ -209,7 +219,7 @@ test.describe('an empty schedule', () => {
     await makeEvent(page, 'E2E keep me', 'South Float East — 90ft');
 
     await page.goto('/review');
-    await page.getByRole('button', { name: /load the sample schedule/i }).click();
+    await page.getByRole('button', { name: /restore the original schedule/i }).click();
 
     // The sample has nothing in the current month, so the booking is gone from it.
     await expect.poll(async () => {
@@ -220,7 +230,7 @@ test.describe('an empty schedule', () => {
     await page.goto('/review');
     const putBack = page.getByRole('button', { name: /Put back the previous schedule/ });
     await expect(putBack).toBeVisible();
-    await expect(page.getByText(/Replaced by the sample/)).toBeVisible();
+    await expect(page.getByText(/Replaced by the original schedule/)).toBeVisible();
     await putBack.click();
 
     await expect.poll(async () => {
@@ -240,9 +250,9 @@ test.describe('putting back', () => {
     test.setTimeout(150_000);
     page.on('dialog', (d) => d.accept());
 
-    // Whatever the earlier specs left is "your work". Load the sample over it.
+    // Whatever the earlier specs left is "your work". Restore the original over it.
     await page.goto('/review');
-    await page.getByRole('button', { name: /load the sample schedule/i }).click();
+    await page.getByRole('button', { name: /restore the original schedule/i }).click();
     await expect(page.getByRole('button', { name: /Put back the previous schedule/ }))
       .toBeVisible({ timeout: 60_000 });
 

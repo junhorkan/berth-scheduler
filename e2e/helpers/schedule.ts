@@ -182,8 +182,8 @@ export async function seedFixture(): Promise<void> {
 }
 
 /**
- * Put the sample back, through the app's own reload — the same function the "Load the
- * sample schedule" button calls, so what the suite leaves behind is exactly what the
+ * Put the sample back, through the app's own reload — the same function the "Restore the
+ * original schedule" button calls, so what the suite leaves behind is exactly what the
  * button would, with no undo left pending. It used to copy the SQL, which is how the
  * two could drift.
  *
@@ -194,13 +194,19 @@ export async function restoreSample(): Promise<void> {
   if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
   const res = await resetToImported();
   if (!res.ok) throw new Error(`restoring the sample failed: ${res.error}`);
-  // Loading snapshots what it replaced, which here is the suite's own debris. Leave the
+  // Restoring snapshots what it replaced, which here is the suite's own debris. Leave the
   // live site with no "put back" offer pointing at test bookings.
   await discardPreviousSchedule();
   await globalThis.__berthSql?.end();
 }
 
-/** An empty schedule with the berths intact — what a fresh facility would see. */
+/**
+ * An empty schedule with the berths intact — what a fresh facility would see.
+ *
+ * No button does this any more, so this helper is the `clearSchedule` mutation's only
+ * caller. It still snapshots what it removes, which is what lets the specs assert the
+ * "Put back the previous schedule" offer an empty schedule carries.
+ */
 export async function clearSchedule(): Promise<void> {
   if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
   const res = await clearScheduleInApp();

@@ -189,8 +189,9 @@ unverifiable.
 **Why.** "Most vessels are missing a length" sounds hopeless, and alphabetical ordering keeps
 it that way. Bookings concentrate heavily on a few regular hulls — the first ten rows account
 for half of all vessel bookings — so recording a handful of lengths makes a large share of the
-schedule verifiable. The page states how many bookings the next entries would unlock, so the
-work looks finite instead of endless.
+schedule verifiable. The order is the statement, and each row carries the count its own missing
+length would unlock, so the work looks finite instead of endless without a sentence above it
+claiming so — the masthead says what the page is for and nothing else.
 
 ---
 
@@ -397,8 +398,8 @@ from a file.** Four reasons, each checked against this codebase:
   possible demonstration of a system built to catch it.
 - **"Add" has no sound meaning.** The grid gives its rows no identity. Adding the workbook
   onto a loaded schedule makes 2,012 stays collide with their own twins, and deduplicating
-  them silently drops rows. Only "replace, with an undo" is sound — and that replaces the
-  sample with the same sample.
+  them silently drops rows. Only "replace, with an undo" is sound — which is what **Restore the
+  original schedule** already does, and it replaces the sample with the same sample.
 - **A migration happens once, run by an operator.** A public, unauthenticated button that
   parses arbitrary zip files and replaces the schedule is attack surface bought for a
   demonstration.
@@ -410,9 +411,9 @@ than any button. **`npm test` failed on a fresh clone** — the reconciliation t
 gitignored workbook inside `describe()`, so elsewhere collection crashed with ENOENT, and the
 repo went public with the README promising a green run; the tests skip by name without the
 file now. **Loading the sample was irreversible**, deleting visitors' bookings and discarding
-the Clear snapshot, which contradicted invariant 12 the day after
+the snapshot the undo depended on, which contradicted invariant 12 the day after
 [log 28](docs/ENGINEERING-LOG.md#28-clear-is-undoable-and-the-board-is-not-a-wall) declared it
-had no exceptions; Load snapshots like Clear now. **A documented figure was wrong and
+had no exceptions; restoring snapshots what it replaces now. **A documented figure was wrong and
 untested** — "484 spellings fold into 418 vessels", in a code comment and in
 `docs/DATA-NOTES.md`. No way of counting the file reproduces 484; the real figure is 446, and
 it is a test now, found only because a new section claimed each rule was locked into a test
@@ -552,10 +553,11 @@ here as unbuilt rather than half-done.
 
 ## The rest of the record
 
-Entries 5–7, 10–19, 23–25, 27, 28 and 30–33 are in
+Entries 5–7, 10–19, 23–25, 27, 28, 30–33, 37 and 38 are in
 **[docs/ENGINEERING-LOG.md](docs/ENGINEERING-LOG.md)**, verbatim and under their own numbers:
 the library and ORM choices, the validated palette, the borrowed type scale and masthead,
 search, the import and its removal, the folding rules behind the review queue, the empty
 board's orientation block, the undo state machine and the 24,576 sequences that test it, the
-importer's hardening against hostile files, the 373 cells it was dropping in silence, and
-moving a booking in time as well as in space.
+importer's hardening against hostile files, the 373 cells it was dropping in silence, moving a
+booking in time as well as in space, the one sentence in these documents that was not true, and
+the removal of the button that emptied the schedule.

@@ -94,11 +94,13 @@ the central design decision. Fourteen entries of reasoning are in
 - **Find** — one box, searching every vessel name, event label and closure note across all
   23 years at once. Results group by identity, so a vessel with 267 bookings is one block
   and not 267 rows, and each result jumps straight to its own month on the board.
-- **The legacy schedule is imported, and removable.** 23 years of bookings are loaded so the
-  conflict and size checks can be tried against real, messy data. **Clear the schedule**
-  empties it and **Load the sample schedule** puts it back, both on Review. **Both can be
-  undone**: each snapshots what it replaces in the same transaction that replaces it, and
-  **Put back the previous schedule** restores it.
+- **The legacy schedule is imported, and restorable.** 23 years of bookings are loaded so the
+  conflict and size checks can be tried against real, messy data. Whatever a visitor cancels or
+  edits, **Restore the original schedule** on Review brings the facility's own record back.
+  **It can be undone**: it snapshots what it replaces in the same transaction that replaces it,
+  and **Put back the previous schedule** returns that. Nothing empties the schedule — a 23-year
+  record is not something a coordinator deletes, and the board's own opening month already
+  shows that an empty schedule is supported.
 
 ## Importing the legacy workbook
 
@@ -152,7 +154,7 @@ npm run dev
 ```
 
 ```bash
-npm test          # 347 unit tests, no database. Without data/*.xlsx, 307 run and 40 skip
+npm test          # 344 unit tests, no database. Without data/*.xlsx, 304 run and 40 skip
 npm run test:db   # 15 raw-SQL tests of the EXCLUDE constraint itself. Every case rolls back
 npm run e2e       # 69 Playwright specs. Writes to the live database — see docs/OPERATIONS.md
 npm run lint      # clean
@@ -206,10 +208,10 @@ its lane, and none can draw a bar that **overhangs** its row.
   dashboard restores it.
 - **The app is public and unauthenticated by design**, so a reviewer can exercise the
   conflict check without credentials. Nothing it offers is destructive for long: a cancelled
-  booking is restored from Review, and **Clear** and **Load** each keep what they replaced,
-  so **Put back the previous schedule** undoes either. The one exception, stated rather than
-  implied: **editing** a booking overwrites its berth, dates, name, kind and note in
-  place, and has no undo.
+  booking is restored from Review, and **Restore the original schedule** keeps what it
+  replaced, so **Put back the previous schedule** undoes it. No page can empty the schedule at
+  all. The one exception, stated rather than implied: **editing** a booking overwrites its
+  berth, dates, name, kind and note in place, and has no undo.
 
 ## The rest of the documentation
 

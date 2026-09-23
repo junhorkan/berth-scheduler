@@ -96,8 +96,11 @@ save, the queue off a problem — and on an empty month none of them render, inc
   *"Nothing on the schedule needs a decision."* — true, and on the front door it argues
   the page should not exist. State belongs in the card, against the row it is the state
   of, where a count of `0` and a few words saying what would fill it are informative
-  rather than dismissive. Vessels is the one page whose line carries a proportion,
-  because *where to start* is the only thing 398 missing lengths leaves you needing.
+  rather than dismissive. **All four lines are purpose lines now.** Vessels was the
+  exception — its line reported the split and then did arithmetic on it — and the two jobs
+  that sentence did are done better below it, by a button that names the split, a pager that
+  counts it, and rows ordered so *where to start* is the top of the list
+  ([LOG 38](ENGINEERING-LOG.md#38-clear-is-gone-and-two-mastheads-stopped-reporting-state)).
 - **A row with a count is organisation; a paragraph explaining the row is clutter.** An
   empty state gets a label, not an essay — *Nothing right now.*, *None missing.* Review
   was rebuilt twice in an hour, once for being bare and once for the prose that fixed it
@@ -141,7 +144,9 @@ commit at a time.
   two buttons, and a filter that searches the whole register. Rendering all of them made
   the page 21,713px tall and buried the page's own argument, and a *Show the remaining
   393* only moved that wall one click away. Its rows are Review's rows, so the two queues
-  read the same, and the page size is stated once, in the page's own line. Review shows five rows per section and folds the rest behind a
+  read the same, and the page size is stated once, by the pager — *1–10 of 398*, under the
+  button that names the category it counts, and nowhere in the page's own line. Review shows
+  five rows per section and folds the rest behind a
   `<details>`; navigation on a row is a text link, and only the decision is a button.
   Review's **History** card goes further and starts closed: one button per category, and
   nothing drawn until one is pressed, because an archive nobody has asked for is the

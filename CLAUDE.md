@@ -99,13 +99,13 @@ obeyable.
     overwrites the berth, span, name, kind and note in place and has no undo** — say so,
     do not imply it is covered. No accounts, so reversibility is the answer
     rather than a gate. Cancelling is a soft delete restored from Review, and restoring
-    re-runs the constraint, so it can be refused. **Clear, Load and Put back** each save
-    what they replace, unless it has nothing to lose (`lib/undo.ts`, tested over every
-    sequence), inside the transaction that replaces it. **Importing is not a UI action
-    at all**: `npm run import` runs behind the database credentials, because a public
-    page with no accounts must not be able to replace everyone's schedule.
+    re-runs the constraint, so it can be refused. **Restore and Put back** each save what
+    they replace, unless it has nothing to lose (`lib/undo.ts`, tested over every
+    sequence), inside the transaction that replaces it. **Neither importing nor emptying
+    is a UI action**: `npm run import` runs behind the database credentials, and Clear was
+    removed — a public page with no accounts must not replace or delete everyone's schedule.
     → [DECISIONS 20](DECISIONS.md#20-cancelling-is-reversible-not-restricted) ·
-    [LOG 28 and 30](docs/ENGINEERING-LOG.md#28-clear-is-undoable-and-the-board-is-not-a-wall)
+    [LOG 28, 30 and 38](docs/ENGINEERING-LOG.md#38-clear-is-gone-and-two-mastheads-stopped-reporting-state)
 13. **Never use WHOI's name or marks.** A real institution, a public site, synthetic data.
     → [DECISIONS 21](DECISIONS.md#21-the-facility-is-not-whoi)
 

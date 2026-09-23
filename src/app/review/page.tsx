@@ -1,6 +1,6 @@
 import Nav from '../../components/Nav';
 import { ResolveButton } from '../../components/ResolveButton';
-import { LoadSampleButton, ClearScheduleButton, RestorePreviousButton } from '../../components/SampleData';
+import { LoadSampleButton, RestorePreviousButton } from '../../components/SampleData';
 import {
   getReviewItems, getMissingLengthSummary, getRecentlyCancelled, getPreviousSchedule,
 } from '../../db/queries';
@@ -251,19 +251,26 @@ export default async function ReviewPage() {
       )}
 
       {/*
-        The schedule's own controls, at the foot and outside the cards: they replace
-        everything above rather than acting on any one row of it. A third card, with a
-        title and a paragraph, made the page read as three things competing — Board and
-        Vessels are each one card and a line.
+        One control, at the foot and outside the cards: it replaces everything above
+        rather than acting on any one row of it. A third card, with a title and a
+        paragraph, made the page read as three things competing — Board and Vessels are
+        each one card and a line.
 
-        One short line, not a paragraph: it says what the buttons do, because "Both can
-        be put back afterwards" left both *what* and put back to *what* to be guessed.
-        DECISIONS 26.
+        There was a second button here, "Clear the schedule", and it is gone. It existed
+        to demonstrate that an empty schedule is supported (invariant 8) — but the front
+        door already demonstrates that: every booking in the supplied workbook ended in
+        2019, and the board opens on the facility's own month, so the first screen anyone
+        sees is an empty one. What the button added was the only way, on a public page
+        with no accounts, to delete 23 years of a real schedule in one press. Undoable,
+        and still not a thing a berth coordinator does.
+
+        Restoring stays. Without it a visitor who cancels or edits a few bookings has no
+        way back to what was here, and the schedule this is loaded with is the facility's
+        own record. DECISIONS 26.
       */}
       <div className="sampledata">
         <div className="sampleacts">
           <LoadSampleButton />
-          <ClearScheduleButton />
           {undo && (
             <RestorePreviousButton
               bookings={undo.bookings}
@@ -273,7 +280,7 @@ export default async function ReviewPage() {
             />
           )}
         </div>
-        <p className="sub-hint">Both replace every booking, and both can be undone.</p>
+        <p className="sub-hint">This replaces every booking, and can be undone.</p>
       </div>
     </main>
   );

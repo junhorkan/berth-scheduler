@@ -145,11 +145,16 @@ export default async function BoardPage({
               {scheduleIsEmpty ? (
                 <>
                   Start with <b>+ New booking</b>, or{' '}
-                  <LoadSampleButton label="load the sample schedule" /> &mdash; 23 years
-                  of legacy bookings to try the checks against.
+                  <LoadSampleButton label="restore the original schedule" /> &mdash; every
+                  booking the facility has on record, to try the checks against.
+                  {/*
+                    Only reachable now if a Put back put an empty schedule back, since
+                    nothing on a public page empties one any more. Kept because the offer
+                    belongs on the screen you are looking at, not the tab you pressed.
+                  */}
                   {undo && (
                     <>
-                      {' '}Cleared it by mistake?{' '}
+                      {' '}Or{' '}
                       <RestorePreviousButton bookings={undo.bookings} vessels={undo.vessels} kind={undo.kind} />
                     </>
                   )}

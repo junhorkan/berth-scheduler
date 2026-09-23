@@ -128,7 +128,7 @@ export async function resolveReviewGroupAction(ids: string[]) {
   return res;
 }
 
-/** Put back the schedule the last Clear or Load replaced. Consumed on success. */
+/** Put back the schedule the last restore replaced. Consumed on success. */
 export async function restorePreviousAction() {
   const res = await m.restorePrevious();
   revalidatePath('/');
@@ -137,11 +137,11 @@ export async function restorePreviousAction() {
   return res;
 }
 
-export async function clearScheduleAction() {
-  const res = await m.clearSchedule();
-  revalidatePath('/');
-  revalidatePath('/vessels');
-  revalidatePath('/review');
-  return res;
-}
+/*
+  `clearScheduleAction` was here. The button that called it is gone: emptying a real
+  23-year schedule is not a berth coordinator's action, and the empty board it existed to
+  demonstrate is already the front door. The `clearSchedule` mutation stays — the
+  Playwright fixture builds the empty schedule with it — but nothing on a public page
+  reaches it now, which is the point.
+*/
 

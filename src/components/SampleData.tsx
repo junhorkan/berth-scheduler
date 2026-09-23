@@ -1,15 +1,20 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { resetToImportedAction, clearScheduleAction, restorePreviousAction } from '../app/actions';
+import { resetToImportedAction, restorePreviousAction } from '../app/actions';
 
 /**
- * The sample workbook is a demonstration, not this facility's history, so loading it
- * is an explicit, reversible choice rather than something baked into the deployment.
+ * Putting the schedule back to the one it was loaded with, and undoing that.
  *
- * Both replace the whole schedule and both can be undone: each keeps what it replaced,
- * and "Put back the previous schedule" restores it. Loading appears wherever someone
- * might want it; clearing appears once, at the foot of Review, behind a confirmation.
+ * Restoring replaces the whole schedule and can be undone: it keeps what it replaced,
+ * and "Put back the previous schedule" restores that. It appears wherever someone might
+ * want it — the foot of Review, and the empty board.
+ *
+ * There was a third button, `ClearScheduleButton`, which emptied the schedule. It was
+ * removed: it existed to show that an empty schedule is supported, which the front door
+ * already shows, and it was the one control on a public page that could delete a real
+ * 23-year record in a press. The `clearSchedule` mutation stays — `e2e/helpers/schedule`
+ * calls it to build the empty-schedule fixture — it is simply not a button any more.
  *
  * Both report failure. They used to `await` the action and throw the result away, so a
  * refusal — a cold database, an exhausted pool, a killed function — was indistinguishable
@@ -34,7 +39,7 @@ function useAction(run: () => Promise<{ ok: boolean; error?: string }>) {
   return { error, pending, go };
 }
 
-export function LoadSampleButton({ label = '↻ Load the sample schedule' }: { label?: string }) {
+export function LoadSampleButton({ label = '↻ Restore the original schedule' }: { label?: string }) {
   const { error, pending, go } = useAction(resetToImportedAction);
   return (
     <>
@@ -42,30 +47,11 @@ export function LoadSampleButton({ label = '↻ Load the sample schedule' }: { l
         className="btn"
         disabled={pending}
         onClick={() => {
-          if (!confirm('Load the sample schedule? It replaces what is on the schedule now, and you can put that back afterwards.')) return;
+          if (!confirm('Restore the original schedule? It replaces what is on the schedule now, and you can put that back afterwards.')) return;
           go();
         }}
       >
-        {pending ? 'Loading…' : label}
-      </button>
-      {error && <span className="actionerr">{error}</span>}
-    </>
-  );
-}
-
-export function ClearScheduleButton() {
-  const { error, pending, go } = useAction(clearScheduleAction);
-  return (
-    <>
-      <button
-        className="btn danger"
-        disabled={pending}
-        onClick={() => {
-          if (!confirm('Clear the whole schedule? Every booking and vessel is removed. The berths stay, and you can put it all back afterwards.')) return;
-          go();
-        }}
-      >
-        {pending ? 'Clearing…' : '✕ Clear the schedule'}
+        {pending ? 'Restoring…' : label}
       </button>
       {error && <span className="actionerr">{error}</span>}
     </>
@@ -73,7 +59,7 @@ export function ClearScheduleButton() {
 }
 
 /**
- * Put back the schedule the last Clear or Load replaced.
+ * Put back the schedule the last restore replaced.
  *
  * Rendered only when there is a snapshot, which keeps it from being a button that
  * usually does nothing. It says what it will restore before it is pressed, because
@@ -93,8 +79,10 @@ export function RestorePreviousButton({
   when?: string;
 }) {
   const { error, pending, go } = useAction(restorePreviousAction);
+  // 'clear' is still reachable: the `clearSchedule` mutation snapshots under that name,
+  // and the Playwright fixture calls it. Only the button is gone, not the code path.
   const how = kind === 'clear' ? 'Cleared'
-    : kind === 'load' ? 'Replaced by the sample'
+    : kind === 'load' ? 'Replaced by the original schedule'
       : 'Replaced by Put back';
   return (
     <>

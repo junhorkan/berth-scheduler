@@ -52,11 +52,14 @@ board renders one; watching the system refuse a booking proves the rule is real.
    that fits, when the length is known. It proposes; I still choose, because the coordinator
    knows things the database doesn't."* Save enables, the length warning stays amber. *"One
    rule is a wall, the other is advice. That asymmetry is the whole design."*
-6. **Clear the schedule on Review, then put it back.** Your booking from step 3 is what makes
-   it worth keeping. *"Nothing here is destructive for long. Clear, Load and Put back each
-   keep what they replace, in the same transaction that replaces it, so the undo can't be out
-   of step with what it undoes. The one thing not kept is the untouched sample, because Load
-   can always make it again."*
+6. **Cancel your booking from step 3, then put it back from Review.** *"Nothing here is
+   destructive for long. Cancelling is a soft delete — the dialog says so before you click —
+   and restoring re-runs the constraint, so the rule holds on the way back too. If somebody
+   edits their way somewhere they didn't mean to go, `↻ Restore the original schedule` at the
+   foot of this page brings the facility's own record back, keeping what it replaced in the
+   same transaction that replaces it, so the undo can't be out of step with what it undoes.
+   There is no button that empties the schedule: deleting a 23-year record isn't a thing a
+   coordinator does, and the empty month we opened on already shows empty is supported."*
 7. **Review → History → Unresolved conflict.** *"Every job this page does is a row with a
    count, and a row reading zero still says what would fill it — nothing needs a decision
    today, nothing is cancelled, 398 vessels have no length. Everything the import couldn't
@@ -113,8 +116,8 @@ board renders one; watching the system refuse a booking proves the rule is real.
 > **Rafting** — two vessels legitimately sharing one berth happens, and modelling it properly
 > means berth capacity in feet rather than a yes/no. **Draft and depth** — vessel draft
 > matters, but no berth depth exists anywhere in the material I was given, so that check is
-> impossible rather than merely missing. **Undo for a move** — cancel, clear and load all keep
-> what they replace, but an edit overwrites the berth, dates, name, kind and note in
+> impossible rather than merely missing. **Undo for a move** — cancelling and restoring both
+> keep what they replace, but an edit overwrites the berth, dates, name, kind and note in
 > place; the fix is the
 > same shape, and I would rather say it is missing than imply it is covered. And a **second
 > database for the test suite**, which today writes to the live one.
@@ -124,7 +127,7 @@ board renders one; watching the system refuse a booking proves the rule is real.
 ## If you are asked how it was built
 
 > Next.js and TypeScript on Vercel, Postgres on Supabase, no ORM. The rules live in
-> `src/domain` and `src/lib`, which import nothing from the database or the UI: 307 unit tests
+> `src/domain` and `src/lib`, which import nothing from the database or the UI: 304 unit tests
 > run in about half a second with no infrastructure, and 40 more verify the parse of their
 > workbook once it is in `data/`. 69 Playwright specs build their own fixture against a real
 > server and restore the sample afterwards, so the app is left in the state it ships in.

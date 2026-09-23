@@ -35,6 +35,8 @@ worth arguing about.
 | 32 | [A move changes a span, not only a berth](#32-a-move-changes-a-span-not-only-a-berth) |
 | 33 | [The drawn bar is the data; the target you press is not](#33-the-drawn-bar-is-the-data-the-target-you-press-is-not) |
 | 26 *cont.* | [Review's two revisions](#26-continued-reviews-two-revisions) |
+| 37 | [The one sentence in the documentation that was not true](#37-the-one-sentence-in-the-documentation-that-was-not-true) |
+| 38 | [Clear is gone, and two mastheads stopped reporting state](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state) |
 
 ---
 
@@ -102,6 +104,10 @@ virtualising 23 years is a large amount of work for a small gain.
 ---
 
 ## 11. Public, unauthenticated, with a reset
+
+> **The buttons named here changed in [38](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state).**
+> *Clear the schedule* is removed and the load is *Restore the original schedule*. The reset
+> this entry argues for is still one press away; it is the only one left.
 
 **Decision.** No login. Anyone can add, edit and cancel. A visible **Load the sample
 schedule** puts back the state the app ships in, so nothing a visitor does can spoil the
@@ -174,6 +180,11 @@ not a pattern. There is a unit test and an end-to-end test for exactly that.
 ---
 
 ## 14. The legacy schedule is imported, and removable
+
+> **The second half of the title is superseded by [38](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state).**
+> The schedule is not removable from the product any more: *Clear the schedule* is gone and
+> the load, renamed *Restore the original schedule*, is what remains. Why it is imported at
+> all — everything below — stands unchanged.
 
 **Decision.** The app ships with the 23-year workbook imported. **Clear the schedule**
 empties it; **Load the sample schedule** puts it back. Both live on the Review tab, and
@@ -462,7 +473,9 @@ much" is not a control. A page forward cannot produce a longer page.
 **What was cut from Review.** The pills — each named a category and gave its count, which
 is exactly what the section heading below it now does. And **Clear the schedule moved to
 the foot of the page**: a destructive action does not belong in a header, one slip from
-the button that loads data.
+the button that loads data. *(It left the foot too, in
+[38](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state) — moving it was the right
+answer to the wrong question. The load stayed, renamed.)*
 
 **What survived a cut it nearly did not.** Provenance — `sheet 2008, row 12, col 2` — is
 kept, but only on *Could not be read* items, which are the ones you resolve by going and
@@ -666,6 +679,11 @@ point is that a list behind a button should cost nothing until the button is pre
 
 ## 28. Clear is undoable, and the board is not a wall
 
+> **The button is gone in [38](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state);
+> the machinery is not.** `clearSchedule` still snapshots inside the transaction that empties
+> the live tables, and the e2e fixture is now its only caller. Every rule here holds for
+> *Restore the original schedule*. Kept because one transaction, and why, is the record.
+
 Two corrections from the owner looking at the running app. Different in size, identical
 in kind: both were places where a defensible decision had drifted past the point it
 served anybody.
@@ -732,6 +750,11 @@ adversarially, by agents told to break it rather than approve it. They broke thr
 things, and one argument changed a decision.
 
 ### The undo had a policy, and the policy was wrong
+
+> **Two buttons reach this rule now, not three
+> ([38](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state)).** Clear left the UI;
+> the rule, the state machine and the 24,576 sequences are untouched, and `clearSchedule` is
+> still one of the actions `lib/undo.ts` covers — reached only by the test fixture.
 
 **Decision.** Clear, Load and Put back follow one rule: **an action saves what it
 replaces, unless that has nothing to lose.** A schedule has nothing to lose when no
@@ -863,7 +886,9 @@ onto an empty in-process Postgres.
   `DATA-NOTES` counted 28 sheets where there are 27.
 - The Vessels page opened on four figures in one sentence. It now says one proportion in
   words — the first ten rows account for half of the vessel bookings — computed, and
-  rounded down so it never overclaims.
+  rounded down so it never overclaims. *(Replaced again in
+  [38](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state), which took the
+  proportion off the masthead altogether and deleted the helper that computed it.)*
 
 ---
 
@@ -954,7 +979,9 @@ because the action behind the panel is a public endpoint and `min` guards only t
 Same function, same sentence, both places. → [invariant 7](../CLAUDE.md#invariants)
 
 **What is still missing.** A move has no undo. Cancel, Clear, Load and Put back all keep
-what they replace; an edit overwrites the berth, span, name, kind and note in place, and that was already
+what they replace — Clear has since left the UI and Load is *Restore the original schedule*
+([38](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state)), and this gap is
+unchanged; an edit overwrites the berth, span, name, kind and note in place, and that was already
 true of berth changes before this. It is honest to say the fix is the same shape — snapshot
 the row inside the transaction — and that it was not built, rather than to claim
 [invariant 12](../CLAUDE.md#invariants) covers a path it does not.
@@ -1079,6 +1106,12 @@ get the old, fully expanded card: `@media print` and `@supports not selector(:ha
 draw every panel and hide the buttons.
 
 ### Every row says what it is, and an empty one says what would be in it
+
+> **The foot of the page carries two buttons now, not three
+> ([38](#38-clear-is-gone-and-two-mastheads-stopped-reporting-state))**: Clear is removed,
+> Load is *Restore the original schedule*, and the line under them is *This replaces every
+> booking, and can be undone.* What carried over is the argument below — a row with a count
+> rather than a paragraph, and a line under the buttons rather than only a dialog.
 
 Four complaints from the owner in one sitting, all of them about the same page, and the
 last one the sharpest: **"Do we need it in the first place?"**
@@ -1207,3 +1240,80 @@ Asking "does this claim still hold?" is a different question from "do the tests 
 and only the first one finds this. A submission whose argument is precise evidence cannot
 afford a single unchecked claim, and the most dangerous one sits under the word that
 invites checking.
+
+---
+
+## 38. Clear is gone, and two mastheads stopped reporting state
+
+Three removals in one pass. Each took something out of the product; none of them added
+anything, and the argument for each was the same shape — the job was already being done
+somewhere better.
+
+### Clear the schedule is removed, and Load is renamed
+
+**Decision.** The foot of Review had three buttons — Load · Clear · Put back. It has two:
+**↻ Restore the original schedule**, which is the old *↻ Load the sample schedule* renamed
+(same `LoadSampleButton`, same `resetToImportedAction`, same `resetToImported`), and **Put
+back the previous schedule**. The line under them is *This replaces every booking, and can
+be undone.* **Nothing in the product empties the schedule any more.**
+
+**Why.** Three arguments, in the order they were made:
+
+- **It is not a coordinator's action.** The schedule this app is loaded with is a real
+  23-year record of a real facility, supplied as the sample. Deleting all of it is not
+  something a berth coordinator does, so it is not a control the product should offer.
+- **The front door already demonstrates the empty case.** Clear existed to show that an
+  empty schedule is supported ([invariant 8](../CLAUDE.md#invariants)). But every booking in
+  the supplied workbook ended in 2019 and the board opens on the facility's own month, so
+  the first screen anyone sees is an empty one, orientation block and all
+  ([18](#18-an-empty-month-is-not-an-empty-page)). A button whose job is to demonstrate what
+  the first screen demonstrates is a demonstration, not a feature — the reading that cut
+  `/check` ([34](../DECISIONS.md#34-a-dry-run-for-a-step-the-product-does-not-have)).
+- **It was the one press that deleted everything.** On a public page with no accounts, it
+  was the only control that could delete 23 years of a real schedule in one click. Undoable,
+  and still not worth offering.
+
+**Why Restore stays.** Without it a visitor who cancels or edits a few bookings has no way
+back to the facility's own record, and that reachable shipped state is the whole reason open
+access is safe ([11](#11-public-unauthenticated-with-a-reset)).
+
+**What was *not* removed.** The undo machinery still covers restoring and the importer, so
+it all stays: the `clearSchedule` mutation in `src/db/mutations.ts` — the Playwright suite
+builds its empty-schedule fixture with it, and is now its only caller — the `*_undo` tables,
+`src/lib/undo.ts` and its policy tests, `restorePrevious`, `getPreviousSchedule`, and
+`npm run sample:load`. The one rule in
+[30](#30-one-undo-rule-an-importer-that-fails-loudly-and-a-check-that-writes-nothing) is
+unchanged, `clearSchedule` still snapshots inside its own transaction, and
+[invariant 12](../CLAUDE.md#invariants) keeps its single stated exception: an edit.
+
+### The Vessels line reported state and then did arithmetic on it
+
+**Before.** *"Most have no length on record. The first ten account for half of the vessel
+bookings, so start there."* **Now.** *"Every vessel on the schedule, and how long
+each one is."*
+
+**Why.** Every figure in the old line was true and computed, and it was still the only
+masthead in the app describing how the page was *doing* rather than what it was *for* — the
+rule is [DESIGN 9](DESIGN.md#9-explain-the-tool-never-the-project), and Review was held to
+it for precisely this in [26 continued](#26-continued-reviews-two-revisions). The two jobs
+that sentence did are each done better a few pixels under it: the split is named on its own
+button, *No length on record*, and counted by the pager; the order still puts the hulls whose
+missing length blocks the most bookings first, and every row states its own booking count
+([DECISIONS 9](../DECISIONS.md#9-the-vessels-list-is-ordered-by-bookings-blocked),
+[23](#23-a-long-list-shows-its-head-and-names-its-categories-once)). The ordering decision
+did not change. Only the masthead's claim about it came off.
+
+**`src/lib/share.ts` went with it.** `shareInWords` computed that proportion in words and
+rounded it down so the sentence could never overclaim — the fix recorded at the foot of
+[30](#30-one-undo-rule-an-importer-that-fails-loudly-and-a-check-that-writes-nothing). It had
+exactly one consumer, and it was that sentence, so the module and its three tests are deleted
+rather than left for somebody to find and wonder about.
+
+### The Search line said its second clause twice
+
+**Before.** *"Find anything that occupies a berth, across every year on the schedule."*
+**Now.** *"Find anything that occupies a berth."* The dropped clause was already one line
+below it, in the page's own panel: *"The board shows one month at a time; this searches all
+of them at once."* — where it sits next to the thing it explains, and says why searching all
+of them is worth doing. [17](#17-repetition-is-not-information) applies to a page's own two
+lines as much as to a table's rows.

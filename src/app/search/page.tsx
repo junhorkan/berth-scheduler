@@ -32,7 +32,7 @@ export default async function SearchPage({
           current="search"
           query={raw}
           title="Search"
-          tagline="Find anything that occupies a berth, across every year on the schedule."
+          tagline="Find anything that occupies a berth."
         />
         <div className="panel">
           <p style={{ margin: 0 }}>

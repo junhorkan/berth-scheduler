@@ -1,55 +1,35 @@
 import Nav from '../../components/Nav';
 import VesselTable from '../../components/VesselTable';
 import { getVessels } from '../../db/queries';
-import { shareInWords } from '../../lib/share';
 
-/**
- * Rows per page in the register. It lives here because the line under the page's name
- * counts exactly the rows on the first page: a page that claims one number and displays
- * another is worse than one that says nothing.
- */
+/** Rows per page in the register. The table pages; nothing else depends on the number. */
 const PER_PAGE = 10;
-/** Small numbers read better as words in a sentence. */
-const NUMBER: Record<number, string> = { 3: 'three', 4: 'four', 5: 'five', 6: 'six', 10: 'ten' };
 
 export const dynamic = 'force-dynamic';
 
 export default async function VesselsPage() {
   const vessels = await getVessels();
-  const missing = vessels.filter((v) => v.lengthFt == null);
-  const totalBookings = vessels.reduce((a, v) => a + v.bookingCount, 0);
-  // The list puts vessels with no length first, busiest first, so its head is where
-  // recording a length unlocks the most fit checks. The line below counts exactly the
-  // rows the register shows, so the page cannot claim one number and display another.
-  const headBookings = missing.slice(0, PER_PAGE).reduce((a, v) => a + v.bookingCount, 0);
-  const share = missing.length > PER_PAGE ? shareInWords(headBookings, totalBookings) : null;
-
-  /**
-   * One line under the page's name: what is missing, and where to start. It used to be
-   * four figures in a sentence (398 of 418, 1,920 of 1,974, 1,002), which the reader had
-   * to do arithmetic on before it said anything. The counts are in the table; the line
-   * says the one proportion that matters, in words (lib/share).
-   */
-  const tagline =
-    vessels.length === 0 ? (
-      'No vessels yet. Booking one registers it here, and its length can be recorded after.'
-    ) : missing.length === 0 ? (
-      'Every vessel has a length on record.'
-    ) : (
-      <>
-        {missing.length * 2 > vessels.length
-          ? 'Most have no length on record.'
-          : missing.length === 1
-            ? 'One has no length on record yet.'
-            : 'Some have no length on record yet.'}
-        {share && <> The first {NUMBER[PER_PAGE] ?? PER_PAGE} account for{' '}
-          <b>{share} of the vessel bookings</b>, so start there.</>}
-      </>
-    );
 
   return (
     <main className="shell">
-      <Nav current="vessels" title="Vessels" tagline={tagline} />
+      {/*
+        One line saying what the page is for, the shape every other masthead uses.
+
+        It used to report state and then do arithmetic on it: "Most have no length on
+        record. The first ten account for half of the vessel bookings, so start
+        there." Every figure in it was true and computed, and it still asked the reader
+        to hold a proportion in their head before the page had told them what it was.
+
+        Each of those two jobs is already done better below. The split is named on its
+        own button — "No length on record" — and counted by the pager; the ordering puts
+        the hulls whose missing length blocks the most bookings first, and each row says
+        how many bookings that is. The line stops repeating them (DECISIONS 9).
+      */}
+      <Nav
+        current="vessels"
+        title="Vessels"
+        tagline="Every vessel on the schedule, and how long each one is."
+      />
       <VesselTable vessels={vessels} perPage={PER_PAGE} />
     </main>
   );

@@ -30,16 +30,17 @@ application reaches the database as the owning role, which RLS does not apply to
 deliberate — there is no client-side database access anywhere in the app, so a policy
 would open a door nothing needs.
 
-Three `*_undo` tables plus `undo_meta` hold whatever the last **Clear** or **Load**
-replaced. They are written inside the same transaction that replaces the live tables,
-and emptied when the undo is used. An action over an already-empty schedule leaves them
-alone, so Clear followed by an accidental Load can still put back what was there before
-the Clear. `npm run sample:load` and the test suite's teardown discard them, so a reset
-leaves no "put back" offer pointing at test data. They are snapshots, never a source of
-truth.
+Three `*_undo` tables plus `undo_meta` hold whatever the last **Restore the original
+schedule** replaced. They are written inside the same transaction that replaces the live
+tables, and emptied when the undo is used. An action over a schedule with nothing to lose
+leaves them alone, so an accidental second restore cannot overwrite the snapshot of real
+work taken by the first. `npm run sample:load` and the test suite's teardown discard them,
+so a reset leaves no "put back" offer pointing at test data. They are snapshots, never a
+source of truth. The button that emptied the schedule is gone, but the tables are not: they
+still cover restoring, and `clearSchedule` still writes them for the e2e fixture.
 
 Four `*_seed` tables hold the imported workbook exactly as `npm run import` loaded it;
-**Load the sample schedule** and the test suite's teardown both copy from them. They have
+**Restore the original schedule** and the test suite's teardown both copy from them. They have
 RLS enabled like everything else — it was found disabled on them twice and re-enabled by
 migration, most recently on 2026-09-19 — so check them first if `get_advisors` ever
 reports a table open. It is clean of ERROR-level findings.
@@ -76,17 +77,18 @@ live database at once while the code that needs it takes a deploy.
 Three things worth knowing:
 
 - **The berths are defined in a migration**, idempotently, so a database built from
-  nothing has the facility in it. Nothing else writes them: Clear, Load, Put back and the
-  importer all leave the seven rows alone, so their ids never change — which is what lets
-  an undo put back bookings that reference them.
+  nothing has the facility in it. Nothing else writes them: restoring, Put back, the
+  importer and the e2e fixture's clear all leave the seven rows alone, so their ids never
+  change — which is what lets an undo put back bookings that reference them.
 - **`review_items.type` is constrained** to the kinds the app can actually produce.
   Missing lengths are derived at read time, not stored, so that value is not accepted.
 - **The `*_seed` tables are created empty.** The newest migration makes them, and the
   `*_undo` tables, real tables with primary keys and row-level security. `npm run import`
   fills them, in the same transaction that writes the live schedule. So a database built
-  from migrations alone has the schema and the berths but nothing for **Load the sample**
-  to load until the importer has run once against the workbook. Stated rather than
-  hidden: moving the seed rows into a migration would put the club's data in the repo.
+  from migrations alone has the schema and the berths but nothing for **Restore the
+  original schedule** to load until the importer has run once against the workbook. Stated
+  rather than hidden: moving the seed rows into a migration would put the club's data in the
+  repo.
 
 ## Environment
 
@@ -135,7 +137,7 @@ one. This has actually happened, and it is the reason to know about it:
 
 - **Do not run the suite when anyone might be looking**, and especially not once a link
   has been handed to somebody.
-- If a run is interrupted before teardown, put the data back with the **Load the sample
+- If a run is interrupted before teardown, put the data back with the **Restore the original
   schedule** button on Review, or `npm run sample:load`, which is the same function
   from the terminal. The teardown calls that function too, so the suite leaves behind
   exactly what the button would.
