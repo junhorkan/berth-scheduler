@@ -708,20 +708,3 @@ a { color: var(--vessel); }
 /* A destructive control that fails silently is worse than one that fails loudly. */
 .actionerr { font-size: 13px; color: var(--critical); max-width: 340px; }
 
-/* ---- Check a workbook: the importer's answer, with nothing saved ---- */
-
-.checkpick { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.checkpick .sub-hint { margin-top: 0; }
-/* The label is the button; the input stays in the page for keyboards and tests. */
-.filepick { position: relative; cursor: pointer; }
-.filepick input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
-.filepick:focus-within { outline: 2px solid var(--vessel); outline-offset: 2px; }
-.filepick:has(input:disabled) { opacity: 0.55; cursor: default; }
-.checkresult { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--axis); }
-.checkresult > .verdict { margin: 12px 0 18px; }
-.checkfile { margin: 0; font-size: 13px; color: var(--ink-muted); font-family: var(--mono); overflow-wrap: anywhere; }
-.checkheadline { margin: 4px 0 0; font-size: 16px; color: var(--ink-2); }
-.checkheadline b { color: var(--ink); }
-.checksub { margin: 4px 0 0; font-size: 13px; color: var(--ink-muted); max-width: 74ch; }
-.checkdiff { margin: 6px 0 0; padding-left: 18px; }
-.checknote { margin-top: 18px; }

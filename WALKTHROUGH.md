@@ -95,13 +95,18 @@ about itself.
   so the board opened on a busy month; it read as clutter, and it was the one place the
   app showed data nobody had entered, so it came out. The board now opens on an empty
   month that says where the bookings are.
-- **You can check a workbook, but not upload one, and I can say why.** Their file is a
-  trap-laden migration, and a button that re-imports it would let anyone on a public site
-  replace everyone's schedule. So `/check` runs the importer in the browser on their copy
-  and saves nothing: untouched, it matches the imported sample booking for booking; with
-  a double-booking planted in Excel, it names it and its cell. And it can never be CSV — collapsing the
-  merged cells drops 58% of booked days and erases the only double-booking in 23 years. I
-  measured that rather than assumed it.
+- **Importing is not a button, and I can say why.** Their file is a trap-laden migration,
+  and a control that re-imports it would let anyone on a public site with no accounts
+  replace everyone's schedule. So `npm run import` runs behind the database credentials,
+  and `npm run import:check` prints the same parse without writing. And the file can never
+  be CSV — collapsing the merged cells drops 58% of booked days and erases the only
+  double-booking in 23 years. I measured that rather than assumed it.
+- **I built a page for this and then deleted it.** `/check` ran the importer in the
+  browser on your own copy of the workbook and saved nothing. It worked, and it managed no
+  berths: a dry run for a command-line step the product does not offer. The brief asks for
+  a system to manage reservations, and a page that demonstrates the import is a page about
+  the project. Cutting something good that does not belong is the same judgment as not
+  building it.
 - **The look was borrowed from a site I find easy, and then measured.** The scale, the
   centred title, the one big button. What I did not take: its emoji, and its 10px mobile
   table — that is the one thing it does wrong, and there is a rule here against it.
@@ -155,11 +160,12 @@ board renders one; watching the system refuse a booking proves the rule is real.
    and closed until you ask — including the one genuine double-booking in 23 years, kept
    rather than deleted. The cells it couldn't read are traceable to sheet, row and column.
    It's history and not work, because nobody can move a boat that sailed in 2017."*
-8. **Open Check a workbook, from the foot of Review, and choose their file.** *"This is
-   the importer, running in your browser on your copy — nothing is uploaded or saved. It
-   says the file matches the sample imported here, booking for booking. Add a second
-   booking to a taken berth in Excel and try again: it names the new double-booking and
-   its cell, and the month that changed."*
+8. **Open Vessels and press `last 2019` on the top row.** *"The register is a queue, not
+   an alphabet: it is ordered by how many bookings each missing length blocks, so the top
+   ten cover about half the schedule. The year is a link to that hull's last booking. Type
+   a length in and the fit check starts working on every booking that vessel has — the
+   missing data gets collected as a side effect of ordinary work, which is the only way it
+   ever gets collected."*
 
 ---
 

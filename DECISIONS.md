@@ -1029,7 +1029,7 @@ inside a card labelled *History*.
 | **No recorded length** `398` | *Add lengths →* |
 | **Cancelled bookings** `0` | *None. A booking you cancel comes back here.* |
 | **History** | *From bookings that have already ended.* |
-| *(below the cards)* | Load · Clear · Put back, then two lines: what they do, and the way in to `/check` |
+| *(below the cards)* | Load · Clear · Put back, and one line saying what they do |
 
 **Why a row that says zero.** A count of `0` beside *Cancelled bookings*, with a few
 words saying what would put something there, is the page explaining what it is for. The
@@ -1065,9 +1065,10 @@ home for Load and Clear. Without it, cancelling becomes irreversible — which i
 The page was never the problem; the page not saying so was.
 
 **"Check a workbook" was a label nobody could act on.** The owner had to ask what it did,
-which is the label failing, not the reader. `/check` is a destination with exactly one way
-in, so the link carries a gloss — *See what the importer makes of your own schedule file.*
-— in the words that page's own masthead uses, rather than a paragraph of them.
+which is the label failing, not the reader. The link got a gloss — and then, in
+[34](#34-a-dry-run-for-a-step-the-product-does-not-have), the page it pointed at was
+removed. *Having to explain what a page is for is evidence about the page, not only
+about its label*, and that reading took one more conversation to arrive at.
 
 **"Both can be put back afterwards" was ambiguous twice over** — both *what*, and put back
 to *what*. It is *Both replace every booking, and both can be undone.* A
@@ -1340,6 +1341,10 @@ than mistakes, each measured before it was closed:
 
 ### A check that writes nothing
 
+> **Removed in [34](#34-a-dry-run-for-a-step-the-product-does-not-have).** The reasoning
+> below is why it was safe; 34 is why it was cut anyway. `npm run import:check` does the
+> same job on the command line, where the import itself lives.
+
 **Decision.** `/check` reads a workbook in the visitor's browser, runs the same
 `planImport` the importer runs, and shows its reconciliation: double-bookings,
 misfits, the file's defects, the cells it would not guess at, each with where it sits in
@@ -1558,3 +1563,55 @@ there was already a correct hand-rolled version eight hundred lines up in the sa
 carrying a comment that ends *"It only fails in the evening, which is when it was found."*
 Knowing the rule was not enough; both specs call `facilityDaysAgo(n)` now, so the third
 one cannot get it wrong.
+
+
+---
+
+## 34. A dry run for a step the product does not have
+
+**Decision.** `/check` is deleted — the page, `WorkbookCheck`, `lib/fingerprint`,
+`getSample()`, the link at the foot of Review and five e2e specs.
+
+**The exchange.** The owner asked what the page was for. I explained it, and got back:
+
+> *"Why do we have it. If it doesn't do anything. The whole entire point of this project
+> was to submit a working application that is practical and for the user to use easily."*
+
+I defended it as a **dry run** — see what a schedule file would become before anyone
+touches the live one — which is a real operation that real migration tools have. The
+answer was one question:
+
+> *"Wait is there an importing schedule tab or no. If you answer no then remove it
+> entirely."*
+
+**No.** Importing is `npm run import`, on the command line, behind the database
+credentials — deliberately, because a public page with no accounts must not be able to
+replace everyone's schedule ([30](#30-one-undo-rule-an-importer-that-fails-loudly-and-a-check-that-writes-nothing)).
+So `/check` was a rehearsal for a step the product does not offer: a dry run whose real
+run only exists on my laptop. That is a sharper version of the argument than the one I
+was making for it, and it settles the question.
+
+**Why my own defence was wrong.** Asked what the page did, I called it *"the honesty
+check on the import"* — a statement about **the project**, not about the tool. That is
+exactly what [invariant 9](CLAUDE.md#invariants) forbids, and I had built a page of it
+while enforcing the rule everywhere else. The brief asks for a system to **manage
+reservations**. `/check` managed nothing, and no coordinator at the facility would ever
+have opened it.
+
+**What is genuinely lost.** It was the only thing in the app that could show someone the
+import is real — that the 2,031 bookings were parsed from their file rather than typed
+into a database. That question is worth answering, so it is answered where the import
+lives: `npm run import:check` prints the same reconciliation, from the same `planImport`,
+without touching the database, and the counts are pinned by unit tests against the
+workbook itself. A reader gets it in the README instead of a page.
+
+**What stays, and why.** `src/import/zipGuard.ts` and `SHEET_LIMITS` were written to
+survive a hostile upload, and there is no upload any more — but `npm run import` replaces
+the live schedule from a file, and a corrupt or absurdly large one should be refused
+loudly rather than parsed into a half-written transaction. They guard the path that still
+exists.
+
+**The general rule, now in [DESIGN 9](docs/DESIGN.md#9-explain-the-tool-never-the-project):**
+a page that **demonstrates** rather than **manages** does not belong in the product,
+however well it is built. Cutting something good that does not belong is the same
+judgment as not building it — it is just more expensive, and the expense is mine.

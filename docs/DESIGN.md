@@ -66,10 +66,16 @@ Building the empty path is what exposed both bugs in invariant 2.
 ## 9. Explain the tool, never the project
 
 Three tabs: **Board, Vessels, Review**. No About page, no architecture in the product.
-`/search` and `/check` are destinations, **not tabs** — do not add them to the nav, and
-do not delete them for breaking the rule. `/check` is reached from the sample controls
-at the foot of Review, beside the schedule it compares against, and the link **carries a
-short gloss**: a destination with one way in cannot afford a name you have to guess at.
+`/search` is a destination, **not a tab** — do not add it to the nav, and do not delete
+it for breaking the rule. Any link to a destination **carries a short gloss**: a page
+with one way in cannot afford a name you have to guess at.
+
+**A page that demonstrates rather than manages does not belong in the product.** `/check`
+let a visitor run the importer over their own workbook in the browser. It was well built
+and it managed no berths — a dry run for `npm run import`, which is a command-line step
+the app does not offer. It is gone; `npm run import:check` does the same job where the
+import itself lives.
+→ [DECISIONS 34](../DECISIONS.md#34-a-dry-run-for-a-step-the-product-does-not-have)
 
 Orientation is allowed in exactly **one** place: the empty board. Every other explanation
 in the app hangs off something on screen — the legend off a bar, the verdict strip off a

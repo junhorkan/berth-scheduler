@@ -256,10 +256,9 @@ export default async function ReviewPage() {
         title and a paragraph, made the page read as three things competing — Board and
         Vessels are each one card and a line.
 
-        Two short lines, not two paragraphs. The first says what the buttons do, because
-        "Both can be put back afterwards" left both *what* and put back to *what* to be
-        guessed. The second is the only way in to /check, so it says what /check is for
-        in the words that page's own masthead uses. DECISIONS 26.
+        One short line, not a paragraph: it says what the buttons do, because "Both can
+        be put back afterwards" left both *what* and put back to *what* to be guessed.
+        DECISIONS 26.
       */}
       <div className="sampledata">
         <div className="sampleacts">
@@ -275,10 +274,6 @@ export default async function ReviewPage() {
           )}
         </div>
         <p className="sub-hint">Both replace every booking, and both can be undone.</p>
-        <p className="sub-hint">
-          <a className="qlink" href="/check">Check a workbook &rarr;</a>
-          <span>See what the importer makes of your own schedule file.</span>
-        </p>
       </div>
     </main>
   );

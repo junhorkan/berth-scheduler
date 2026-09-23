@@ -25,7 +25,7 @@ export default async function Nav({
   actions,
   query = '',
 }: {
-  current: 'board' | 'vessels' | 'review' | 'search' | 'check';
+  current: 'board' | 'vessels' | 'review' | 'search';
   /** The page's own name. The board is the site, so it takes the site's. */
   title?: string;
   /** One line under the title: what the page is for, or what it holds right now. */

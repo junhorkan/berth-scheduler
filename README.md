@@ -27,11 +27,11 @@ Everything on the board is from the workbook you sent. Nothing is invented.
    2017 — is kept, not deleted, and **Could not be read** holds the cells the importer
    would not guess at, each with its sheet, row and column. **Show on board** opens a
    booking where it sits on the board.
-4. **Open [Check a workbook](https://berth-scheduler.vercel.app/check) and choose your copy
-   of the workbook.** Your browser reads it with the importer's own code, uploads nothing,
-   and says whether it matches the sample imported here, booking for booking. Plant a
-   second booking on a taken berth first, and it names the new double-booking and the
-   cell it came from.
+4. **Open Vessels and press `last 2019` on the first row.** The register is ordered by
+   how many bookings each missing length blocks, so the top of it is where recording one
+   length is worth the most. The year links straight to that hull's last booking on the
+   board. Type a length into the box beside any row and the fit check starts working on
+   every booking that vessel has.
 
 ---
 
@@ -107,9 +107,8 @@ is the central design decision. See `DECISIONS.md`.
   373 entries on rows that name no berth — reported, never attributed
 ```
 
-`npm run import:check` prints the same reconciliation without touching the database, and
-[/check](https://berth-scheduler.vercel.app/check) runs the same planner in the browser on
-any copy of the workbook — see step 4 above.
+`npm run import:check` prints the same reconciliation without touching the database, so
+the parse can be checked against any copy of the workbook before anything is written.
 
 Only **20 of 418 vessels** have a length recorded anywhere in the source, which is the
 evidence behind warning rather than blocking on fit. Among the bookings that *can* be
