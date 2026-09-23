@@ -154,9 +154,12 @@ a { color: var(--vessel); }
 .spacer { margin-left: auto; }
 
 /* ----------------------------------------------------------------- board */
+/* No `overflow-x` here any more: `.boardscroll` owns the scrolling, this card never
+   overflows, and the declaration also forced `overflow-y: auto`, which made the card clip
+   vertically — a claim the comment on `.boardscroll` would otherwise contradict. */
 .board {
   background: var(--surface); border: 1px solid var(--ring); box-shadow: var(--shadow);
-  border-radius: 14px; padding: 16px 16px 18px; overflow-x: auto;
+  border-radius: 14px; padding: 16px 16px 18px;
 }
 /*
  * The grid is what scrolls sideways — not the card.
@@ -167,7 +170,17 @@ a { color: var(--vessel); }
  * with no labels and no visible way back a month. The card is now the card, and only
  * this box moves.
  */
-.boardscroll { overflow-x: auto; }
+.boardscroll {
+  overflow-x: auto;
+  /*
+    3px of right padding, because `.bar::before` overhangs its lane by that much to buy a
+    one-day booking a pressable target. `.board`'s own 16px used to absorb it; this box
+    has none, so a booking touching the last day of the month pushed 2px past the
+    scrollport — a scrollbar under a board that otherwise fits, on about a third of the
+    months that hold bookings.
+  */
+  padding-right: 3px;
+}
 
 /*
  * Flex, not grid, and that is the whole reason the berth names stay put.
@@ -198,8 +211,15 @@ a { color: var(--vessel); }
  * card's background because a transparent rail lets the bars slide under the names.
  *
  * `z-index: 8` clears every bar — they are positioned at `auto`, and the highest any
- * reaches is `.bar.selected` at 6 — while staying under the tooltip at 30, which should
- * stay readable when it opens over the rail.
+ * reaches is `.bar.selected` at 6.
+ *
+ * KNOWN LIMIT, and this comment used to claim the opposite: a tooltip does NOT stay
+ * readable over the rail for a bar that has its own z-index (`.bar.toolong` 3,
+ * `.bar.unresolved` 4, `.bar.selected` 6). Those bars establish a stacking context, so
+ * their `::after` is trapped inside it and cannot clear the rail however high the
+ * tooltip's own 30 is. It needs a hover and a horizontally scrolled board at once, so
+ * desktop never sees it; a narrow window can. Fixing it properly means lifting the
+ * tooltip out of the bar, which `::after` cannot do.
  */
 .rail, .railcorner {
   flex: 0 0 150px; position: sticky; left: 0; z-index: 8; background: var(--surface);
@@ -589,17 +609,15 @@ a { color: var(--vessel); }
   .hero h1 { font-size: 28px; }
   .hero .tagline { font-size: 15px; }
   /*
-    The rail keeps its width here. It used to drop to 108px so more days fit beside it,
-    which stopped being free when the board stopped shortening the pooled berth's name:
-    at 108px "Small craft slips (institution boats)" wraps to four lines and its pooled
-    span to two — 93px of content in a 66px row, spilling into the lane below. At 150px
-    it is two lines and one, the same as desktop.
-
-    The narrowing bought little anyway. The lane is `minmax(620px, 1fr)`, so at phone
-    width the board already scrolls sideways; 108px to 150px moves the scroll width by
-    42px on a surface that is already scrolled three times over.
+    The rail used to drop to 108px here so more days fit beside it. That stopped being
+    free when the board stopped shortening the pooled berth's name — at 108px "Small
+    craft slips (institution boats)" wraps to four lines and its pooled span to two, 93px
+    of content in a 66px row, spilling into the lane below — and it bought little anyway,
+    since the lane's 620px floor means a phone scrolls the board sideways regardless.
+    So the override is gone rather than restated: `flex: 0 0 150px` already holds at
+    every width, and a breakpoint that changes nothing is a breakpoint to read and
+    re-derive later.
   */
-  .rail, .railcorner { flex-basis: 150px; }
   .boardhead .month { min-width: 0; flex: 1; font-size: 17px; }
   /* The pickers take a row of their own, or they squeeze the month into the arrows. */
   .boardhead .jump { flex-basis: 100%; }
@@ -681,8 +699,20 @@ a { color: var(--vessel); }
   content: attr(data-tip);
   opacity: 1; width: auto; height: auto; padding: 5px 9px;
 }
-/* The last two lanes have nothing below them, so theirs go above. */
-.gridrow > .lane:nth-last-child(-n + 2) .bar[data-tip]::after {
+/*
+ * The last two ROWS have nothing below them, so theirs go above.
+ *
+ * This counted lanes when the board was one grid whose children ran corner, dayhead,
+ * rail, lane, rail, lane… — so `:nth-last-child(-n + 2)` picked out the final lane.
+ * Splitting the board into a row per berth made every `.lane` the last child of its own
+ * row, so the exception became the rule and EVERY tooltip opened upward, over the row
+ * above or over the day numbers. Worse, it silently retired the guard the rule exists
+ * for: `.boardscroll` clips vertically, so a tooltip above a bar in the first row is
+ * invisible. Today nothing in that row is tall enough to hit it. One berth reorder is.
+ *
+ * It counts rows now, which is what it always meant.
+ */
+.boardscroll > .gridrow:nth-last-child(-n + 2) .bar[data-tip]::after {
   top: auto; bottom: calc(100% + 6px);
 }
 .bar.tipleft[data-tip]::after { left: 0; }

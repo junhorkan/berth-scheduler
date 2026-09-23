@@ -359,7 +359,11 @@ function Legend() {
         was the one thing it never mentioned, and a first-time reader had to infer it.
       */}
       <div className="legend-rule">Bar height is the vessel against its berth: 120ft in a 240ft berth fills half the lane.</div>
-      <div className="legend-hint">Hover any bar for detail, or click it to edit.</div>
+      {/* "click it to edit" was true of every bar until today. Now every bar a visitor
+          actually sees is a 1997–2019 record: the panel opens and states why it will
+          not change. The empty board's rules were updated in the same commit; this
+          line was missed. */}
+      <div className="legend-hint">Hover any bar for detail, or click it to open.</div>
     </div>
   );
 }

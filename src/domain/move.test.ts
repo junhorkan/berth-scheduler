@@ -38,14 +38,23 @@ describe('checkMove', () => {
   });
 
   /*
-    The rule that makes a move different from a booking. A future booking is live work
-    and cannot be dragged behind today; an imported 2010 booking is a record, and a
-    record can be corrected — otherwise all 2,031 of them would be uneditable, and a
-    mistyped date could only be cancelled, which loses the row and its provenance.
+    This asserted the other half of the old rule: a future booking could not be dragged
+    behind today, but an imported 2010 booking was a record and a record could be
+    CORRECTED — otherwise all 2,031 of them would be uneditable.
+
+    That half is gone, and deliberately (`src/domain/record.ts`). On a public page with
+    no accounts, "anyone may correct the record" is "anyone may rewrite 23 years of
+    somebody else's history, permanently". The correction stays with whoever holds the
+    database credentials. So `hasEnded` refuses an ended booking before `checkMove` is
+    ever reached, and `checkMove` refuses any span that would END in the past — which
+    subsumes the floor below for anything moving wholly backwards.
+
+    The floor still earns its place for the case the new rule does not cover: a booking
+    that has not started, dragged to START behind today while still ending ahead of it.
   */
   it('refuses to move a booking that has not started yet into the past', () => {
     const res = checkMove({
-      currentStart: '2026-10-01', start: '2026-09-01', end: '2026-09-03', today: TODAY,
+      currentStart: '2026-10-01', start: '2026-09-01', end: '2026-09-30', today: TODAY,
     });
     expect(res.ok).toBe(false);
     expect(res).toMatchObject({ error: expect.stringContaining('cannot be moved into the past') });
@@ -57,10 +66,13 @@ describe('checkMove', () => {
     }).ok).toBe(false);
   });
 
-  it('lets a booking already in the past be corrected within the past', () => {
+  it('no longer lets a past booking be corrected within the past', () => {
+    // It used to. `updateBooking` now refuses an ended booking outright, so this is the
+    // domain agreeing with the write path rather than quietly permitting what the write
+    // path will reject — the two disagreeing is the failure invariant 1 exists to stop.
     expect(checkMove({
       currentStart: '2010-07-04', start: '2010-07-06', end: '2010-07-09', today: TODAY,
-    })).toEqual({ ok: true });
+    }).ok).toBe(false);
   });
 
   it('lets a past booking be corrected forward, across today', () => {
@@ -93,5 +105,34 @@ describe('checkMove ceiling', () => {
     expect(checkMove({
       currentStart: '2026-10-01', start: '2099-01-01', end: '2099-01-02', today: TODAY,
     })).toEqual({ ok: true });
+  });
+});
+
+/**
+ * The trap this rule exists to close: a booking that has started but not ended could be
+ * edited to end behind today, which makes it a record — and a record refuses every
+ * further edit and every cancel. Two steps, no warning, and a row only the database
+ * credentials could fix.
+ */
+describe('a move may not end a booking in the past', () => {
+  const today = '2026-09-23';
+
+  it('refuses a running booking being shortened to end yesterday', () => {
+    const r = checkMove({ currentStart: '2026-09-20', start: '2026-09-20', end: '2026-09-22', today });
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.error).toMatch(/already passed/);
+  });
+
+  it('refuses an upcoming booking being dragged wholly behind today', () => {
+    const r = checkMove({ currentStart: '2026-10-01', start: '2026-09-01', end: '2026-09-03', today });
+    expect(r.ok).toBe(false);
+  });
+
+  it('allows a running booking to end today, which is still work', () => {
+    expect(checkMove({ currentStart: '2026-09-20', start: '2026-09-20', end: today, today }).ok).toBe(true);
+  });
+
+  it('allows a running booking to be extended', () => {
+    expect(checkMove({ currentStart: '2026-09-20', start: '2026-09-20', end: '2026-09-30', today }).ok).toBe(true);
   });
 });

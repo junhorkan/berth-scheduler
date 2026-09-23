@@ -45,6 +45,25 @@ export function checkMove(input: {
     return { ok: false, error: `The schedule only takes bookings up to ${ceiling.slice(0, 4)}.` };
   }
 
+  /*
+    A move may not END a booking in the past, whichever way it is going.
+
+    Without this, a booking that had started but not finished could have its end date
+    set behind today — legal by the floor below, since that only holds a booking that
+    has not started yet. The row then satisfies `hasEnded`, and `updateBooking` and
+    `cancelBooking` both refuse it from that moment on: a booking nobody without the
+    database credentials can correct or cancel, made in two steps with no warning.
+
+    It is also the right rule on its own terms. A span that ends before today describes
+    a stay that did not happen, and `createBooking` refuses to write one directly.
+  */
+  if (end < today) {
+    return {
+      ok: false,
+      error: 'A booking cannot be changed to end on a day that has already passed.',
+    };
+  }
+
   // Only a booking that has not started yet is held to the scheduling floor.
   if (currentStart >= today && start < today) {
     return {

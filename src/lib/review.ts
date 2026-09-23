@@ -2,7 +2,7 @@
  * Collapsing the attention queue.
  *
  * The queue showed one row per affected booking, so `M/V Iron Heron` appeared four
- * times in a row, each saying "Vessel is 100' but the berth is 55'". That is one
+ * times in a row, each saying "Vessel is 100ft but the berth is 55ft". That is one
  * vessel with one problem across four bookings — 28 rows for 15 real problems, and
  * the repetition buried the items that differ.
  *

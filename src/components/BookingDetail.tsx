@@ -248,8 +248,8 @@ export default function BookingDetail({
                 and the importer's own "Imported overlap with …" is still visible, in the
                 field it was always stored in. */}
             {/* Telling someone to resolve a stay that has already ended sends them to do
-                work that means nothing (DECISIONS 26). It can still be moved, to correct
-                the record, so this says what it is rather than that nothing can be done. */}
+                work that means nothing (DECISIONS 26) — and it can no longer be moved
+                either, so this says what it is rather than naming an action. */}
             {ended
               ? `. It ended on ${booking.endDate}, so it is history rather than work.`
               : '; move or cancel it to resolve.'}
@@ -287,6 +287,22 @@ export default function BookingDetail({
         */}
         {ended && booking.status !== 'cancelled' && (
           <p className="verdict idle" style={{ marginTop: 14 }}>{ENDED_REFUSAL}</p>
+        )}
+
+        {/*
+          A cancelled booking that has also ended can still be put back — a cancellation
+          made in error should not become permanent just because the dates have passed.
+          But putting it back makes it a record, and a record cannot be cancelled again:
+          the one control on this panel becomes a one-way door.
+
+          Said before the press rather than discovered after it, which is the same rule
+          the cancel dialog follows.
+        */}
+        {ended && booking.status === 'cancelled' && (
+          <p className="verdict idle" style={{ marginTop: 14 }}>
+            These dates have passed. Putting this booking back returns it to the record,
+            and it cannot be cancelled again here.
+          </p>
         )}
 
         {editable && (
