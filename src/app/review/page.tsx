@@ -161,7 +161,9 @@ export default async function ReviewPage() {
         <section className="qsection undo">
           <h2 className="qhead muted">
             Cancelled bookings
-            <span className="qhcount">{cancelled.length}</span>
+            <span className="qhcount">
+              {cancelled[0]?.hasMore ? `${cancelled.length}+` : cancelled.length}
+            </span>
           </h2>
           {cancelled.length === 0 ? (
             <p className="qempty">None. A booking you cancel comes back here.</p>

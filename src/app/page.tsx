@@ -204,12 +204,16 @@ export default async function BoardPage({
       />
 
       {/*
-        A link to a booking that is no longer there — shared before someone cancelled it,
-        or mistyped — used to open the board with no panel and no word about why. That is
-        the one thing invariant 8 forbids: empty is supported, and never silent.
+        A link to a booking that is not there — mistyped, or from a schedule that has
+        since been replaced — used to open the board with no panel and no word about why.
+        That is the one thing invariant 8 forbids: empty is supported, and never silent.
+
+        It does NOT say "it may have been cancelled", which it used to: `getBookingById`
+        returns a cancelled booking deliberately, and the panel handles one. So the single
+        case this line renders in is the one case where the booking was not cancelled.
       */}
       {selectedId && !selected && (
-        <p className="note">No booking matches that link. It may have been cancelled.</p>
+        <p className="note">No booking matches that link.</p>
       )}
 
       {selected && (

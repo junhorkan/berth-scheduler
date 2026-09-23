@@ -7,7 +7,7 @@ import type { BookingKind, BookingStatus, BerthCapacityMode } from '../domain/ty
 import { canonicalVesselName } from '../domain/normalize';
 import { isValidRange } from '../domain/conflicts';
 import { isSearchable, likePattern } from '../lib/search';
-import { todayISO } from '../lib/nav';
+import { todayISO, isBookingId } from '../lib/nav';
 import type { SearchHit } from '../lib/search';
 
 export type BerthRow = {
@@ -48,12 +48,27 @@ export async function getBerths(): Promise<BerthRow[]> {
 }
 
 /** Bookings overlapping the given inclusive date window, with vessel length joined. */
+/**
+ * The month's bookings — joined to berths on `active`, which it was not.
+ *
+ * `getBerths` filters on `active` and this did not, so a booking in a deactivated berth
+ * was fetched and then silently dropped by the board, which looks its berth up by id.
+ * Worse, it still counted: a non-zero `bookings.length` suppresses both the empty-state
+ * note and the "nearest bookings" pointer, so the result was a fully drawn empty grid
+ * with no sentence anywhere saying where the bookings were — exactly what invariant 8
+ * forbids, arriving by the one route the empty-state logic does not cover.
+ *
+ * All seven berths are active and only SQL can change that, so this has never fired.
+ * `getBerths` already implements half the feature, which is what makes it worth closing
+ * rather than writing down.
+ */
 export async function getBookingsInRange(start: string, end: string): Promise<BookingRow[]> {
   const sql = db();
   const rows = await sql`
     select b.id, b.berth_id, b.vessel_id, b.kind, b.status, b.label,
            b.start_date, b.end_date, b.notes, v.length_ft as vessel_length_ft
       from bookings b
+      join berths be on be.id = b.berth_id and be.active
       left join vessels v on v.id = b.vessel_id
      where b.status <> 'cancelled'
        and b.start_date <= ${end}::date
@@ -112,7 +127,7 @@ export async function getBerthOccupancy(
   start: string,
   end: string,
   excludeBookingId?: string,
-): Promise<Record<string, { label: string; startDate: string; endDate: string }[]>> {
+): Promise<Record<string, { label: string; startDate: string; endDate: string }[]> | null> {
   /*
     An end before its start is a state the form passes through on every edit, and
     `daterange(start, end + 1)` THROWS on it — "range lower bound must be less than or
@@ -122,16 +137,29 @@ export async function getBerthOccupancy(
     with Save enabled. A stale yes is the one answer a conflict check must never give.
 
     `checkBooking` already validates the range and reports it; this one silently threw.
-    Nothing is occupied over an impossible range, so the honest answer is nothing.
+
+    `null`, not `{}`. An empty map is indistinguishable from "asked, and every berth is
+    free", and the caller reads it as the latter: the berth dropdown labels every option
+    "free, fits" and the suggester will name one, for a range nothing looked at. Null
+    says "not asked", which is the true answer.
   */
-  if (!isValidRange({ start, end })) return {};
+  if (!isValidRange({ start, end })) return null;
+  // Guarded like every other id that reaches SQL: `checkBooking` does this for the same
+  // value, and a non-uuid here is a 22P02 thrown out of a public Server Action.
+  if (excludeBookingId != null && !isBookingId(excludeBookingId)) return null;
 
   const sql = db();
   const rows = await sql`
     select b.berth_id, b.label, b.start_date, b.end_date
       from bookings b
       join berths be on be.id = b.berth_id
-     where b.status = 'active'
+     -- Not status = active: this is ADVICE about what is on the board, and the board
+     -- draws the one conflict_unresolved row too. The blocking check in checkBooking
+     -- keeps the narrower filter because it must mirror the EXCLUDE predicate exactly,
+     -- but a dropdown that calls a berth free on days the grid shows occupied is the
+     -- failure this control exists to prevent. (No backticks: this is inside a tagged
+     -- template and one of them ends the SQL.)
+     where b.status <> 'cancelled'
        and be.capacity_mode = 'exclusive'
        and b.during && daterange(${start}::date, (${end}::date + 1), '[)')
        and (${excludeBookingId ?? null}::uuid is null or b.id <> ${excludeBookingId ?? null}::uuid)
@@ -151,6 +179,8 @@ export async function getBerthOccupancy(
 
 export type CancelledRow = {
   id: string;
+  /** True on every row when the list was capped, so the page can say so. */
+  hasMore: boolean;
   label: string;
   berthName: string;
   startDate: string;
@@ -172,10 +202,20 @@ export async function getRecentlyCancelled(limit = 8): Promise<CancelledRow[]> {
       from bookings b
       join berths be on be.id = b.berth_id
      where b.status = 'cancelled' and b.cancelled_at is not null
-     order by b.cancelled_at desc
-     limit ${limit}`;
-  return rows.map((r) => ({
+     order by b.cancelled_at desc, b.id
+     limit ${limit + 1}`;
+  /*
+    One more row than asked for, so the caller can tell a full page from a full list.
+
+    Review printed `cancelled.length` as the section's count, and this returns at most
+    `limit` — so with nine cancellations the page said "Cancelled bookings · 8", for
+    good. The page has the honest pattern for this fifty lines further down ("Showing
+    the first 200 open items"); this row is what lets the same thing be said here.
+  */
+  const hasMore = rows.length > limit;
+  return (hasMore ? rows.slice(0, limit) : rows).map((r) => ({
     id: r.id as string,
+    hasMore,
     label: r.label as string,
     berthName: r.berth_name as string,
     startDate: (r.start_date as Date).toISOString().slice(0, 10),
@@ -186,14 +226,15 @@ export async function getRecentlyCancelled(limit = 8): Promise<CancelledRow[]> {
 
 
 export type SystemSummary = {
-  berths: number;
-  vessels: number;
-  vesselsWithLength: number;
   bookings: number;
-  unresolvedConflicts: number;
   openReviewItems: number;
-  firstYear: number;
-  lastYear: number;
+  /**
+   * Null on an empty schedule: `extract(year from min(...))` over no rows is null, and
+   * the type said `number` — a cast the compiler accepted and the data did not honour.
+   * `firstYear`/`lastYear` in `lib/nav` already take null, which is why nothing broke.
+   */
+  firstYear: number | null;
+  lastYear: number | null;
 };
 
 /**
@@ -204,11 +245,13 @@ export const getSummary = cache(async function getSummary(): Promise<SystemSumma
   const sql = db();
   const [r] = await sql`
     select
-      (select count(*)::int from berths)  as berths,
-      (select count(*)::int from vessels) as vessels,
-      (select count(*)::int from vessels where length_ft is not null) as vessels_with_length,
+      -- Four more counts stood here: berths, vessels, vessels-with-a-length and
+      -- unresolved conflicts. Nothing anywhere read any of them, and Nav awaits this on
+      -- every page, so they ran on every render to answer questions nobody asked. The
+      -- berth count also counted every row while getBerths filters on active, so had
+      -- anything rendered it, it would have disagreed with the grid beneath it.
+      -- (No backticks in here: this is inside a tagged template, and one ends the SQL.)
       (select count(*)::int from bookings where status <> 'cancelled') as bookings,
-      (select count(*)::int from bookings where status = 'conflict_unresolved') as unresolved,
       -- Only what somebody can still act on: an item whose booking has not ended.
       -- An item with no booking at all is a cell from an old sheet, so the join drops
       -- it here and the history card below carries it instead. A badge that counts
@@ -228,14 +271,10 @@ export const getSummary = cache(async function getSummary(): Promise<SystemSumma
       (select extract(year from max(start_date))::int
          from bookings where status <> 'cancelled') as last_year`;
   return {
-    berths: r.berths as number,
-    vessels: r.vessels as number,
-    vesselsWithLength: r.vessels_with_length as number,
     bookings: r.bookings as number,
-    unresolvedConflicts: r.unresolved as number,
     openReviewItems: r.open_review as number,
-    firstYear: r.first_year as number,
-    lastYear: r.last_year as number,
+    firstYear: r.first_year as number | null,
+    lastYear: r.last_year as number | null,
   };
 });
 
@@ -283,7 +322,14 @@ export async function getVessels(): Promise<VesselRow[]> {
       -- booking typeahead reads getVesselOptions, which is deliberately unfiltered, so
       -- booking that name again finds the same row rather than making a second one.
       -- The register shows what is on the schedule; the typeahead remembers everything.
-      join bookings b on b.vessel_id = v.id and b.status <> 'cancelled'
+      -- and b.kind = 'vessel', which getMissingLengthSummary has and this did not: a
+      -- register row is a hull that is on the schedule AS a vessel. The schema only
+      -- requires a vessel for kind = 'vessel', so an event carrying a vessel_id would
+      -- have pinned a hull here and not in Review's count of the same category — two
+      -- totals for one named thing on two pages. The write paths all clear it now; this
+      -- is the read agreeing rather than trusting them.
+      join bookings b
+        on b.vessel_id = v.id and b.status <> 'cancelled' and b.kind = 'vessel'
       left join lateral (
         select b2.id, b2.start_date, b2.end_date
           from bookings b2
@@ -334,7 +380,8 @@ export async function getVesselOptions(): Promise<VesselOption[]> {
   }));
 }
 
-export type MissingLengthSummary = { vessels: number; bookings: number };
+/** Just the count of hulls. `bookings` was computed here and rendered nowhere. */
+export type MissingLengthSummary = { vessels: number };
 
 /**
  * How much of the schedule cannot be fit-checked, computed now rather than remembered.
@@ -351,12 +398,12 @@ export type MissingLengthSummary = { vessels: number; bookings: number };
 export async function getMissingLengthSummary(): Promise<MissingLengthSummary> {
   const sql = db();
   const [r] = await sql`
-    select count(distinct v.id)::int as vessels, count(b.id)::int as bookings
+    select count(distinct v.id)::int as vessels
       from vessels v
       join bookings b
         on b.vessel_id = v.id and b.status <> 'cancelled' and b.kind = 'vessel'
      where v.length_ft is null`;
-  return { vessels: r.vessels as number, bookings: r.bookings as number };
+  return { vessels: r.vessels as number };
 }
 
 export type ReviewRow = {
@@ -398,7 +445,12 @@ export async function getReviewItems(limit = 200): Promise<ReviewRow[]> {
                 when 'unclassified' then 2
                 else 3
               end,
-              r.created_at
+              -- ...then r.id, because created_at is NOT a tiebreaker here. It defaults
+              -- to now(), which is TRANSACTION time, so all 46 items the importer wrote
+              -- share one timestamp — verified against the live schedule. Without an id
+              -- the order within a type is arbitrary and can differ between two renders
+              -- of the same page, which decides WHICH items the limit below keeps.
+              r.created_at, r.id
      limit ${limit}`;
   return rows.map((r) => ({
     id: r.id as string,
@@ -462,7 +514,7 @@ export async function getBookingById(id: string): Promise<BookingDetailRow | nul
 /**
  * A ceiling on rows returned by one search.
  *
- * Deliberately above the total booking count in the imported workbook (~1,974), so with
+ * Deliberately above the total booking count in the imported workbook (2,031), so with
  * this dataset no real query is truncated — the limit exists to bound the query if the
  * schedule grows, and the page says so when it bites rather than silently showing less.
  */
@@ -487,7 +539,19 @@ export async function searchBookings(query: string): Promise<SearchResult> {
 
   const sql = db();
   const pattern = likePattern(query);
-  const vesselPattern = likePattern(canonicalVesselName(query).normalized);
+  /*
+    The vessel arm is skipped when the query normalises to nothing, or it matches every
+    vessel on the schedule.
+
+    `isSearchable` is checked against the RAW query, and `canonicalVesselName` strips the
+    whole `\p{Cf}` category — so a query of two zero-width characters is long enough to
+    search and normalises to `''`, making the pattern `'%%'` and `like '%%'` true of every
+    hull. The result was every non-cancelled vessel booking, truncated at the limit, under
+    a heading printing an invisible query. It takes a paste to reach, and it is one line
+    to close.
+  */
+  const normalized = canonicalVesselName(query).normalized;
+  const vesselPattern = normalized === '' ? null : likePattern(normalized);
 
   const rows = await sql`
     select b.id, b.label, b.vessel_id, b.kind, b.status, b.start_date, b.end_date,
@@ -496,7 +560,9 @@ export async function searchBookings(query: string): Promise<SearchResult> {
       join berths be on be.id = b.berth_id
       left join vessels v on v.id = b.vessel_id
      where b.status <> 'cancelled'
-       and (b.label ilike ${pattern} or v.normalized_name like ${vesselPattern})
+       and (b.label ilike ${pattern}
+            or (${vesselPattern}::text is not null
+                and v.normalized_name like ${vesselPattern}))
      order by b.start_date desc
      limit ${SEARCH_LIMIT}`;
 

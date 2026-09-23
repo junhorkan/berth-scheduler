@@ -23,8 +23,17 @@ export async function GET() {
       at: new Date().toISOString(),
     });
   } catch (e) {
+    /*
+      The error is logged, not returned.
+
+      This handed back `e.message` on an unauthenticated GET, and a connection failure
+      from postgres.js reads `write ECONNREFUSED <host>:<port>` — the database's address,
+      published by the one endpoint documented as safe to hit by hand. `describeDbError`
+      exists to stop exactly this on the write paths; this route predates it.
+    */
+    console.error('[keep-warm]', e);
     return Response.json(
-      { ok: false, error: e instanceof Error ? e.message : String(e), ms: Date.now() - startedAt },
+      { ok: false, ms: Date.now() - startedAt },
       { status: 503 },
     );
   }

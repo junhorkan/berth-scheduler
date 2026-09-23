@@ -78,9 +78,19 @@ export function likePattern(raw: string): string {
  * 'Barge Salt Dory') stay one block. Events and closures have no vessel row, so they
  * group by label — case-folded, because the source is inconsistent about it.
  */
+/**
+ * What counts as "the same thing" across two hits.
+ *
+ * A hull is its id. Everything else is its label — AND its kind, which this used to
+ * leave out: an event and a closure sharing a label folded into one group whose badge
+ * was whichever hit arrived first, while the count summed both. That is reachable
+ * through the product, not just the importer, because the panel lets someone choose the
+ * kind and type the label independently — so "Dock maintenance" entered as an event
+ * merged with the imported closures and the group was labelled one or the other.
+ */
 function groupKeyFor(hit: SearchHit): string {
   if (hit.vesselId) return `v:${hit.vesselId}`;
-  return `l:${normalizeQuery(hit.label).toUpperCase()}`;
+  return `l:${hit.kind}:${normalizeQuery(hit.label).toUpperCase()}`;
 }
 
 /**
