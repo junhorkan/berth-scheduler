@@ -8,6 +8,10 @@ import {
 // too (src/domain/record.ts), so a reworded rule cannot leave a spec asserting the old
 // sentence — or, worse, passing because it asserted a paraphrase of it.
 import { ENDED_REFUSAL } from '../src/domain/record';
+// Same reason: the panel renders its dates through this, so a spec that spelled the
+// format out by hand would assert a shape the app no longer uses — which is exactly what
+// happened when Review and the panels stopped printing raw ISO.
+import { formatSpanFull } from '../src/lib/search';
 
 /**
  * The board is the product. These assert the two things it exists to do:
@@ -943,7 +947,9 @@ test.describe('a booking that has already happened', () => {
     const panel = page.getByRole('dialog', { name: 'Booking', exact: true });
 
     await expect(panel).toContainText(PAST_BERTH);
-    await expect(panel).toContainText(`${PAST_START} to ${PAST_END}`);
+    await expect(panel).toContainText(formatSpanFull(PAST_START, PAST_END));
+    // And not the raw ISO it used to print, which is the thing that changed.
+    await expect(panel).not.toContainText(`${PAST_START} to ${PAST_END}`);
     await expect(panel).toContainText('Kind');
     await expect(panel).toContainText('Vessel');
     // The hull on the register, which the label is not, and where the row came from.
